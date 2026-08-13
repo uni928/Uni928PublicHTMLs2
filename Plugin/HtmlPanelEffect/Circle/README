@@ -1,5 +1,68 @@
-スクロールで出現時に演出。恐らく他の機能と併用可
+スクロールで出現時に演出。恐らく他のプラグインと併用可
 
 https://uni928.github.io/Uni928PublicHTMLs2/Plugin/HtmlPanelEffect/Circle/demo.html
 
 <script src="https://uni928.github.io/Uni928PublicHTMLs2/Plugin/HtmlPanelEffect/Circle/random-circle-reveal.js"></script>
+
+# RandomCircleReveal 簡易使い方
+
+## 1. JSを読み込む
+
+```html
+<script src="random-circle-reveal-v1.4.0.js"></script>
+```
+
+## 2. パネルにclassを付ける
+
+```html
+<section class="slide-in-left rcr-panel">
+  パネルの内容
+</section>
+```
+
+`rcr-panel`を付けた要素が、スクロールで表示領域に入ると自動再生されます。
+
+既存の左・右・下方向のスライドイン用classと同じ要素に付けて使用できます。
+
+## 3. 輪郭線を設定する
+
+```html
+<section
+  class="slide-in-bottom rcr-panel"
+  data-rcr-ring-color="#ffffff"
+  data-rcr-ring-width="2">
+  パネルの内容
+</section>
+```
+
+| 属性 | 初期値 | 内容 |
+| --- | ---: | --- |
+| `data-rcr-ring-color` | `#ffffff` | 円の輪郭色 |
+| `data-rcr-ring-width` | `2` | 輪郭線の太さ（px） |
+| `data-rcr-cover-color` | `#000000` | 初期カバーの色 |
+| `data-rcr-count` | `10` | 円の個数 |
+| `data-rcr-duration` | `900` | 1個の円が広がる時間（ms） |
+| `data-rcr-alpha-step` | `10` | 円の透明度変化量 |
+
+## 手動で再生する
+
+自動再生せず、既存のパネルアニメーションと同じタイミングで再生する場合は、`data-rcr-trigger="manual"`を付けます。
+
+```html
+<section id="panel" class="slide-in-right rcr-panel" data-rcr-trigger="manual">
+  パネルの内容
+</section>
+
+<script>
+  RandomCircleReveal.play(document.getElementById('panel'));
+</script>
+```
+
+## 動作の概要
+
+- 円は互いに離れた位置から出現します。
+- 円の出現間隔は600msです。
+- 円の拡大時間は900msです。
+- 1個の円による透明化量は最大で約5.88%（100 / 17）です。
+- すべての円が出現した後、カバーを削除してパネル全体を表示します。
+- `prefers-reduced-motion: reduce`が有効な環境ではエフェクトを省略します。
