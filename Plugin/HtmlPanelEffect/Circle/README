@@ -24,26 +24,6 @@ https://uni928.github.io/Uni928PublicHTMLs2/Plugin/HtmlPanelEffect/Circle/demo.h
 
 既存の左・右・下方向のスライドイン用classと同じ要素に付けて使用できます。
 
-## 3. 輪郭線を設定する
-
-```html
-<section
-  class="slide-in-bottom rcr-panel"
-  data-rcr-ring-color="#ffffff"
-  data-rcr-ring-width="2">
-  パネルの内容
-</section>
-```
-
-| 属性 | 初期値 | 内容 |
-| --- | ---: | --- |
-| `data-rcr-ring-color` | `#ffffff` | 円の輪郭色 |
-| `data-rcr-ring-width` | `2` | 輪郭線の太さ（px） |
-| `data-rcr-cover-color` | `#000000` | 初期カバーの色 |
-| `data-rcr-count` | `10` | 円の個数 |
-| `data-rcr-duration` | `900` | 1個の円が広がる時間（ms） |
-| `data-rcr-alpha-step` | `10` | 円の透明度変化量 |
-
 ## 手動で再生する
 
 自動再生せず、既存のパネルアニメーションと同じタイミングで再生する場合は、`data-rcr-trigger="manual"`を付けます。
