@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RandomCircleReveal デモ</title>
+  <style>
+    @layer base, demo;
+
+    /* base: ページ全体の基本スタイル */
+    @layer base {
+      :root {
+        color-scheme: dark;
+        font-family: system-ui, sans-serif;
+        background: #10131a;
+        color: #f7f8fb;
+      }
+
+      * { box-sizing: border-box; }
+      body { margin: 0; }
+      main { width: min(860px, calc(100% - 32px)); margin: 0 auto; }
+      section { min-height: 82vh; display: grid; place-items: center; }
+    }
+
+    /* demo: デモ用のパネルと操作説明 */
+    @layer demo {
+      .intro { text-align: center; }
+      .panel-list { display: grid; gap: 24px; padding: 12vh 0; }
+      .demo-panel {
+        min-height: 220px;
+        padding: 32px;
+        border: 1px solid #3f4c68;
+        border-radius: 24px;
+        background: linear-gradient(135deg, #27314d, #182033);
+        box-shadow: 0 20px 60px rgb(0 0 0 / 25%);
+      }
+      .demo-panel:nth-child(2) { background: linear-gradient(135deg, #264b45, #172d32); }
+      .demo-panel:nth-child(3) { background: linear-gradient(135deg, #4c3558, #251c38); }
+      code { color: #a8d8ff; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="intro">
+      <div>
+        <p>スクロールして確認してください</p>
+        <p><code>.rcr-panel</code> を付けたパネルで円が発生します。</p>
+      </div>
+    </section>
+
+    <div class="panel-list">
+      <article class="demo-panel rcr-panel" data-rcr-ring-color="#7dd3fc">
+        <h2>IntersectionObserverで自動再生</h2>
+        <p>最初は不透明なカバーで隠れ、透明な円と輪郭線が広がります。</p>
+      </article>
+      <article class="demo-panel rcr-panel" data-rcr-count="12" data-rcr-ring-color="#86efac" data-rcr-ring-width="3">
+        <h2>透明円・12箇所</h2>
+        <p>円のアルファ値は255から0へ下がり、白い輪郭線も表示されます。</p>
+      </article>
+      <article class="demo-panel rcr-panel" data-rcr-trigger="manual">
+        <h2>手動再生</h2>
+        <p>外部のパネルアニメーションの開始時に呼び出す例です。</p>
+        <button type="button" id="manual-play">エフェクトを再生</button>
+      </article>
+    </div>
+  </main>
+
+  <script src="./random-circle-reveal.js"></script>
+  <script>
+    document.getElementById('manual-play').addEventListener('click', function () {
+      RandomCircleReveal.play(document.querySelector('.rcr-panel[data-rcr-trigger="manual"]'));
+    });
+  </script>
+</body>
+</html>
