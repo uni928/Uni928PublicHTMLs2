@@ -5,6 +5,7 @@
   var SELECTOR = '.rcr-panel';
   var states = new WeakMap();
   var manager = { observer: null, mutationObserver: null, started: false };
+  var scriptElement = document.currentScript;
 
   var APPEAR_INTERVAL_MS = 60;
   var TRANSPARENCY_PER_COMPLETED_CIRCLE = 0.2;
@@ -12,7 +13,7 @@
   var MIN_POSITION_DISTANCE_RATIO = 0.4;
 
   var DEFAULTS = {
-    count: 6,
+    count: 5,
     duration: 900,
     minRadius: 0,
     maxRadiusRatio: 1,
@@ -496,6 +497,54 @@
     return api;
   }
 
+  function copyScriptConfig(panel) {
+    if (!scriptElement || !scriptElement.dataset) {
+      return;
+    }
+
+    [
+      'rcrCount',
+      'rcrDuration',
+      'rcrMinRadius',
+      'rcrMaxRadiusRatio',
+      'rcrCoverColor',
+      'rcrRingColor',
+      'rcrRingWidth'
+    ].forEach(function (key) {
+      if (scriptElement.dataset[key] !== undefined) {
+        panel.dataset[key] = scriptElement.dataset[key];
+      }
+    });
+  }
+
+  function createAutoScreenPanel() {
+    var existing = document.querySelector('[data-rcr-screen="true"]');
+    if (existing) {
+      return { panel: existing, created: false };
+    }
+
+    var panel = document.createElement('div');
+    panel.className = 'rcr-auto-screen rcr-panel';
+    panel.dataset.rcrScreen = 'true';
+    panel.dataset.rcrTrigger = 'manual';
+    panel.setAttribute('aria-hidden', 'true');
+    panel.style.display = 'none';
+    copyScriptConfig(panel);
+    document.body.appendChild(panel);
+    return { panel: panel, created: true };
+  }
+
+  function autoPlayScreen() {
+    var target = createAutoScreenPanel();
+    global.requestAnimationFrame(function () {
+      play(target.panel).then(function () {
+        if (target.created && target.panel.parentNode) {
+          target.panel.parentNode.removeChild(target.panel);
+        }
+      });
+    });
+  }
+
   var api = {
     selector: SELECTOR,
     start: start,
@@ -508,6 +557,7 @@
 
   function autoStart() {
     start(document);
+    autoPlayScreen();
   }
 
   if (document.readyState === 'loading') {
