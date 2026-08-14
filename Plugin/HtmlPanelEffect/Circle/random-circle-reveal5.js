@@ -6,6 +6,7 @@
   var states = new WeakMap();
   var manager = { observer: null, mutationObserver: null, started: false };
   var scriptElement = document.currentScript;
+  var initialScreenCover = null;
 
   var APPEAR_INTERVAL_MS = 60;
   var TRANSPARENCY_PER_COMPLETED_CIRCLE = 0.2;
@@ -23,6 +24,44 @@
     once: true,
     trigger: 'intersection'
   };
+
+  // ページの初回描画よりできるだけ早く、全画面を確実に覆います。
+  // アニメーション用Canvasの準備が終わるまで、この被せは外しません。
+  function installInitialScreenCover() {
+    if (initialScreenCover || !document.documentElement) {
+      return;
+    }
+
+    var coverColor = DEFAULTS.coverColor;
+    if (scriptElement && scriptElement.dataset && scriptElement.dataset.rcrCoverColor) {
+      coverColor = scriptElement.dataset.rcrCoverColor;
+    }
+
+    initialScreenCover = document.createElement('div');
+    initialScreenCover.className = 'rcr-initial-screen-cover';
+    initialScreenCover.setAttribute('aria-hidden', 'true');
+    initialScreenCover.style.position = 'fixed';
+    initialScreenCover.style.inset = '0';
+    initialScreenCover.style.width = '100vw';
+    initialScreenCover.style.height = '100vh';
+    initialScreenCover.style.margin = '0';
+    initialScreenCover.style.padding = '0';
+    initialScreenCover.style.background = coverColor;
+    initialScreenCover.style.zIndex = '2147483647';
+    initialScreenCover.style.pointerEvents = 'none';
+    initialScreenCover.style.touchAction = 'none';
+
+    document.documentElement.appendChild(initialScreenCover);
+  }
+
+  function removeInitialScreenCover() {
+    if (initialScreenCover && initialScreenCover.parentNode) {
+      initialScreenCover.parentNode.removeChild(initialScreenCover);
+    }
+    initialScreenCover = null;
+  }
+
+  installInitialScreenCover();
 
   function clamp(value, min, max) {
     return Math.min(max, Math.max(min, value));
@@ -359,6 +398,9 @@
       cleanupState(previous);
     }
     if (isReducedMotion()) {
+      if (panel.dataset && panel.dataset.rcrScreen === 'true') {
+        removeInitialScreenCover();
+      }
       return Promise.resolve();
     }
 
@@ -440,6 +482,9 @@
 
     state.context = state.canvas.getContext('2d');
     if (!state.context) {
+      if (state.screen) {
+        removeInitialScreenCover();
+      }
       cleanupState(state);
       return Promise.resolve();
     }
@@ -448,6 +493,12 @@
     resizeCanvas(state);
     state.elapsed = 0;
     draw(state, state.elapsed);
+
+    // Canvasが全面を塗り終えた後にだけ、初期被せを外します。
+    // Canvas生成前やload直後に背後が1フレーム見えるのを防ぎます。
+    if (state.screen) {
+      removeInitialScreenCover();
+    }
 
     if (state.screen) {
       state.resizeHandler = function () {
@@ -672,6 +723,8 @@
     autoPlayScreen();
   }
 
+  // 初期被せ自体はスクリプト評価時点ですでに表示済みです。
+  // bodyが利用可能になってからアニメーション用Canvasを準備します。
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', autoStart, { once: true });
   } else {
