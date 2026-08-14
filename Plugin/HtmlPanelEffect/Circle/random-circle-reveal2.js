@@ -7,6 +7,7 @@
   var manager = { observer: null, mutationObserver: null, started: false };
 
   var APPEAR_INTERVAL_MS = 60;
+  var TRANSPARENCY_PER_COMPLETED_CIRCLE = 0.2;
   var POSITION_SEARCH_ATTEMPTS = 240;
   var MIN_POSITION_DISTANCE_RATIO = 0.4;
 
@@ -181,10 +182,20 @@
   function draw(state, elapsed) {
     var context = state.context;
 
+    var completedCount = state.circles.reduce(function (count, circle) {
+      var completedAt = circle.delay + state.config.duration;
+      return count + (elapsed >= completedAt ? 1 : 0);
+    }, 0);
+    var coverAlpha = Math.max(
+      0,
+      1 - completedCount * TRANSPARENCY_PER_COMPLETED_CIRCLE
+    );
+
     // 毎フレーム、画面全体を黒く塗り直します。
+    // 円が1個完了するたびに黒画面を20%透明にします。
     context.clearRect(0, 0, state.width, state.height);
     context.globalCompositeOperation = 'source-over';
-    context.globalAlpha = 1;
+    context.globalAlpha = coverAlpha;
     context.fillStyle = state.config.coverColor;
     context.fillRect(0, 0, state.width, state.height);
 
