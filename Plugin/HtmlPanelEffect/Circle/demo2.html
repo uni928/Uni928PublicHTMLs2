@@ -76,26 +76,7 @@
 
       h1 span, h2 em { display: block; color: var(--accent); font-family: Georgia, "Times New Roman", serif; font-style: italic; font-weight: 400; }
       .description { max-width: 460px; margin-bottom: 34px; color: var(--muted); line-height: 1.9; }
-      .action-row { display: flex; flex-wrap: wrap; align-items: center; gap: 18px; }
-
-      .replay-button {
-        display: inline-flex;
-        align-items: center;
-        gap: 22px;
-        min-height: 48px;
-        padding: 0 14px 0 20px;
-        border: 1px solid var(--accent);
-        border-radius: 999px;
-        background: var(--accent);
-        color: #0b1517;
-        cursor: pointer;
-        font-size: 0.8rem;
-        font-weight: 700;
-      }
-
-      .replay-button:hover:not(:disabled) { background: #d5fff2; }
-      .replay-button:disabled { cursor: wait; opacity: 0.65; }
-      .replay-icon { display: grid; width: 27px; height: 27px; place-items: center; border-radius: 50%; background: #0b1517; color: var(--accent); }
+      .action-note { color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.7rem; }
 
       .visual { aspect-ratio: 1; border: 1px solid var(--line); border-radius: 50%; background: radial-gradient(circle, rgb(183 247 227 / 12%), transparent 58%), #0e1b1e; box-shadow: 0 0 80px rgb(74 193 167 / 12%); }
       .detail { padding-block: 120px; border-top: 1px solid var(--line); }
@@ -119,19 +100,6 @@
   </style>
 </head>
 <body>
-  <!-- この要素は再生の対象を示すだけです。実際の黒画面はJSがbody直下に作成します。 -->
-  <div
-    id="screenTrigger"
-    class="rcr-panel"
-    data-rcr-screen="true"
-    data-rcr-trigger="manual"
-    data-rcr-duration="900"
-    data-rcr-count="6"
-    data-rcr-ring-color="#b7f7e3"
-    data-rcr-ring-width="1.5"
-    aria-hidden="true">
-  </div>
-
   <main class="page">
     <header class="header">
       <a class="brand" href="#top">RandomCircleReveal</a>
@@ -143,15 +111,9 @@
         <p class="eyebrow">Screen reveal / v1.5.0</p>
         <h1>Reveal the page<span>in circles.</span></h1>
         <p class="description">
-          画面全体に黒いレイヤーを置き、円が広がる部分だけ透明にしてページを表示します。
+          このHTMLでは、JSの読み込みだけで画面全体の演出が自動的に始まります。円が1個通過するたびに20%ずつ透明になります。
         </p>
-        <div class="action-row">
-          <button id="replayButton" class="replay-button" type="button">
-            <span>もう一度再生</span>
-            <span class="replay-icon" aria-hidden="true">↗</span>
-          </button>
-          <span class="small-note">black overlay / no touch blocking</span>
-        </div>
+        <p class="action-note">black overlay / no touch blocking / script only</p>
       </div>
       <div class="visual" aria-hidden="true"></div>
     </section>
@@ -168,28 +130,7 @@
     <footer class="footer section">RandomCircleReveal Screen v1.5.0</footer>
   </main>
 
+  <!-- このscriptタグだけで、黒画面の生成・再生・終了後の削除まで行います。 -->
   <script src="https://uni928.github.io/Uni928PublicHTMLs2/Plugin/HtmlPanelEffect/Circle/random-circle-reveal2.js"></script>
-  <script>
-    const screenTrigger = document.getElementById('screenTrigger');
-    const replayButton = document.getElementById('replayButton');
-
-    async function playScreenReveal() {
-      if (!screenTrigger || !window.RandomCircleReveal || replayButton.disabled) {
-        return;
-      }
-
-      replayButton.disabled = true;
-      await RandomCircleReveal.play(screenTrigger);
-      replayButton.disabled = false;
-    }
-
-    window.addEventListener('load', () => {
-      playScreenReveal();
-    }, { once: true });
-
-    replayButton.addEventListener('click', () => {
-      playScreenReveal();
-    });
-  </script>
 </body>
 </html>
