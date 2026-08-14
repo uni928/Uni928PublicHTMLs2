@@ -400,6 +400,7 @@
       context: null,
       circles: [],
       frameId: 0,
+      elapsed: 0,
       loadHandler: null,
       resizeObserver: null,
       resizeHandler: null,
@@ -445,12 +446,14 @@
 
     createCircles(state);
     resizeCanvas(state);
-    draw(state, 0);
+    state.elapsed = 0;
+    draw(state, state.elapsed);
 
     if (state.screen) {
       state.resizeHandler = function () {
         if (state.running) {
           resizeCanvas(state);
+          draw(state, state.elapsed);
         }
       };
       global.addEventListener('resize', state.resizeHandler, { passive: true });
@@ -458,6 +461,7 @@
       state.resizeObserver = new ResizeObserver(function () {
         if (state.running) {
           resizeCanvas(state);
+          draw(state, state.elapsed);
         }
       });
       state.resizeObserver.observe(panel);
@@ -476,6 +480,10 @@
         animationStarted = true;
         state.loadHandler = null;
 
+        // load直後にCanvasがリセットされていても、円を動かす前の被せ状態を同期的に戻します。
+        state.elapsed = 0;
+        draw(state, state.elapsed);
+
         var startTime = null;
         var endTime = state.config.duration + (
           Math.max(0, state.config.count - 1) * APPEAR_INTERVAL_MS
@@ -490,6 +498,7 @@
           }
 
           var elapsed = timestamp - startTime;
+          state.elapsed = elapsed;
           draw(state, elapsed);
           if (elapsed < endTime) {
             state.frameId = global.requestAnimationFrame(frame);
