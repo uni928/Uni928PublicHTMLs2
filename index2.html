@@ -144,7 +144,8 @@ HTML / CSS / JavaScriptには一切手を加えず、
 <div class="n">
 安全版では元HTMLを一切変更しません。
 Brotli / deflate-raw / gzip など、ブラウザが利用できる方式を実際に試し、
-最終的に最も小さくなる方式を自動的に採用します。
+最終的に最も小さくなる方式を自動的に採用します。さらに生成前に、
+サンドボックス内で自己解凍処理を実行し、元HTMLと完全一致するか確認します。
 </div>
 
 </main>
@@ -224,6 +225,23 @@ async function run(file){
    best.format
   );
 
+  let restoreCheck='未実施';
+
+  if(mode==='safe'){
+   msg('安全版の復元チェックを実行しています...');
+
+   const restoredText=
+    await verifyPackedHtml(b64,best.format);
+
+   if(restoredText!==src){
+    throw Error(
+     '復元チェックに失敗しました。元HTMLと復元結果が一致しません。'
+    )
+   }
+
+   restoreCheck='成功（元HTMLと完全一致）';
+  }
+
   const outBytes=
    new TextEncoder().encode(out).length;
 
@@ -246,6 +264,9 @@ async function run(file){
    '圧縮前データ: '+fmt(bodyBytes.length)+'\n'+
    '圧縮データ: '+fmt(best.bytes.length)+'\n'+
    '最終HTML: '+fmt(outBytes)+'\n'+
+   (mode==='safe'
+    ?'復元チェック: '+restoreCheck+'\n'
+    :'')+
    '元サイズ比: '+
    reduction.toFixed(2)+'% 削減\n'+
    '出力: '+name
@@ -381,6 +402,63 @@ function tryMinify(html){
  );
 
  return html.trim()
+}
+
+async function verifyPackedHtml(b64,format){
+ return new Promise((resolve,reject)=>{
+  const token=
+   'verify-'+Date.now()+'-'+Math.random().toString(36).slice(2);
+
+  const frame=document.createElement('iframe');
+
+  frame.setAttribute('sandbox','allow-scripts');
+  frame.hidden=true;
+
+  const timeout=setTimeout(()=>{
+   cleanup();
+   reject(Error('復元チェックがタイムアウトしました。'))
+  },10000);
+
+  function cleanup(){
+   clearTimeout(timeout);
+   window.removeEventListener('message',onMessage);
+   frame.remove()
+  }
+
+  function onMessage(e){
+   const data=e.data;
+
+   if(!data||data.token!==token)return;
+
+   cleanup();
+
+   if(data.ok){
+    resolve(data.html)
+   }else{
+    reject(Error('復元チェックエラー: '+data.error))
+   }
+  }
+
+  window.addEventListener('message',onMessage);
+
+  frame.srcdoc=makeVerifyHtml(b64,format,token);
+  document.body.appendChild(frame)
+ })
+}
+
+function makeVerifyHtml(b64,format,token){
+ const q=s=>JSON.stringify(s);
+
+ return '<!doctype html><meta charset=utf-8>'+ 
+ '<script>'+ 
+ '(async()=>{try{'+ 
+ 'let b='+q(b64)+',f='+q(format)+','+ 
+ 'x=Uint8Array.from(atob(b),c=>c.charCodeAt(0)),'+ 
+ 's=new Blob([x]).stream().pipeThrough(new DecompressionStream(f)),'+ 
+ 'h=new TextDecoder().decode(await new Response(s).arrayBuffer());'+ 
+ 'parent.postMessage({token:'+q(token)+',ok:true,html:h},"*")'+ 
+ '}catch(e){parent.postMessage({token:'+q(token)+',ok:false,error:e.message},"*")}})()'+ 
+ '<\/script>'
 }
 
 function bytesToBase64(bytes){
