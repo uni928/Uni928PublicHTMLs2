@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>検索</title>
+<style>
+@layer reset, base, components, states, responsive;
+
+@layer reset {
+  /* 基本リセット */
+  *, *::before, *::after { box-sizing: border-box; }
+  button, input { font: inherit; }
+}
+
+@layer base {
+  /* 全体の色・余白・背景 */
+  :root {
+    color-scheme: light;
+    --bg: #f4f2fb;
+    --bg-soft: #fbfaff;
+    --fg: #211b2f;
+    --muted: #756f82;
+    --accent: #7250d5;
+    --accent-strong: #5d3fc0;
+    --accent-soft: #eee9ff;
+    --card: rgba(255, 255, 255, .86);
+    --tile: rgba(255, 255, 255, .76);
+    --tile-hover: #ffffff;
+    --ring: rgba(73, 55, 112, .12);
+    --danger: #df525d;
+    --shadow-sm: 0 8px 24px rgba(53, 38, 86, .08);
+    --shadow-md: 0 16px 50px rgba(53, 38, 86, .12);
+  }
+
+  html, body { min-height: 100%; }
+
+  body {
+    margin: 0;
+    font-family: Inter, "Noto Sans JP", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    color: var(--fg);
+    background:
+      radial-gradient(circle at 20% 15%, rgba(123, 92, 205, .14), transparent 30%),
+      radial-gradient(circle at 82% 75%, rgba(172, 142, 255, .12), transparent 28%),
+      linear-gradient(145deg, var(--bg-soft), var(--bg));
+  }
+
+  button { color: inherit; }
+}
+
+@layer components {
+  /* メインレイアウト */
+  .page {
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    padding: 48px 20px;
+  }
+
+  .stack {
+    width: min(840px, 94vw);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 34px;
+  }
+
+  /* 検索バー */
+  .search {
+    width: min(760px, 94vw);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px 10px 18px;
+    border: 1px solid rgba(255, 255, 255, .86);
+    border-radius: 24px;
+    background: rgba(255, 255, 255, .82);
+    box-shadow: var(--shadow-md), inset 0 0 0 1px rgba(74, 52, 115, .04);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+  }
+
+  .search:focus-within {
+    transform: translateY(-1px);
+    border-color: rgba(114, 80, 213, .28);
+    box-shadow: 0 20px 60px rgba(53, 38, 86, .16), 0 0 0 4px rgba(114, 80, 213, .07);
+  }
+
+  .search svg { flex: 0 0 auto; opacity: .72; }
+
+  .search input {
+    min-width: 0;
+    flex: 1;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--fg);
+    font-size: 18px;
+    padding: 10px 2px;
+  }
+
+  .search input::placeholder { color: #aaa4b6; }
+
+  .search button {
+    border: 0;
+    padding: 10px 18px;
+    border-radius: 15px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+    color: #fff;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 8px 18px rgba(93, 63, 192, .2);
+    transition: transform .16s ease, box-shadow .16s ease, filter .16s ease;
+  }
+
+  .search button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 24px rgba(93, 63, 192, .28);
+    filter: saturate(1.08);
+  }
+
+  .search button:active { transform: translateY(0) scale(.98); }
+
+  /* ショートカット */
+  .grid {
+    width: min(760px, 94vw);
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(108px, 1fr));
+    gap: 18px 14px;
+  }
+
+  .tile {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 6px 10px;
+    border-radius: 22px;
+    user-select: none;
+    transition: transform .18s ease, background .18s ease;
+  }
+
+  .tile:hover {
+    transform: translateY(-3px);
+    background: rgba(255, 255, 255, .34);
+  }
+
+  .tile .dot {
+    width: 72px;
+    height: 72px;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, .92);
+    border-radius: 22px;
+    background: var(--tile);
+    box-shadow: var(--shadow-sm), inset 0 0 0 1px var(--ring);
+    cursor: pointer;
+    font-size: 30px;
+    font-weight: 700;
+    letter-spacing: .03em;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+  }
+
+  .tile .dot:hover {
+    transform: scale(1.045);
+    background: var(--tile-hover);
+    box-shadow: 0 14px 30px rgba(53, 38, 86, .13), inset 0 0 0 1px rgba(114, 80, 213, .08);
+  }
+
+  .tile .dot img {
+    width: 44%;
+    height: 44%;
+    object-fit: contain;
+  }
+
+  .tile .cap {
+    max-width: 100px;
+    overflow: hidden;
+    color: var(--fg);
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.4;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .add .dot {
+    border: 1px dashed rgba(114, 80, 213, .36);
+    background: rgba(238, 233, 255, .72);
+    color: var(--accent-strong);
+    box-shadow: none;
+    font-size: 31px;
+    font-weight: 500;
+  }
+
+  /* 編集ボタン */
+  .btnmini {
+    position: absolute;
+    top: 2px;
+    right: 8px;
+    display: flex;
+    gap: 6px;
+    z-index: 2;
+  }
+
+  .btnmini button {
+    width: 28px;
+    height: 28px;
+    display: grid;
+    place-items: center;
+    border: 2px solid rgba(255, 255, 255, .9);
+    border-radius: 50%;
+    color: #fff;
+    cursor: pointer;
+    box-shadow: 0 5px 12px rgba(31, 25, 48, .18);
+    transition: transform .15s ease, filter .15s ease;
+  }
+
+  .btnmini button:hover { transform: scale(1.08); filter: brightness(1.04); }
+  .btnmini .rename { background: var(--accent); }
+  .btnmini .remove { background: var(--danger); }
+
+  /* モーダル */
+  .modalWrap {
+    position: fixed;
+    inset: 0;
+    display: none;
+    place-items: center;
+    padding: 20px;
+    background: rgba(30, 24, 43, .35);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 1000;
+  }
+
+  .modal {
+    width: min(500px, 92vw);
+    padding: 24px;
+    border: 1px solid rgba(255, 255, 255, .88);
+    border-radius: 24px;
+    background: rgba(255, 255, 255, .94);
+    box-shadow: 0 28px 80px rgba(28, 20, 49, .24);
+  }
+
+  .modal h3 {
+    margin: 0 0 18px;
+    font-size: 19px;
+    letter-spacing: .01em;
+  }
+
+  .modal .row {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    margin-bottom: 14px;
+  }
+
+  .modal label {
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .modal input {
+    width: 100%;
+    padding: 12px 13px;
+    border: 1px solid rgba(65, 52, 91, .14);
+    border-radius: 13px;
+    outline: 0;
+    background: #fbfaff;
+    color: var(--fg);
+    font-size: 14px;
+    transition: border-color .16s ease, box-shadow .16s ease, background .16s ease;
+  }
+
+  .modal input:focus {
+    border-color: rgba(114, 80, 213, .4);
+    background: #fff;
+    box-shadow: 0 0 0 4px rgba(114, 80, 213, .08);
+  }
+
+  .modal .actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 9px;
+    margin-top: 20px;
+  }
+
+  .modal .actions button {
+    border: 0;
+    padding: 10px 16px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-weight: 700;
+    transition: transform .15s ease, background .15s ease;
+  }
+
+  #cancelBtn { background: #f0eef4; color: #5f596b; }
+  #okBtn { background: var(--accent); color: #fff; }
+  .modal .actions button:hover { transform: translateY(-1px); }
+
+  /* ドラッグ中 */
+  .placeholder {
+    width: 72px;
+    height: 72px;
+    border: 2px dashed rgba(114, 80, 213, .35);
+    border-radius: 22px;
+    background: rgba(114, 80, 213, .05);
+  }
+
+  /* トースト */
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: 24px;
+    z-index: 2000;
+    transform: translate(-50%, 10px);
+    padding: 10px 15px;
+    border: 1px solid rgba(255, 255, 255, .14);
+    border-radius: 999px;
+    background: rgba(31, 25, 48, .9);
+    color: #fff;
+    box-shadow: 0 10px 28px rgba(15, 12, 22, .22);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .2s ease, transform .2s ease;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+}
+
+@layer states {
+  /* 状態変化 */
+  .edit .tile .dot { cursor: grab; }
+  .edit .tile,
+  .edit .tile .dot { touch-action: none; }
+  .edit .tile:not(.add) { background: rgba(255, 255, 255, .28); }
+
+  .ghost {
+    opacity: .7;
+    filter: drop-shadow(0 16px 24px rgba(36, 26, 64, .18));
+  }
+
+  .toast.show {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+@layer responsive {
+  /* スマホ向け調整 */
+  @media (max-width: 600px) {
+    .page { place-items: start center; padding: 34px 14px; }
+    .stack { gap: 26px; }
+    .search { width: 100%; border-radius: 20px; padding-left: 14px; }
+    .search input { font-size: 16px; }
+    .search button { padding-inline: 14px; }
+    .grid { width: 100%; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px 6px; }
+    .tile { padding-inline: 2px; }
+    .tile .dot { width: 64px; height: 64px; border-radius: 20px; }
+    .tile .cap { max-width: 76px; font-size: 12px; }
+    .btnmini { right: 0; }
+  }
+
+  @media (max-width: 390px) {
+    .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { scroll-behavior: auto; }
+    .search,
+    .search button,
+    .tile,
+    .tile .dot,
+    .btnmini button,
+    .modal input,
+    .modal .actions button,
+    .toast { transition: none; }
+  }
+}
+</style>
+</head>
+<body>
+  <div class="page">
+    <div class="stack">
+      <form class="search" id="searchForm" action="https://www.google.com/search" method="GET">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M21 21l-4.3-4.3" stroke="#9aa0a6" stroke-width="2" stroke-linecap="round"/><circle cx="11" cy="11" r="7" stroke="#9aa0a6" stroke-width="2"/></svg>
+        <input id="q" name="q" type="text" placeholder="検索またはURLを入力" autocomplete="off" />
+        <button type="submit">検索</button>
+      </form>      <div class="grid" id="grid" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <div class="modalWrap" id="modalWrap" role="dialog" aria-modal="true">
+    <div class="modal">
+      <h3 id="modalTitle">ショートカットを追加</h3>
+      <div class="row"><label>名前</label><input id="nameInput" type="text" placeholder="例：YouTube" /></div>
+      <div class="row"><label>URL</label><input id="urlInput" type="text" placeholder="https://example.com" /></div>
+      <div class="actions">
+        <button id="cancelBtn" type="button">キャンセル</button>
+        <button id="okBtn" type="button">完了</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script>
+const DB_NAME='shortcut-db';const STORE='shortcuts';let dbPromise;
+function openDB(){if(!dbPromise){dbPromise=new Promise((res,rej)=>{const r=indexedDB.open(DB_NAME,1);r.onupgradeneeded=e=>{const db=e.target.result;const st=db.createObjectStore(STORE,{keyPath:'id',autoIncrement:true});st.createIndex('by_order','order');st.createIndex('by_url','url',{unique:true});};r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});}return dbPromise;}
+async function txStore(mode='readonly'){const db=await openDB();const tx=db.transaction(STORE,mode);return{tx,st:tx.objectStore(STORE)};}
+async function getAll(){const{st}=await txStore();return new Promise(r=>{const i=st.index('by_order');const out=[];i.openCursor().onsuccess=e=>{const c=e.target.result;if(c){out.push(c.value);c.continue();}else r(out);};});}
+function normUrl(v){if(!v)return'';v=v.trim();if(!/^https?:\/\//i.test(v))v='https://'+v;try{new URL(v);return v;}catch{return''}}
+function hostTitle(url){try{return new URL(url).hostname.replace(/^www\./,'');}catch{return url}}
+function faviconUrl(url){try{const u=new URL(url);return `https://www.google.com/s2/favicons?domain=${u.hostname}`;}catch{return''}}
+async function addShortcut(url,title){url=normUrl(url);if(!url)throw new Error('invalid');const all=await getAll();if(all.some(x=>x.url===url))return null;const order=(all.reduce((m,x)=>Math.max(m,x.order||0),0)||0)+1;let t=title&&title.trim()?title.trim():hostTitle(url);const{st,tx}=await txStore('readwrite');st.add({url,title:t,order});return new Promise(r=>tx.oncomplete=()=>r(true));}
+async function renameShortcut(id,title){const{st,tx}=await txStore('readwrite');const cur=window._cache.get(Number(id));if(!cur)return;st.put({...cur,title});return new Promise(r=>tx.oncomplete=()=>r(true));}
+async function removeShortcut(id){const{st,tx}=await txStore('readwrite');st.delete(Number(id));return new Promise(r=>tx.oncomplete=()=>r(true));}
+async function saveOrder(ids){
+  const{st,tx}=await txStore('readwrite');
+  ids.forEach((id,i)=>{
+    const nid = Number(id);
+    const cur = window._cache?.get(nid) || { id: nid };
+    st.put({ ...cur, id: nid, order: i+1 });
+  });
+  return new Promise(r=>tx.oncomplete=()=>r(true));
+}
+
+const grid=document.getElementById('grid');
+const modalWrap=document.getElementById('modalWrap');
+const nameInput=document.getElementById('nameInput');
+const urlInput=document.getElementById('urlInput');
+const okBtn=document.getElementById('okBtn');
+const cancelBtn=document.getElementById('cancelBtn');
+const toastEl=document.getElementById('toast');
+
+// グローバル変数をブロックスコープ外で宣言（どの関数からも参照可能に）
+window.editMode = false;
+window.editingId = null;
+window.editTimer = null;
+if (!window._cache) window._cache = new Map();
+
+// 並べ替えドラッグ用変数
+let draggingGhost=null, draggingId=null, dragPlaceholder=null, dragStartY=0, draggingNode=null;
+// グローバルキャッシュを安全に初期化
+if(!window._cache) window._cache = new Map();
+function toast(m){toastEl.textContent=m;toastEl.classList.add('show');setTimeout(()=>toastEl.classList.remove('show'),1200);} 
+function enterEditMode(){ if(editMode) return; editMode=true; render(); toast('編集モード'); resetEditTimer(); }
+function exitEditMode(){ if(!editMode) return; editMode=false; clearTimeout(editTimer); render(); toast('編集モード終了'); }
+function resetEditTimer(){ clearTimeout(editTimer); editTimer=setTimeout(()=> exitEditMode(), 8000); }
+function openModal(t,u){document.getElementById('modalTitle').textContent=editingId?'ショートカットを編集':'ショートカットを追加';modalWrap.style.display='grid';nameInput.value=t||'';urlInput.value=u||'';setTimeout(()=>nameInput.focus(),50);}
+function closeModal(){modalWrap.style.display='none';editingId=null;}
+
+// 並べ替え：移動/終了ハンドラ
+function onDragMove(e){
+  if(!draggingGhost) return;
+  e.preventDefault();
+  const dy = e.clientY - dragStartY;
+  draggingGhost.style.transform = `translateY(${dy}px)`;
+  const el = document.elementFromPoint(e.clientX, e.clientY);
+  const tile = el && el.closest('.tile');
+  // ゴースト自身やプレースホルダは無視
+  if(tile === draggingGhost || tile === dragPlaceholder) return;
+  if(tile && tile.parentElement===grid && tile!==dragPlaceholder){
+    const rect = tile.getBoundingClientRect();
+    const before = (e.clientY - rect.top) < rect.height/2;
+    grid.insertBefore(dragPlaceholder, before ? tile : tile.nextSibling);
+  }
+}
+async function onDragUp(){
+  if(draggingGhost){ draggingGhost.remove(); draggingGhost=null; }
+  // 取り外していた元ノードをプレースホルダ位置へ戻す
+  if(draggingNode && dragPlaceholder){
+    grid.insertBefore(draggingNode, dragPlaceholder);
+    draggingNode.style.opacity = '';
+  }
+  if(dragPlaceholder){ dragPlaceholder.remove(); dragPlaceholder=null; }
+  const ids = [...grid.querySelectorAll('.tile')].slice(1).map(n=>n.dataset.id); // 先頭の「＋」は除外
+  await saveOrder(ids);
+  toast('順序を保存しました');
+  draggingId=null; draggingNode=null;
+  window.removeEventListener('pointermove', onDragMove);
+}
+
+async function render(){const items=await getAll();if(!window._cache) window._cache = new Map();
+  window._cache.clear();
+  items.forEach(x=>window._cache.set(x.id,x));document.body.classList.toggle('edit',editMode);grid.innerHTML='';const add=document.createElement('div');add.className='tile add';add.innerHTML='<div class="dot">+</div><div class="cap">ショートカット</div>';add.addEventListener('click',()=>{editingId=null;openModal('','');});grid.appendChild(add);
+// ＋は長押し対象外（no-op）
+add.addEventListener('pointerdown', ()=>{});
+items.forEach(it=>{const t=document.createElement('div');t.className='tile';t.dataset.id=it.id;const favi=faviconUrl(it.url);const icon=favi?`<img src="${favi}" alt="icon" onerror="this.style.display='none'">`:(it.title||hostTitle(it.url)).charAt(0).toUpperCase();t.innerHTML=`<div class="dot" title="${it.title}">${icon}</div><div class="cap">${it.title}</div>`;
+const dot=t.querySelector('.dot');
+// 通常クリックで開く
+dot.addEventListener('click',()=>{if(editMode)return;location.href=it.url;});
+// 長押しで編集モード（＋以外）
+let lpTimer=null;
+t.addEventListener('pointerdown',()=>{ if(editMode) return; lpTimer=setTimeout(()=> enterEditMode(), 500); });
+t.addEventListener('pointerup',()=>{ clearTimeout(lpTimer); });
+t.addEventListener('pointerleave',()=>{ clearTimeout(lpTimer); });
+t.addEventListener('contextmenu',(e)=>{ e.preventDefault(); enterEditMode(); });
+if(editMode){
+  const btn=document.createElement('div');btn.className='btnmini';
+  const rn=document.createElement('button');rn.className='rename';rn.textContent='✎';rn.onclick=()=>{editingId=it.id;openModal(it.title,it.url);};
+  const rm=document.createElement('button');rm.className='remove';rm.textContent='×';rm.onclick=async()=>{await removeShortcut(it.id);await render();};
+  btn.append(rn,rm);t.appendChild(btn);
+
+  // ドラッグで入れ替え（編集ボタン上は無効）
+  t.addEventListener('pointerdown',(e)=>{
+    if(e.target.closest('.btnmini')) return;
+    draggingId = t.dataset.id;
+    dragStartY = e.clientY;
+    // プレースホルダ（元サイズに合わせる）
+    dragPlaceholder = document.createElement('div');
+    dragPlaceholder.className = 'placeholder';
+    dragPlaceholder.style.width  = `${t.offsetWidth}px`;
+    dragPlaceholder.style.height = `${t.offsetHeight}px`;
+    // 元の位置にプレースホルダを挿入し、元ノードは一時的にDOMから外す
+    grid.insertBefore(dragPlaceholder, t);
+    draggingNode = t; // 後で戻すため保持
+    grid.removeChild(t);
+    // 影要素（クローン）を画面上に表示して追従
+    const r = dragPlaceholder.getBoundingClientRect();
+    draggingGhost = draggingNode.cloneNode(true);
+    draggingGhost.classList.add('ghost');
+    Object.assign(draggingGhost.style,{
+      position:'fixed', left:r.left+'px', top:r.top+'px',
+      width:r.width+'px', zIndex:999, pointerEvents:'none'
+    });
+    document.body.appendChild(draggingGhost);
+    window.addEventListener('pointermove', onDragMove, {passive:false});
+    window.addEventListener('pointerup', onDragUp, {once:true});
+  });
+}
+grid.appendChild(t);});}
+
+
+okBtn.onclick=async()=>{const name=nameInput.value.trim();const url=urlInput.value.trim();if(!url){urlInput.focus();return;}if(editingId){await renameShortcut(editingId,name||hostTitle(url));toast('タイトルを更新しました');}else{try{await addShortcut(url,name);toast('追加しました');}catch{toast('追加に失敗しました');}}closeModal();await render();};
+cancelBtn.onclick=()=>closeModal();modalWrap.onclick=e=>{if(e.target===modalWrap)closeModal();};
+// 背景クリック/ESCで編集モードを終了 & 操作で延長
+document.addEventListener('click',(e)=>{ if(!editMode) return; if(!e.target.closest('.tile') && !e.target.closest('.modalWrap')) exitEditMode(); });
+document.addEventListener('keydown',(e)=>{ if(e.key==='Escape') exitEditMode(); });
+document.addEventListener('pointerdown',()=>{ if(editMode) resetEditTimer(); });
+(async()=>{await openDB();await render();})();
+
+// ========================= 検索欄: URL優先でアクセス, 失敗時は検索 =========================
+const searchForm = document.getElementById('searchForm');
+const qInput = document.getElementById('q');
+function isLikelyUrl(v){
+  if(!v) return false;
+  v = v.trim();
+  if(/^https?:\/\//i.test(v)) return true;
+  // ドメイン or IP っぽい（example.com / sub.example.co.jp / 192.168.1.1 / localhost）
+  return /^([a-z0-9-]+\.)+[a-z]{2,}(?:[\/?#].*)?$/i.test(v) || /^(\d{1,3}\.){3}\d{1,3}(?:[:\/?#].*)?$/.test(v) || /^localhost(?:[:\/?#].*)?$/i.test(v);
+}
+searchForm.addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const raw = qInput.value.trim();
+  if(!raw) return;
+  // URL っぽければアクセスに挑戦、ダメなら検索
+  if(isLikelyUrl(raw)){
+    const target = normUrl(raw);
+    try{
+      // no-cors で到達性だけ確認（3秒タイムアウト）
+     const ctrl = new AbortController();
+      const timer = setTimeout(()=> ctrl.abort(), 3000);
+      await fetch(target, { mode:'no-cors', method:'GET', signal: ctrl.signal });
+     clearTimeout(timer);
+      location.href = target;
+    }catch{
+      location.href = `https://www.google.com/search?q=${encodeURIComponent(raw)}`;
+    }
+  }else{
+    location.href = `https://www.google.com/search?q=${encodeURIComponent(raw)}`;
+  }
+});
+
+window.addEventListener('load', () => qInput.focus());
+  
+</script>
+</body>
+</html>
+
+
+
