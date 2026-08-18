@@ -351,7 +351,7 @@
     transition: transform .15s ease, background .15s ease;
   }
 
-  #cancelBtn, #operationCloseBtn { background: #edf2eb; color: #56635a; }
+  #cancelBtn, #operationCloseBtn, #searchCloseBtn { background: #edf2eb; color: #56635a; }
   #okBtn { background: var(--accent); color: #fff; }
   .modal .actions button:hover { transform: translateY(-1px); }
 
@@ -482,6 +482,121 @@
 
   .folder .cap { color: #3f4e25; }
 
+  /* 操作内検索 */
+  .searchControls {
+    display: grid;
+    grid-template-columns: 150px minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .searchControls select,
+  .searchControls input {
+    width: 100%;
+    min-width: 0;
+    padding: 11px 12px;
+    border: 1px solid rgba(54, 91, 60, .18);
+    border-radius: 13px;
+    outline: 0;
+    background: #fbfdf9;
+    color: var(--fg);
+  }
+
+  .searchControls select:focus,
+  .searchControls input:focus {
+    border-color: rgba(62, 125, 77, .52);
+    background: #fff;
+    box-shadow: 0 0 0 4px rgba(62, 125, 77, .10);
+  }
+
+  .searchControls button {
+    border: 0;
+    padding: 11px 16px;
+    border-radius: 12px;
+    background: var(--accent);
+    color: #fff;
+    font-weight: 800;
+    cursor: pointer;
+  }
+
+  .searchHint {
+    margin: 10px 0 12px;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.6;
+  }
+
+  .searchResults {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: min(52vh, 440px);
+    overflow: auto;
+    padding-right: 2px;
+  }
+
+  .searchResult {
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr);
+    gap: 11px;
+    align-items: center;
+    width: 100%;
+    padding: 10px 11px;
+    border: 1px solid rgba(62, 125, 77, .13);
+    border-radius: 14px;
+    background: #fbfdf9;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: transform .15s ease, background .15s ease, border-color .15s ease;
+  }
+
+  .searchResult:hover {
+    transform: translateY(-1px);
+    border-color: rgba(62, 125, 77, .30);
+    background: #fff;
+  }
+
+  .searchResultIcon {
+    width: 42px;
+    height: 42px;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    border: 1px solid rgba(62, 125, 77, .12);
+    border-radius: 12px;
+    background: #f1f6ed;
+    font-size: 21px;
+  }
+
+  .searchResultIcon img { width: 23px; height: 23px; object-fit: contain; }
+
+  .searchResultBody { min-width: 0; }
+  .searchResultTitle {
+    overflow: hidden;
+    color: #294431;
+    font-size: 14px;
+    font-weight: 800;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .searchResultMeta {
+    overflow: hidden;
+    margin-top: 3px;
+    color: var(--muted);
+    font-size: 11px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .searchEmpty {
+    padding: 24px 12px;
+    color: var(--muted);
+    text-align: center;
+    font-size: 13px;
+  }
+
 }
 
 @layer states {
@@ -517,6 +632,8 @@
     .btnmini { right: 0; }
     .operationMenu { grid-template-columns: 1fr; }
     .operationButton { min-height: 62px; flex-direction: row; justify-content: flex-start; padding: 0 18px; }
+    .searchControls { grid-template-columns: 1fr; }
+    .searchControls button { width: 100%; }
     body::before { bottom: 18vh; }
     body::after { height: 24vh; }
   }
@@ -577,9 +694,32 @@
         <button class="operationButton" id="addFolderAction" type="button"><span>📁</span><span>フォルダを追加</span></button>
         <button class="operationButton" id="importAction" type="button"><span>⇧</span><span>インポート</span></button>
         <button class="operationButton" id="exportAction" type="button"><span>⇩</span><span>エクスポート</span></button>
+        <button class="operationButton" id="searchAction" type="button"><span>⌕</span><span>検索</span></button>
       </div>
       <div class="actions">
         <button id="operationCloseBtn" type="button">閉じる</button>
+      </div>
+    </div>
+  </div>
+
+
+
+  <div class="modalWrap" id="shortcutSearchWrap" role="dialog" aria-modal="true">
+    <div class="modal">
+      <h3>登録内容をあいまい検索</h3>
+      <div class="searchControls">
+        <select id="shortcutSearchType" aria-label="検索方法">
+          <option value="url">URL検索</option>
+          <option value="site">サイト名検索</option>
+          <option value="name">名前検索</option>
+        </select>
+        <input id="shortcutSearchInput" type="search" placeholder="検索語を入力" autocomplete="off" />
+        <button id="shortcutSearchButton" type="button">検索</button>
+      </div>
+      <div class="searchHint" id="shortcutSearchHint">現在のフォルダを最優先に、その子フォルダ・孫フォルダ以下をあいまい検索します。親フォルダは検索しません。</div>
+      <div class="searchResults" id="shortcutSearchResults" aria-live="polite"></div>
+      <div class="actions">
+        <button id="searchCloseBtn" type="button">閉じる</button>
       </div>
     </div>
   </div>
@@ -816,6 +956,14 @@ const addFolderAction = document.getElementById('addFolderAction');
 const importAction = document.getElementById('importAction');
 const exportAction = document.getElementById('exportAction');
 const importFile = document.getElementById('importFile');
+const searchAction = document.getElementById('searchAction');
+const shortcutSearchWrap = document.getElementById('shortcutSearchWrap');
+const shortcutSearchType = document.getElementById('shortcutSearchType');
+const shortcutSearchInput = document.getElementById('shortcutSearchInput');
+const shortcutSearchButton = document.getElementById('shortcutSearchButton');
+const shortcutSearchResults = document.getElementById('shortcutSearchResults');
+const shortcutSearchHint = document.getElementById('shortcutSearchHint');
+const searchCloseBtn = document.getElementById('searchCloseBtn');
 
 window.editMode = false;
 window.editingId = null;
@@ -935,6 +1083,176 @@ function openOperationMenu() {
 
 function closeOperationMenu() {
   operationWrap.style.display = 'none';
+}
+
+
+
+function siteNameFromUrl(url) {
+  try {
+    return new URL(url).hostname.replace(/^www\./i, '');
+  } catch {
+    return '';
+  }
+}
+
+function normalizeSearchText(value) {
+  return String(value || '')
+    .normalize('NFKC')
+    .toLocaleLowerCase('ja')
+    .replace(/\s+/g, '')
+    .replace(/[._\-/:?#&=]+/g, '');
+}
+
+function levenshteinDistance(a, b) {
+  if (a === b) return 0;
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+  const prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+  const curr = new Array(b.length + 1);
+  for (let i = 1; i <= a.length; i++) {
+    curr[0] = i;
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      curr[j] = Math.min(curr[j - 1] + 1, prev[j] + 1, prev[j - 1] + cost);
+    }
+    for (let j = 0; j <= b.length; j++) prev[j] = curr[j];
+  }
+  return prev[b.length];
+}
+
+function fuzzyScore(value, query) {
+  const text = normalizeSearchText(value);
+  const q = normalizeSearchText(query);
+  if (!text || !q) return 0;
+  if (text === q) return 1;
+  if (text.includes(q)) return 0.96 - Math.min(0.2, (text.length - q.length) * 0.003);
+
+  let qi = 0;
+  for (const ch of text) {
+    if (ch === q[qi]) qi++;
+    if (qi === q.length) break;
+  }
+  const subsequenceScore = qi === q.length ? 0.72 * (q.length / text.length) + 0.18 : 0;
+
+  const maxLen = Math.max(text.length, q.length);
+  const distance = levenshteinDistance(text, q);
+  const editScore = maxLen ? 1 - distance / maxLen : 0;
+  const score = Math.max(subsequenceScore, editScore);
+  const threshold = q.length <= 2 ? 0.8 : q.length <= 4 ? 0.58 : 0.48;
+  return score >= threshold ? score : 0;
+}
+
+function collectSearchScope(all, startFolderKey) {
+  const depthByFolder = new Map([[startFolderKey, 0]]);
+  const queue = [startFolderKey];
+
+  while (queue.length) {
+    const parentKey = queue.shift();
+    const nextDepth = (depthByFolder.get(parentKey) || 0) + 1;
+    for (const item of all) {
+      if (item.type !== 'folder') continue;
+      if ((item.parentFolder || ROOT_FOLDER) !== parentKey) continue;
+      if (depthByFolder.has(item.folderKey)) continue;
+      depthByFolder.set(item.folderKey, nextDepth);
+      queue.push(item.folderKey);
+    }
+  }
+
+  return depthByFolder;
+}
+
+function folderPathMap(all, startFolderKey) {
+  const paths = new Map([[startFolderKey, '現在のフォルダ']]);
+  const queue = [startFolderKey];
+  while (queue.length) {
+    const parentKey = queue.shift();
+    const base = paths.get(parentKey) || '現在のフォルダ';
+    const children = all.filter(item => item.type === 'folder' && (item.parentFolder || ROOT_FOLDER) === parentKey);
+    for (const child of children) {
+      if (paths.has(child.folderKey)) continue;
+      paths.set(child.folderKey, `${base} / ${child.title}`);
+      queue.push(child.folderKey);
+    }
+  }
+  return paths;
+}
+
+async function searchRegisteredEntries() {
+  const query = shortcutSearchInput.value.trim();
+  const type = shortcutSearchType.value;
+  shortcutSearchResults.innerHTML = '';
+  if (!query) {
+    shortcutSearchResults.innerHTML = '<div class="searchEmpty">検索語を入力してください。</div>';
+    shortcutSearchInput.focus();
+    return;
+  }
+
+  const all = await getAll();
+  const startFolderKey = currentFolderKey();
+  const depthByFolder = collectSearchScope(all, startFolderKey);
+  const paths = folderPathMap(all, startFolderKey);
+
+  const results = all.map(item => {
+    const parentKey = item.parentFolder || ROOT_FOLDER;
+    if (!depthByFolder.has(parentKey)) return null;
+
+    let target = '';
+    if (type === 'name') {
+      target = item.title || '';
+    } else {
+      if (item.type !== 'shortcut') return null;
+      if (type === 'url') target = item.url || '';
+      else if (type === 'site') target = siteNameFromUrl(item.url);
+      else return null;
+    }
+
+    const score = fuzzyScore(target, query);
+    return score > 0 ? { item, score } : null;
+  }).filter(Boolean).sort((a, b) => {
+    const da = depthByFolder.get(a.item.parentFolder || ROOT_FOLDER) ?? Number.MAX_SAFE_INTEGER;
+    const db = depthByFolder.get(b.item.parentFolder || ROOT_FOLDER) ?? Number.MAX_SAFE_INTEGER;
+    return da - db || b.score - a.score || (a.item.order || 0) - (b.item.order || 0) || a.item.id - b.item.id;
+  });
+
+  if (!results.length) {
+    shortcutSearchResults.innerHTML = '<div class="searchEmpty">近い項目は見つかりませんでした。</div>';
+    return;
+  }
+
+  const fragment = document.createDocumentFragment();
+  for (const { item, score } of results) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'searchResult';
+    const parentKey = item.parentFolder || ROOT_FOLDER;
+    const depth = depthByFolder.get(parentKey) || 0;
+    const locationLabel = depth === 0 ? '現在のフォルダ' : (paths.get(parentKey) || `配下フォルダ 深さ${depth}`);
+    const meta = item.type === 'folder'
+      ? `${locationLabel} ・ フォルダ`
+      : `${locationLabel} ・ ${siteNameFromUrl(item.url)}`;
+    const icon = item.type === 'folder'
+      ? '📁'
+      : `<img src="${escapeHtml(faviconUrl(item.url))}" alt="" onerror="this.style.display='none'">`;
+    button.innerHTML = `<span class="searchResultIcon">${icon}</span><span class="searchResultBody"><span class="searchResultTitle">${escapeHtml(item.title)}</span><span class="searchResultMeta">${escapeHtml(meta)}</span></span>`;
+    button.title = `一致度 ${Math.round(score * 100)}%`;
+    button.addEventListener('click', () => {
+      if (item.type === 'folder') location.href = folderUrl(item.folderKey);
+      else location.href = item.url;
+    });
+    fragment.appendChild(button);
+  }
+  shortcutSearchResults.appendChild(fragment);
+}
+
+function openShortcutSearch() {
+  closeOperationMenu();
+  shortcutSearchResults.innerHTML = '<div class="searchEmpty">検索方法を選び、検索語を入力してください。</div>';
+  shortcutSearchWrap.style.display = 'grid';
+  setTimeout(() => shortcutSearchInput.focus(), 50);
+}
+
+function closeShortcutSearch() {
+  shortcutSearchWrap.style.display = 'none';
 }
 
 function createOperationTile() {
@@ -1127,6 +1445,15 @@ async function importData(file) {
 
 addShortcutAction.onclick = () => { closeOperationMenu(); openModal('shortcut'); };
 addFolderAction.onclick = () => { closeOperationMenu(); openModal('folder'); };
+searchAction.onclick = openShortcutSearch;
+shortcutSearchButton.onclick = searchRegisteredEntries;
+shortcutSearchInput.addEventListener('keydown', e => { if (e.key === 'Enter') searchRegisteredEntries(); });
+shortcutSearchType.addEventListener('change', () => {
+  const labels = { url: 'URLをあいまい検索', site: 'サイト名をあいまい検索（大文字小文字は同一）', name: '名前をあいまい検索' };
+  shortcutSearchInput.placeholder = labels[shortcutSearchType.value] || '検索語を入力';
+});
+searchCloseBtn.onclick = closeShortcutSearch;
+shortcutSearchWrap.onclick = e => { if (e.target === shortcutSearchWrap) closeShortcutSearch(); };
 exportAction.onclick = async () => { closeOperationMenu(); await exportData(); };
 importAction.onclick = () => importFile.click();
 operationCloseBtn.onclick = closeOperationMenu;
@@ -1198,7 +1525,8 @@ document.addEventListener('click', e => {
 });
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
-    if (operationWrap.style.display === 'grid') closeOperationMenu();
+    if (shortcutSearchWrap.style.display === 'grid') closeShortcutSearch();
+    else if (operationWrap.style.display === 'grid') closeOperationMenu();
     else if (modalWrap.style.display === 'grid') closeModal();
     else exitEditMode();
   }
