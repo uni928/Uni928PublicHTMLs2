@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HTML → Android Studio 変換ツール</title>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<style>
+@layer reset, base, components, utilities;
+
+/* reset: ブラウザ差を抑える */
+@layer reset {
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  button, input, select { font: inherit; }
+}
+
+/* base: ページ全体の基本表示 */
+@layer base {
+  :root {
+    color-scheme: light dark;
+    --bg: #f4f6f8;
+    --panel: #ffffff;
+    --text: #18202a;
+    --muted: #667085;
+    --line: #d8dee7;
+    --accent: #2563eb;
+    --accent-hover: #1d4ed8;
+    --ok: #137333;
+    --warn: #9a6700;
+    --danger: #b42318;
+    --soft: #eef4ff;
+    --shadow: 0 12px 30px rgba(15, 23, 42, .08);
+  }
+
+  body {
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    line-height: 1.6;
+  }
+
+  button {
+    border: 0;
+    border-radius: 10px;
+    cursor: pointer;
+  }
+
+  input, select {
+    width: 100%;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--panel);
+    color: var(--text);
+    padding: 10px 12px;
+  }
+
+  code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+}
+
+/* components: 画面を構成するUI */
+@layer components {
+  .app {
+    width: min(100% - 24px, 980px);
+    margin: 0 auto;
+    padding: 28px 0 48px;
+  }
+
+  .hero {
+    margin-bottom: 18px;
+    text-align: center;
+  }
+
+  .hero h1 {
+    margin: 0 0 6px;
+    font-size: clamp(24px, 5vw, 38px);
+  }
+
+  .hero p {
+    margin: 0;
+    color: var(--muted);
+  }
+
+  .panel {
+    margin-top: 16px;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background: var(--panel);
+    box-shadow: var(--shadow);
+    padding: 18px;
+  }
+
+  .panel h2 {
+    margin: 0 0 12px;
+    font-size: 18px;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .field label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .drop-zone {
+    display: grid;
+    place-items: center;
+    min-height: 180px;
+    border: 2px dashed var(--line);
+    border-radius: 14px;
+    padding: 24px;
+    text-align: center;
+    transition: border-color .15s ease, background .15s ease;
+  }
+
+  .drop-zone.is-over {
+    border-color: var(--accent);
+    background: var(--soft);
+  }
+
+  .drop-zone strong {
+    display: block;
+    font-size: 18px;
+  }
+
+  .drop-zone p {
+    margin: 6px 0 14px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  .button-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+  }
+
+  .btn {
+    padding: 10px 16px;
+    font-weight: 700;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: white;
+  }
+
+  .btn-primary:hover { background: var(--accent-hover); }
+
+  .btn-secondary {
+    border: 1px solid var(--line);
+    background: var(--panel);
+    color: var(--text);
+  }
+
+  .btn-danger {
+    background: #fee4e2;
+    color: var(--danger);
+  }
+
+  .file-list {
+    display: grid;
+    gap: 8px;
+    max-height: 300px;
+    overflow: auto;
+  }
+
+  .file-item {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    align-items: center;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 9px 11px;
+  }
+
+  .file-main {
+    min-width: 0;
+  }
+
+  .file-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 700;
+  }
+
+  .file-meta {
+    color: var(--muted);
+    font-size: 12px;
+  }
+
+
+  .icon-editor {
+    display: grid;
+    grid-template-columns: minmax(220px, 320px) 1fr;
+    gap: 18px;
+    align-items: start;
+  }
+
+  .icon-preview-wrap {
+    display: grid;
+    gap: 10px;
+    justify-items: center;
+  }
+
+  .icon-preview {
+    width: min(100%, 280px);
+    aspect-ratio: 1;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    background:
+      linear-gradient(45deg, #e9edf3 25%, transparent 25%),
+      linear-gradient(-45deg, #e9edf3 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #e9edf3 75%),
+      linear-gradient(-45deg, transparent 75%, #e9edf3 75%);
+    background-size: 20px 20px;
+    background-position: 0 0, 0 10px, 10px -10px, -10px 0;
+    overflow: hidden;
+  }
+
+  .icon-preview canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .icon-controls {
+    display: grid;
+    gap: 12px;
+  }
+
+  .range-row {
+    display: grid;
+    grid-template-columns: 90px 1fr 60px;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .range-row input[type="range"] {
+    padding: 0;
+    border: 0;
+  }
+
+  .range-value {
+    text-align: right;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  .icon-note {
+    margin: 0;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  .status {
+    min-height: 24px;
+    margin-top: 12px;
+    font-size: 14px;
+  }
+
+  .status.ok { color: var(--ok); }
+  .status.warn { color: var(--warn); }
+  .status.error { color: var(--danger); }
+
+  .help {
+    margin: 0;
+    padding-left: 22px;
+    color: var(--muted);
+    font-size: 14px;
+  }
+
+  .hidden-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .empty {
+    color: var(--muted);
+    text-align: center;
+    padding: 20px 4px;
+  }
+}
+
+/* utilities: レスポンシブなど小さな補助 */
+@layer utilities {
+  @media (max-width: 700px) {
+    .grid { grid-template-columns: 1fr; }
+    .app { width: min(100% - 16px, 980px); }
+    .panel { padding: 14px; }
+    .icon-editor { grid-template-columns: 1fr; }
+  }
+}
+</style>
+</head>
+<body>
+<main class="app">
+  <header class="hero">
+    <h1>HTML → Android Studio</h1>
+    <p>複数HTML・CSS・JS・画像などを、Android WebViewプロジェクトへまとめます。</p>
+  </header>
+
+  <section class="panel">
+    <h2>1. サイトのファイルを追加</h2>
+    <div id="dropZone" class="drop-zone">
+      <div>
+        <strong>ここにファイルをドロップ</strong>
+        <p>複数HTMLだけでも、サイトフォルダ丸ごとでも追加できます。</p>
+        <div class="button-row">
+          <button class="btn btn-primary" id="pickFilesBtn" type="button">ファイルを選択</button>
+          <button class="btn btn-secondary" id="pickFolderBtn" type="button">フォルダを選択</button>
+        </div>
+      </div>
+    </div>
+    <input id="fileInput" class="hidden-input" type="file" multiple>
+    <input id="folderInput" class="hidden-input" type="file" webkitdirectory multiple>
+  </section>
+
+  <section class="panel">
+    <h2>2. Androidアプリ設定</h2>
+    <div class="grid">
+      <div class="field">
+        <label for="appName">アプリ名</label>
+        <input id="appName" value="MyHtmlApp">
+      </div>
+      <div class="field">
+        <label for="packageName">パッケージ名</label>
+        <input id="packageName" value="com.example.myhtmlapp">
+      </div>
+      <div class="field">
+        <label for="startPage">最初に開くHTML</label>
+        <select id="startPage">
+          <option value="">HTMLを追加してください</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="projectName">プロジェクト名</label>
+        <input id="projectName" value="HtmlAndroidApp">
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>3. アプリアイコン</h2>
+    <div class="icon-editor">
+      <div class="icon-preview-wrap">
+        <div class="icon-preview">
+          <canvas id="iconCanvas" width="512" height="512" aria-label="アイコンプレビュー"></canvas>
+        </div>
+        <div class="button-row">
+          <button id="pickIconBtn" class="btn btn-secondary" type="button">アイコン画像を選択</button>
+          <button id="resetIconBtn" class="btn btn-secondary" type="button">調整をリセット</button>
+        </div>
+        <input id="iconInput" class="hidden-input" type="file" accept="image/*">
+      </div>
+
+      <div class="icon-controls">
+        <div class="range-row">
+          <label for="iconZoom">拡大縮小</label>
+          <input id="iconZoom" type="range" min="100" max="400" value="100">
+          <span id="iconZoomValue" class="range-value">100%</span>
+        </div>
+        <div class="range-row">
+          <label for="iconX">左右</label>
+          <input id="iconX" type="range" min="-100" max="100" value="0">
+          <span id="iconXValue" class="range-value">0%</span>
+        </div>
+        <div class="range-row">
+          <label for="iconY">上下</label>
+          <input id="iconY" type="range" min="-100" max="100" value="0">
+          <span id="iconYValue" class="range-value">0%</span>
+        </div>
+        <p class="icon-note">
+          1枚の画像から mdpi / hdpi / xhdpi / xxhdpi / xxxhdpi 用の
+          <code>ic_launcher.png</code> を自動生成します。画像を指定しない場合は既定アイコンになります。
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>4. 追加済みファイル</h2>
+    <div id="fileList" class="file-list">
+      <div class="empty">まだファイルがありません。</div>
+    </div>
+    <div class="button-row" style="margin-top:12px">
+      <button id="clearBtn" class="btn btn-danger" type="button">すべて削除</button>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>5. Android Studio用ZIPを生成</h2>
+    <div class="button-row">
+      <button id="generateBtn" class="btn btn-primary" type="button">ファイルを生成する</button>
+    </div>
+    <div id="status" class="status" aria-live="polite"></div>
+  </section>
+
+  <section class="panel">
+    <h2>6. 使い方</h2>
+    <ol class="help">
+      <li><code>index.html</code> など複数のHTMLと、必要ならCSS・JS・画像を追加します。</li>
+      <li>HTML同士は <code>&lt;a href="page2.html"&gt;</code> のような相対リンクで移動できます。</li>
+      <li>「ファイルを生成する」を押してZIPを保存します。</li>
+      <li>ZIPを展開し、そのフォルダをAndroid Studioで開きます。</li>
+      <li>Gradle Sync後、そのまま実行できます。</li>
+    </ol>
+  </section>
+</main>
+
+<script>
+(() => {
+  "use strict";
+
+  const files = new Map();
+
+  const fileInput = document.getElementById("fileInput");
+  const folderInput = document.getElementById("folderInput");
+  const pickFilesBtn = document.getElementById("pickFilesBtn");
+  const pickFolderBtn = document.getElementById("pickFolderBtn");
+  const dropZone = document.getElementById("dropZone");
+  const fileList = document.getElementById("fileList");
+  const startPage = document.getElementById("startPage");
+  const status = document.getElementById("status");
+  const clearBtn = document.getElementById("clearBtn");
+  const generateBtn = document.getElementById("generateBtn");
+
+  const iconInput = document.getElementById("iconInput");
+  const pickIconBtn = document.getElementById("pickIconBtn");
+  const resetIconBtn = document.getElementById("resetIconBtn");
+  const iconCanvas = document.getElementById("iconCanvas");
+  const iconZoom = document.getElementById("iconZoom");
+  const iconX = document.getElementById("iconX");
+  const iconY = document.getElementById("iconY");
+  const iconZoomValue = document.getElementById("iconZoomValue");
+  const iconXValue = document.getElementById("iconXValue");
+  const iconYValue = document.getElementById("iconYValue");
+
+  let iconImage = null;
+
+  const appNameInput = document.getElementById("appName");
+  const packageNameInput = document.getElementById("packageName");
+  const projectNameInput = document.getElementById("projectName");
+
+  pickFilesBtn.addEventListener("click", () => fileInput.click());
+  pickFolderBtn.addEventListener("click", () => folderInput.click());
+  fileInput.addEventListener("change", e => addFiles(e.target.files));
+  folderInput.addEventListener("change", e => addFiles(e.target.files));
+
+  ["dragenter", "dragover"].forEach(type => {
+    dropZone.addEventListener(type, e => {
+      e.preventDefault();
+      dropZone.classList.add("is-over");
+    });
+  });
+
+  ["dragleave", "drop"].forEach(type => {
+    dropZone.addEventListener(type, e => {
+      e.preventDefault();
+      dropZone.classList.remove("is-over");
+    });
+  });
+
+  dropZone.addEventListener("drop", async e => {
+    if (e.dataTransfer.items && e.dataTransfer.items.length) {
+      const items = [...e.dataTransfer.items];
+      const entries = items
+        .map(item => item.webkitGetAsEntry ? item.webkitGetAsEntry() : null)
+        .filter(Boolean);
+
+      if (entries.some(entry => entry.isDirectory)) {
+        const collected = [];
+        for (const entry of entries) {
+          await walkEntry(entry, "", collected);
+        }
+        addPreparedFiles(collected);
+        return;
+      }
+    }
+    addFiles(e.dataTransfer.files);
+  });
+
+  clearBtn.addEventListener("click", () => {
+    files.clear();
+    fileInput.value = "";
+    folderInput.value = "";
+    render();
+    setStatus("ファイルをすべて削除しました。", "warn");
+  });
+
+  generateBtn.addEventListener("click", generateProject);
+
+  pickIconBtn.addEventListener("click", () => iconInput.click());
+  iconInput.addEventListener("change", loadIconImage);
+  resetIconBtn.addEventListener("click", () => {
+    iconZoom.value = "100";
+    iconX.value = "0";
+    iconY.value = "0";
+    updateIconControls();
+    drawIconPreview();
+  });
+
+  [iconZoom, iconX, iconY].forEach(input => {
+    input.addEventListener("input", () => {
+      updateIconControls();
+      drawIconPreview();
+    });
+  });
+
+  function normalizePath(path) {
+    return path
+      .replaceAll("\\\\", "/")
+      .replace(/^\/+/, "")
+      .split("/")
+      .filter(part => part && part !== ".")
+      .join("/");
+  }
+
+  function addFiles(fileListLike) {
+    const prepared = [...fileListLike].map(file => {
+      const path = normalizePath(file.webkitRelativePath || file.name);
+      return { path, file };
+    });
+    addPreparedFiles(prepared);
+  }
+
+  function addPreparedFiles(prepared) {
+    for (const item of prepared) {
+      if (!item.path) continue;
+      files.set(item.path, item.file);
+    }
+    render();
+    setStatus(`${prepared.length} 件を追加しました。`, "ok");
+  }
+
+  async function walkEntry(entry, parentPath, output) {
+    if (entry.isFile) {
+      const file = await new Promise((resolve, reject) => entry.file(resolve, reject));
+      output.push({
+        path: normalizePath(parentPath + file.name),
+        file
+      });
+      return;
+    }
+
+    if (entry.isDirectory) {
+      const reader = entry.createReader();
+      let batch = [];
+      do {
+        batch = await new Promise((resolve, reject) => reader.readEntries(resolve, reject));
+        for (const child of batch) {
+          await walkEntry(child, parentPath + entry.name + "/", output);
+        }
+      } while (batch.length > 0);
+    }
+  }
+
+  function render() {
+    renderFileList();
+    renderStartPages();
+  }
+
+  function renderFileList() {
+    fileList.innerHTML = "";
+
+    if (files.size === 0) {
+      const empty = document.createElement("div");
+      empty.className = "empty";
+      empty.textContent = "まだファイルがありません。";
+      fileList.appendChild(empty);
+      return;
+    }
+
+    [...files.entries()]
+      .sort(([a], [b]) => a.localeCompare(b, "ja"))
+      .forEach(([path, file]) => {
+        const row = document.createElement("div");
+        row.className = "file-item";
+
+        const main = document.createElement("div");
+        main.className = "file-main";
+
+        const name = document.createElement("div");
+        name.className = "file-name";
+        name.textContent = path;
+
+        const meta = document.createElement("div");
+        meta.className = "file-meta";
+        meta.textContent = `${formatBytes(file.size)} / ${file.type || "種類不明"}`;
+
+        const remove = document.createElement("button");
+        remove.className = "btn btn-secondary";
+        remove.type = "button";
+        remove.textContent = "削除";
+        remove.addEventListener("click", () => {
+          files.delete(path);
+          render();
+        });
+
+        main.append(name, meta);
+        row.append(main, remove);
+        fileList.appendChild(row);
+      });
+  }
+
+  function renderStartPages() {
+    const old = startPage.value;
+    const htmlFiles = [...files.keys()]
+      .filter(path => /\.html?$/i.test(path))
+      .sort((a, b) => {
+        const ai = /(^|\/)index\.html?$/i.test(a) ? -1 : 0;
+        const bi = /(^|\/)index\.html?$/i.test(b) ? -1 : 0;
+        return ai - bi || a.localeCompare(b, "ja");
+      });
+
+    startPage.innerHTML = "";
+
+    if (htmlFiles.length === 0) {
+      const opt = document.createElement("option");
+      opt.value = "";
+      opt.textContent = "HTMLを追加してください";
+      startPage.appendChild(opt);
+      return;
+    }
+
+    for (const path of htmlFiles) {
+      const opt = document.createElement("option");
+      opt.value = path;
+      opt.textContent = path;
+      startPage.appendChild(opt);
+    }
+
+    if (htmlFiles.includes(old)) {
+      startPage.value = old;
+    } else {
+      const index = htmlFiles.find(path => /(^|\/)index\.html?$/i.test(path));
+      startPage.value = index || htmlFiles[0];
+    }
+  }
+
+  function formatBytes(bytes) {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  }
+
+  function setStatus(message, type = "") {
+    status.textContent = message;
+    status.className = `status ${type}`.trim();
+  }
+
+  function validPackageName(value) {
+    return /^[a-zA-Z_]\w*(\.[a-zA-Z_]\w*)+$/.test(value);
+  }
+
+  function safeProjectName(value) {
+    const result = value.trim().replace(/[^\w.-]+/g, "_");
+    return result || "HtmlAndroidApp";
+  }
+
+  function escapeXml(value) {
+    return value
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&apos;");
+  }
+
+
+  async function loadIconImage() {
+    const file = iconInput.files && iconInput.files[0];
+    if (!file) return;
+
+    try {
+      const bitmap = await createImageBitmap(file);
+      iconImage = bitmap;
+      iconZoom.value = "100";
+      iconX.value = "0";
+      iconY.value = "0";
+      updateIconControls();
+      drawIconPreview();
+      setStatus("アイコン画像を読み込みました。切り取り位置と拡大率を調整できます。", "ok");
+    } catch (error) {
+      console.error(error);
+      setStatus("アイコン画像を読み込めませんでした。", "error");
+    }
+  }
+
+  function updateIconControls() {
+    iconZoomValue.textContent = `${iconZoom.value}%`;
+    iconXValue.textContent = `${iconX.value}%`;
+    iconYValue.textContent = `${iconY.value}%`;
+  }
+
+  function drawIconToCanvas(canvas, size) {
+    const ctx = canvas.getContext("2d");
+    canvas.width = size;
+    canvas.height = size;
+    ctx.clearRect(0, 0, size, size);
+
+    if (!iconImage) {
+      ctx.fillStyle = "#2563eb";
+      ctx.fillRect(0, 0, size, size);
+      ctx.fillStyle = "#ffffff";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.font = `700 ${Math.round(size * 0.34)}px sans-serif`;
+      ctx.fillText("H", size / 2, size / 2);
+      return;
+    }
+
+    const zoom = Number(iconZoom.value) / 100;
+    const imgW = iconImage.width;
+    const imgH = iconImage.height;
+
+    // 正方形を完全に覆う倍率を基準にし、そこからズームします。
+    const baseScale = Math.max(size / imgW, size / imgH);
+    const scale = baseScale * zoom;
+    const drawW = imgW * scale;
+    const drawH = imgH * scale;
+
+    const availableX = Math.max(0, (drawW - size) / 2);
+    const availableY = Math.max(0, (drawH - size) / 2);
+    const offsetX = (Number(iconX.value) / 100) * availableX;
+    const offsetY = (Number(iconY.value) / 100) * availableY;
+
+    const x = (size - drawW) / 2 + offsetX;
+    const y = (size - drawH) / 2 + offsetY;
+
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(iconImage, x, y, drawW, drawH);
+  }
+
+  function drawIconPreview() {
+    drawIconToCanvas(iconCanvas, 512);
+  }
+
+  function canvasToBlob(canvas) {
+    return new Promise((resolve, reject) => {
+      canvas.toBlob(blob => {
+        if (blob) resolve(blob);
+        else reject(new Error("PNGの生成に失敗しました。"));
+      }, "image/png");
+    });
+  }
+
+  async function createLauncherIcons(mainFolder) {
+    const sizes = [
+      ["mipmap-mdpi", 48],
+      ["mipmap-hdpi", 72],
+      ["mipmap-xhdpi", 96],
+      ["mipmap-xxhdpi", 144],
+      ["mipmap-xxxhdpi", 192]
+    ];
+
+    for (const [folderName, size] of sizes) {
+      const canvas = document.createElement("canvas");
+      drawIconToCanvas(canvas, size);
+      const blob = await canvasToBlob(canvas);
+      mainFolder.folder(`res/${folderName}`).file("ic_launcher.png", blob);
+    }
+  }
+
+  async function generateProject() {
+    if (typeof JSZip === "undefined") {
+      setStatus("ZIPライブラリを読み込めませんでした。インターネット接続を確認してください。", "error");
+      return;
+    }
+
+    const htmlFiles = [...files.keys()].filter(path => /\.html?$/i.test(path));
+    if (htmlFiles.length === 0) {
+      setStatus("HTMLファイルを1つ以上追加してください。", "error");
+      return;
+    }
+
+    const appName = appNameInput.value.trim() || "MyHtmlApp";
+    const packageName = packageNameInput.value.trim();
+    const projectName = safeProjectName(projectNameInput.value);
+    const firstPage = startPage.value;
+
+    if (!validPackageName(packageName)) {
+      setStatus("パッケージ名が不正です。例: com.example.myhtmlapp", "error");
+      return;
+    }
+
+    if (!firstPage || !files.has(firstPage)) {
+      setStatus("最初に開くHTMLを選択してください。", "error");
+      return;
+    }
+
+    generateBtn.disabled = true;
+    setStatus("Android Studioプロジェクトを生成しています…", "warn");
+
+    try {
+      const zip = new JSZip();
+      const root = zip.folder(projectName);
+
+      root.file("settings.gradle.kts", createSettings(projectName));
+      root.file("build.gradle.kts", createRootGradle());
+      root.file("gradle.properties", createGradleProperties());
+      root.file("README.txt", createReadme(appName, firstPage));
+
+      const app = root.folder("app");
+      app.file("build.gradle.kts", createAppGradle(packageName));
+
+      const main = app.folder("src/main");
+      await createLauncherIcons(main);
+      main.file("AndroidManifest.xml", createManifest(packageName, appName));
+      main.folder("res/layout").file("activity_main.xml", createLayout());
+      main.folder("res/values").file("colors.xml", createColors());
+      main.folder("res/values").file("themes.xml", createThemes());
+      main.folder("res/values").file("strings.xml", createStrings(appName));
+
+      const javaPath = packageName.replaceAll(".", "/");
+      main.folder(`java/${javaPath}`).file(
+        "MainActivity.java",
+        createMainActivity(packageName, firstPage)
+      );
+
+      const siteFolder = main.folder("assets/www");
+      for (const [path, file] of files) {
+        siteFolder.file(path, await file.arrayBuffer());
+      }
+
+      const blob = await zip.generateAsync({
+        type: "blob",
+        compression: "DEFLATE",
+        compressionOptions: { level: 6 }
+      }, metadata => {
+        setStatus(`ZIP生成中… ${Math.round(metadata.percent)}%`, "warn");
+      });
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${projectName}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 3000);
+
+      setStatus(`生成完了: ${projectName}.zip`, "ok");
+    } catch (error) {
+      console.error(error);
+      setStatus(`生成に失敗しました: ${error.message}`, "error");
+    } finally {
+      generateBtn.disabled = false;
+    }
+  }
+
+  function createSettings(projectName) {
+    return `pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+rootProject.name = "${projectName.replaceAll('"', '\\"')}"
+include(":app")
+`;
+  }
+
+  function createRootGradle() {
+    return `plugins {
+    id("com.android.application") version "8.7.3" apply false
+}
+`;
+  }
+
+  function createGradleProperties() {
+    return `org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+android.useAndroidX=true
+android.nonTransitiveRClass=true
+`;
+  }
+
+  function createAppGradle(packageName) {
+    return `plugins {
+    id("com.android.application")
+}
+
+android {
+    namespace = "${packageName}"
+    compileSdk = 35
+
+    defaultConfig {
+        applicationId = "${packageName}"
+        minSdk = 23
+        targetSdk = 35
+        versionCode = 1
+        versionName = "1.0"
+    }
+}
+
+dependencies {
+    implementation("androidx.webkit:webkit:1.12.1")
+}
+`;
+  }
+
+  function createManifest(packageName, appName) {
+    return `<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.HtmlAndroidApp"
+        android:usesCleartextTraffic="false">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+    </application>
+</manifest>
+`;
+  }
+
+  function createLayout() {
+    return `<?xml version="1.0" encoding="utf-8"?>
+<WebView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/webView"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent" />
+`;
+  }
+
+  function createColors() {
+    return `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#000000</color>
+    <color name="white">#FFFFFF</color>
+</resources>
+`;
+  }
+
+  function createThemes() {
+    return `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.HtmlAndroidApp" parent="android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:statusBarColor">#FFFFFF</item>
+        <item name="android:navigationBarColor">#FFFFFF</item>
+    </style>
+</resources>
+`;
+  }
+
+  function createStrings(appName) {
+    return `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">${escapeXml(appName)}</string>
+</resources>
+`;
+  }
+
+  function createMainActivity(packageName, firstPage) {
+    const safeFirstPage = firstPage
+      .split("/")
+      .map(part => encodeURIComponent(part))
+      .join("/")
+      .replaceAll("%2F", "/");
+
+    return `package ${packageName};
+
+import android.app.Activity;
+import android.os.Bundle;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebView;
+import androidx.webkit.WebViewAssetLoader;
+import androidx.webkit.WebViewClientCompat;
+
+public class MainActivity extends Activity {
+    private WebView webView;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        webView = findViewById(R.id.webView);
+
+        // HTML内でJavaScriptを利用できるようにします。
+        webView.getSettings().setJavaScriptEnabled(true);
+        webView.getSettings().setDomStorageEnabled(true);
+
+        // file:// ではなく Android公式推奨の WebViewAssetLoader を利用します。
+        final WebViewAssetLoader assetLoader =
+                new WebViewAssetLoader.Builder()
+                        .addPathHandler(
+                                "/assets/",
+                                new WebViewAssetLoader.AssetsPathHandler(this)
+                        )
+                        .build();
+
+        webView.setWebViewClient(new WebViewClientCompat() {
+            @Override
+            public android.webkit.WebResourceResponse shouldInterceptRequest(
+                    WebView view,
+                    WebResourceRequest request
+            ) {
+                return assetLoader.shouldInterceptRequest(request.getUrl());
+            }
+
+            @Override
+            @SuppressWarnings("deprecation")
+            public android.webkit.WebResourceResponse shouldInterceptRequest(
+                    WebView view,
+                    String url
+            ) {
+                return assetLoader.shouldInterceptRequest(android.net.Uri.parse(url));
+            }
+        });
+
+        if (savedInstanceState == null) {
+            webView.loadUrl(
+                    "https://appassets.androidplatform.net/assets/www/${safeFirstPage}"
+            );
+        } else {
+            webView.restoreState(savedInstanceState);
+        }
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        webView.saveState(outState);
+        super.onSaveInstanceState(outState);
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (webView.canGoBack()) {
+            webView.goBack();
+        } else {
+            super.onBackPressed();
+        }
+    }
+}
+`;
+  }
+
+  function createReadme(appName, firstPage) {
+    return `${appName}
+
+このプロジェクトは、HTML/CSS/JavaScript/画像などを
+Android WebViewで表示するために自動生成されています。
+
+開始ページ:
+${firstPage}
+
+サイトファイル:
+app/src/main/assets/www/
+
+ランチャーアイコン:
+app/src/main/res/mipmap-*/ic_launcher.png
+
+HTML間の移動例:
+<a href="page2.html">次のページ</a>
+
+Android Studioでこのフォルダを開き、Gradle Sync後に実行してください。
+
+注意:
+- JavaScriptは有効です。
+- インターネット上のhttpsリソースも読み込めます。
+- http通信は初期設定では禁止しています。
+- ローカルファイルはWebViewAssetLoader経由で読み込みます。
+`;
+  }
+
+  updateIconControls();
+  drawIconPreview();
+  render();
+})();
+</script>
+</body>
+</html>
