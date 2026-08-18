@@ -1,4 +1,4 @@
-ac<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8" />
@@ -351,7 +351,7 @@ ac<!DOCTYPE html>
     transition: transform .15s ease, background .15s ease;
   }
 
-  #cancelBtn, #operationCloseBtn, #searchCloseBtn { background: #edf2eb; color: #56635a; }
+  #cancelBtn, #operationCloseBtn, #searchCloseBtn, #helpCloseBtn { background: #edf2eb; color: #56635a; }
   #okBtn { background: var(--accent); color: #fff; }
   .modal .actions button:hover { transform: translateY(-1px); }
 
@@ -481,6 +481,21 @@ ac<!DOCTYPE html>
   }
 
   .folder .cap { color: #3f4e25; }
+
+  /* 簡易説明：文章量を抑え、読みやすさを優先 */
+  .helpText {
+    display: grid;
+    gap: 10px;
+    margin: 4px 0 8px;
+    padding: 14px 16px;
+    border: 1px solid var(--ring);
+    border-radius: 14px;
+    background: rgba(247, 251, 244, .92);
+    color: var(--fg);
+    line-height: 1.7;
+  }
+
+  .helpText p { margin: 0; }
 
   /* 操作内検索 */
   .searchControls {
@@ -695,6 +710,7 @@ ac<!DOCTYPE html>
         <button class="operationButton" id="importAction" type="button"><span>⇧</span><span>インポート</span></button>
         <button class="operationButton" id="exportAction" type="button"><span>⇩</span><span>エクスポート</span></button>
         <button class="operationButton" id="searchAction" type="button"><span>⌕</span><span>検索</span></button>
+        <button class="operationButton" id="helpAction" type="button"><span>?</span><span>簡易説明</span></button>
       </div>
       <div class="actions">
         <button id="operationCloseBtn" type="button">閉じる</button>
@@ -720,6 +736,21 @@ ac<!DOCTYPE html>
       <div class="searchResults" id="shortcutSearchResults" aria-live="polite"></div>
       <div class="actions">
         <button id="searchCloseBtn" type="button">閉じる</button>
+      </div>
+    </div>
+  </div>
+
+
+  <div class="modalWrap" id="helpWrap" role="dialog" aria-modal="true">
+    <div class="modal">
+      <h3>簡易説明</h3>
+      <div class="helpText">
+        <p>検索とショートカットを、フォルダごとに整理できる検索画面です。</p>
+        <p>操作以外は長押しで編集モードに入り、移動・編集・削除が可能な状態になります。</p>
+        <p>インポートは、このサイトでエクスポートしたJSONに対応しています。ブラウザで出力したお気に入りHTMLも読み込める可能性があります。</p>
+      </div>
+      <div class="actions">
+        <button id="helpCloseBtn" type="button">閉じる</button>
       </div>
     </div>
   </div>
@@ -957,6 +988,9 @@ const importAction = document.getElementById('importAction');
 const exportAction = document.getElementById('exportAction');
 const importFile = document.getElementById('importFile');
 const searchAction = document.getElementById('searchAction');
+const helpAction = document.getElementById('helpAction');
+const helpWrap = document.getElementById('helpWrap');
+const helpCloseBtn = document.getElementById('helpCloseBtn');
 const shortcutSearchWrap = document.getElementById('shortcutSearchWrap');
 const shortcutSearchType = document.getElementById('shortcutSearchType');
 const shortcutSearchInput = document.getElementById('shortcutSearchInput');
@@ -1253,6 +1287,15 @@ function openShortcutSearch() {
 
 function closeShortcutSearch() {
   shortcutSearchWrap.style.display = 'none';
+}
+
+function openHelp() {
+  closeOperationMenu();
+  helpWrap.style.display = 'grid';
+}
+
+function closeHelp() {
+  helpWrap.style.display = 'none';
 }
 
 function createOperationTile() {
@@ -1586,6 +1629,9 @@ async function importData(file) {
 addShortcutAction.onclick = () => { closeOperationMenu(); openModal('shortcut'); };
 addFolderAction.onclick = () => { closeOperationMenu(); openModal('folder'); };
 searchAction.onclick = openShortcutSearch;
+helpAction.onclick = openHelp;
+helpCloseBtn.onclick = closeHelp;
+helpWrap.onclick = e => { if (e.target === helpWrap) closeHelp(); };
 shortcutSearchButton.onclick = searchRegisteredEntries;
 shortcutSearchInput.addEventListener('keydown', e => { if (e.key === 'Enter') searchRegisteredEntries(); });
 shortcutSearchType.addEventListener('change', () => {
@@ -1666,6 +1712,7 @@ document.addEventListener('click', e => {
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     if (shortcutSearchWrap.style.display === 'grid') closeShortcutSearch();
+    if (helpWrap.style.display === 'grid') closeHelp();
     else if (operationWrap.style.display === 'grid') closeOperationMenu();
     else if (modalWrap.style.display === 'grid') closeModal();
     else exitEditMode();
