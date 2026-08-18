@@ -307,6 +307,10 @@
     margin-bottom: 14px;
   }
 
+  .modal .row[hidden] {
+    display: none;
+  }
+
   .modal label {
     color: var(--muted);
     font-size: 12px;
@@ -347,7 +351,7 @@
     transition: transform .15s ease, background .15s ease;
   }
 
-  #cancelBtn { background: #edf2eb; color: #56635a; }
+  #cancelBtn, #operationCloseBtn { background: #edf2eb; color: #56635a; }
   #okBtn { background: var(--accent); color: #fff; }
   .modal .actions button:hover { transform: translateY(-1px); }
 
@@ -414,10 +418,6 @@
     white-space: nowrap;
   }
 
-  .folderHeading span {
-    color: var(--muted);
-    font-size: 11px;
-  }
 
   .backButton {
     flex: 0 0 auto;
@@ -434,13 +434,45 @@
 
   .backButton:hover { transform: translateY(-1px); background: #fff; }
 
-  .add-folder .dot {
-    border: 1px dashed rgba(88, 117, 54, .52);
-    background: rgba(247, 249, 220, .95);
-    color: #677b2f;
+  /* 操作タイルと操作メニュー */
+  .operations .dot {
+    border: 1px dashed rgba(62, 125, 77, .48);
+    background: rgba(239, 248, 231, .96);
+    color: var(--accent-strong);
     box-shadow: none;
-    font-size: 29px;
+    font-size: 28px;
   }
+
+  .operationMenu {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .operationButton {
+    min-height: 78px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border: 1px solid rgba(62, 125, 77, .15);
+    border-radius: 16px;
+    background: #f7fbf4;
+    color: #2f5938;
+    cursor: pointer;
+    font-weight: 800;
+    transition: transform .15s ease, background .15s ease, border-color .15s ease;
+  }
+
+  .operationButton:hover {
+    transform: translateY(-1px);
+    border-color: rgba(62, 125, 77, .34);
+    background: #fff;
+  }
+
+  .operationButton span:first-child { font-size: 24px; line-height: 1; }
+  .operationButton span:last-child { font-size: 13px; }
 
   .folder .dot {
     background: linear-gradient(145deg, #fffdf0, #eef3c8);
@@ -483,6 +515,8 @@
     .tile .dot { width: 64px; height: 64px; border-radius: 20px; }
     .tile .cap { max-width: 76px; font-size: 12px; }
     .btnmini { right: 0; }
+    .operationMenu { grid-template-columns: 1fr; }
+    .operationButton { min-height: 62px; flex-direction: row; justify-content: flex-start; padding: 0 18px; }
     body::before { bottom: 18vh; }
     body::after { height: 24vh; }
   }
@@ -517,7 +551,6 @@
         <button class="backButton" id="backButton" type="button">← 戻る</button>
         <div class="folderHeading">
           <strong id="folderTitle">ホーム</strong>
-          <span id="folderHint">このURLをお気に入り登録すると、このフォルダを直接開けます</span>
         </div>
       </div>
       <div class="grid" id="grid" aria-live="polite"></div>
@@ -536,6 +569,22 @@
     </div>
   </div>
 
+  <div class="modalWrap" id="operationWrap" role="dialog" aria-modal="true">
+    <div class="modal">
+      <h3>操作</h3>
+      <div class="operationMenu">
+        <button class="operationButton" id="addShortcutAction" type="button"><span>＋</span><span>ショートカットを追加</span></button>
+        <button class="operationButton" id="addFolderAction" type="button"><span>📁</span><span>フォルダを追加</span></button>
+        <button class="operationButton" id="importAction" type="button"><span>⇧</span><span>インポート</span></button>
+        <button class="operationButton" id="exportAction" type="button"><span>⇩</span><span>エクスポート</span></button>
+      </div>
+      <div class="actions">
+        <button id="operationCloseBtn" type="button">閉じる</button>
+      </div>
+    </div>
+  </div>
+
+  <input id="importFile" type="file" accept="application/json,.json" hidden />
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
 <script>
@@ -760,6 +809,13 @@ const toastEl = document.getElementById('toast');
 const folderBar = document.getElementById('folderBar');
 const folderTitle = document.getElementById('folderTitle');
 const backButton = document.getElementById('backButton');
+const operationWrap = document.getElementById('operationWrap');
+const operationCloseBtn = document.getElementById('operationCloseBtn');
+const addShortcutAction = document.getElementById('addShortcutAction');
+const addFolderAction = document.getElementById('addFolderAction');
+const importAction = document.getElementById('importAction');
+const exportAction = document.getElementById('exportAction');
+const importFile = document.getElementById('importFile');
 
 window.editMode = false;
 window.editingId = null;
@@ -873,17 +929,19 @@ async function renderFolderBar(all, folderKey) {
   return folderKey;
 }
 
-function createAddTile(kind) {
+function openOperationMenu() {
+  operationWrap.style.display = 'grid';
+}
+
+function closeOperationMenu() {
+  operationWrap.style.display = 'none';
+}
+
+function createOperationTile() {
   const tile = document.createElement('div');
-  if (kind === 'folder') {
-    tile.className = 'tile add-folder';
-    tile.innerHTML = '<div class="dot" aria-hidden="true">📁</div><div class="cap">フォルダを追加</div>';
-    tile.addEventListener('click', () => openModal('folder'));
-  } else {
-    tile.className = 'tile add';
-    tile.innerHTML = '<div class="dot" aria-hidden="true">＋</div><div class="cap">ショートカット</div>';
-    tile.addEventListener('click', () => openModal('shortcut'));
-  }
+  tile.className = 'tile operations';
+  tile.innerHTML = '<div class="dot" aria-hidden="true">☰</div><div class="cap">操作</div>';
+  tile.addEventListener('click', openOperationMenu);
   tile.addEventListener('pointerdown', () => {});
   return tile;
 }
@@ -903,8 +961,8 @@ async function render() {
   document.body.classList.toggle('edit', editMode);
   grid.innerHTML = '';
 
-  // 指定どおり「ショートカットを追加」の右隣に「フォルダを追加」を置く。
-  grid.append(createAddTile('shortcut'), createAddTile('folder'));
+  // 追加・入出力は「操作」に集約する。
+  grid.append(createOperationTile());
 
   items.forEach(item => {
     const tile = document.createElement('div');
@@ -995,6 +1053,96 @@ function escapeHtml(value) {
   })[ch]);
 }
 
+async function exportData() {
+  const all = await getAll();
+  const payload = {
+    format: 'meadow-shortcuts',
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    entries: all.map(({ id, ...entry }) => entry)
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+  a.href = url;
+  a.download = `meadow-shortcuts-${stamp}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+  toast('エクスポートしました');
+}
+
+function validateImportEntries(entries) {
+  if (!Array.isArray(entries)) throw new Error('invalid-entries');
+  const folderKeys = new Set([ROOT_FOLDER]);
+  const normalized = entries.map((entry, index) => {
+    if (!entry || (entry.type !== 'shortcut' && entry.type !== 'folder')) throw new Error('invalid-entry');
+    const title = String(entry.title || '').trim() || (entry.type === 'folder' ? '新しいフォルダ' : '名称未設定');
+    const parentFolder = String(entry.parentFolder || ROOT_FOLDER);
+    const order = Number.isFinite(Number(entry.order)) ? Number(entry.order) : index + 1;
+
+    if (entry.type === 'folder') {
+      const folderKey = String(entry.folderKey || '').trim();
+      if (!/^[a-f0-9]{16,64}$/i.test(folderKey) || folderKeys.has(folderKey)) throw new Error('invalid-folder-key');
+      folderKeys.add(folderKey);
+      return { type: 'folder', parentFolder, folderKey, title, order };
+    }
+
+    const url = normUrl(String(entry.url || ''));
+    if (!url) throw new Error('invalid-url');
+    return { type: 'shortcut', parentFolder, url, title, order };
+  });
+
+  for (const entry of normalized) {
+    if (entry.parentFolder !== ROOT_FOLDER && !folderKeys.has(entry.parentFolder)) throw new Error('missing-parent');
+  }
+  return normalized;
+}
+
+async function importData(file) {
+  const text = await file.text();
+  const parsed = JSON.parse(text);
+  if (parsed?.format !== 'meadow-shortcuts' || parsed?.version !== 1) throw new Error('unsupported-format');
+  const entries = validateImportEntries(parsed.entries);
+  if (!confirm(`現在の登録内容を置き換えて、${entries.length}件をインポートしますか？`)) return;
+
+  const { st, tx } = await txStore('readwrite');
+  st.clear();
+  entries.forEach(entry => st.add(entry));
+  await new Promise((resolve, reject) => {
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error);
+  });
+
+  const url = new URL(location.href);
+  url.searchParams.delete('folder');
+  history.replaceState(null, '', url.href);
+  closeOperationMenu();
+  await render();
+  toast('インポートしました');
+}
+
+addShortcutAction.onclick = () => { closeOperationMenu(); openModal('shortcut'); };
+addFolderAction.onclick = () => { closeOperationMenu(); openModal('folder'); };
+exportAction.onclick = async () => { closeOperationMenu(); await exportData(); };
+importAction.onclick = () => importFile.click();
+operationCloseBtn.onclick = closeOperationMenu;
+operationWrap.onclick = e => { if (e.target === operationWrap) closeOperationMenu(); };
+importFile.addEventListener('change', async () => {
+  const file = importFile.files?.[0];
+  importFile.value = '';
+  if (!file) return;
+  try {
+    await importData(file);
+  } catch (error) {
+    console.error(error);
+    toast('インポートに失敗しました');
+  }
+});
+
 nameInput.addEventListener('input', () => { nameWasEdited = true; });
 urlInput.addEventListener('input', () => {
   if (!nameWasEdited || !nameInput.value.trim()) {
@@ -1050,7 +1198,8 @@ document.addEventListener('click', e => {
 });
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
-    if (modalWrap.style.display === 'grid') closeModal();
+    if (operationWrap.style.display === 'grid') closeOperationMenu();
+    else if (modalWrap.style.display === 'grid') closeModal();
     else exitEditMode();
   }
 });
