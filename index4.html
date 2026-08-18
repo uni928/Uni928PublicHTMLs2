@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ac<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8" />
@@ -724,7 +724,7 @@
     </div>
   </div>
 
-  <input id="importFile" type="file" accept="application/json,.json" hidden />
+  <input id="importFile" type="file" accept="application/json,.json,text/html,.html,.htm" hidden />
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
 <script>
@@ -1419,13 +1419,127 @@ function validateImportEntries(entries) {
   return normalized;
 }
 
-async function importData(file) {
-  const text = await file.text();
-  const parsed = JSON.parse(text);
-  if (parsed?.format !== 'meadow-shortcuts' || parsed?.version !== 1) throw new Error('unsupported-format');
-  const entries = validateImportEntries(parsed.entries);
-  if (!confirm(`現在の登録内容を置き換えて、${entries.length}件をインポートしますか？`)) return;
+async function generateImportFolderKey(name, usedKeys) {
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const random = new Uint8Array(24);
+    crypto.getRandomValues(random);
+    const seed = `${name}|${Date.now()}|${performance.now()}|${Array.from(random).join(',')}|${attempt}`;
+    let key;
 
+    if (crypto.subtle) {
+      const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(seed));
+      key = Array.from(new Uint8Array(digest)).map(v => v.toString(16).padStart(2, '0')).join('').slice(0, 32);
+    } else {
+      key = Array.from(random).map(v => v.toString(16).padStart(2, '0')).join('').slice(0, 32);
+    }
+
+    if (!usedKeys.has(key)) {
+      usedKeys.add(key);
+      return key;
+    }
+  }
+  throw new Error('folder-key-collision');
+}
+
+async function parseBrowserBookmarks(text) {
+  const doc = new DOMParser().parseFromString(text, 'text/html');
+  if (!doc.querySelector('a[href]') && !doc.querySelector('h3')) throw new Error('not-browser-bookmarks');
+
+  const entries = [];
+  const usedKeys = new Set([ROOT_FOLDER]);
+  const orderByParent = new Map();
+  let skipped = 0;
+
+  const nextOrder = (parentFolder) => {
+    const next = (orderByParent.get(parentFolder) || 0) + 1;
+    orderByParent.set(parentFolder, next);
+    return next;
+  };
+
+  const directChild = (element, tagName) =>
+    Array.from(element.children).find(child => child.tagName === tagName) || null;
+
+  const addBookmark = (anchor, parentFolder) => {
+    const rawUrl = String(anchor.getAttribute('href') || '').trim();
+    // ブラウザ固有ページや javascript: などは安全のため取り込まない。
+    if (!/^https?:\/\//i.test(rawUrl)) {
+      skipped += 1;
+      return;
+    }
+    const url = normUrl(rawUrl);
+    if (!url) {
+      skipped += 1;
+      return;
+    }
+    const title = String(anchor.textContent || '').trim() || suggestedTitle(url) || hostTitle(url) || '名称未設定';
+    entries.push({ type: 'shortcut', parentFolder, url, title, order: nextOrder(parentFolder) });
+  };
+
+  const walk = async (container, parentFolder) => {
+    const children = Array.from(container.children);
+    let pendingFolderKey = null;
+
+    for (let i = 0; i < children.length; i += 1) {
+      const element = children[i];
+      const tag = element.tagName;
+
+      if (tag === 'DT') {
+        const heading = directChild(element, 'H3');
+        const anchor = directChild(element, 'A');
+        const nestedList = directChild(element, 'DL');
+
+        if (heading) {
+          const title = String(heading.textContent || '').trim() || '新しいフォルダ';
+          const folderKey = await generateImportFolderKey(title, usedKeys);
+          entries.push({ type: 'folder', parentFolder, folderKey, title, order: nextOrder(parentFolder) });
+
+          if (nestedList) {
+            await walk(nestedList, folderKey);
+            pendingFolderKey = null;
+          } else {
+            // Netscape Bookmark形式では、フォルダ見出しの次のDLが兄弟要素になることがある。
+            pendingFolderKey = folderKey;
+          }
+          continue;
+        }
+
+        if (anchor) {
+          addBookmark(anchor, parentFolder);
+          pendingFolderKey = null;
+          continue;
+        }
+
+        if (nestedList) await walk(nestedList, pendingFolderKey || parentFolder);
+        pendingFolderKey = null;
+        continue;
+      }
+
+      if (tag === 'DL') {
+        await walk(element, pendingFolderKey || parentFolder);
+        pendingFolderKey = null;
+        continue;
+      }
+
+      if (tag === 'P' && element.children.length) {
+        await walk(element, pendingFolderKey || parentFolder);
+        pendingFolderKey = null;
+      }
+    }
+  };
+
+  const rootList = doc.querySelector('dl');
+  if (rootList) {
+    await walk(rootList, ROOT_FOLDER);
+  } else {
+    // 形式が少し異なるエクスポートにも最低限対応する。
+    for (const anchor of doc.querySelectorAll('a[href]')) addBookmark(anchor, ROOT_FOLDER);
+  }
+
+  if (!entries.some(entry => entry.type === 'shortcut')) throw new Error('no-importable-bookmarks');
+  return { entries, skipped };
+}
+
+async function replaceImportedEntries(entries) {
   const { st, tx } = await txStore('readwrite');
   st.clear();
   entries.forEach(entry => st.add(entry));
@@ -1440,7 +1554,33 @@ async function importData(file) {
   history.replaceState(null, '', url.href);
   closeOperationMenu();
   await render();
-  toast('インポートしました');
+}
+
+async function importData(file) {
+  const text = await file.text();
+
+  // まず、このサイト自身がエクスポートしたJSONとして読み込む。
+  try {
+    const parsed = JSON.parse(text);
+    if (parsed?.format === 'meadow-shortcuts' && parsed?.version === 1) {
+      const entries = validateImportEntries(parsed.entries);
+      if (!confirm(`現在の登録内容を置き換えて、${entries.length}件をインポートしますか？`)) return;
+      await replaceImportedEntries(entries);
+      toast('インポートしました');
+      return;
+    }
+  } catch (error) {
+    // JSONでなければ、続けてブラウザのお気に入りHTMLとして解析を試す。
+  }
+
+  const browserData = await parseBrowserBookmarks(text);
+  const shortcutCount = browserData.entries.filter(entry => entry.type === 'shortcut').length;
+  const folderCount = browserData.entries.filter(entry => entry.type === 'folder').length;
+  const skippedText = browserData.skipped ? `\n未対応URL ${browserData.skipped}件は除外されます。` : '';
+  if (!confirm(`ブラウザのお気に入りとして解析できました。\nフォルダ ${folderCount}件 / お気に入り ${shortcutCount}件を取り込みます。\n現在の登録内容は置き換えられます。${skippedText}`)) return;
+
+  await replaceImportedEntries(browserData.entries);
+  toast(browserData.skipped ? `インポートしました（${browserData.skipped}件除外）` : 'お気に入りをインポートしました');
 }
 
 addShortcutAction.onclick = () => { closeOperationMenu(); openModal('shortcut'); };
