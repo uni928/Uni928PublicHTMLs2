@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>AI会話ログ HTML整形ジェネレーター</title>
 <style>
-@layer reset, base, components, utilities;
+@layer reset, base, components, uni-html-dropbox, utilities;
 
 /* base: ページ全体の基礎スタイル */
 @layer reset {
@@ -65,19 +65,6 @@
   .status { flex: 0 0 auto; border-radius: 999px; background: #eef2f6; padding: 6px 10px; color: var(--muted); font-size: .78rem; font-weight: 700; }
   .status.ok { background: #e8f6ef; color: var(--success); }
   .status.error { background: #fff0ee; color: var(--danger); }
-  .drop {
-    margin: 20px 24px 0;
-    border: 1.5px dashed #b8c3d1;
-    border-radius: 16px;
-    background: #fbfcfe;
-    padding: 16px;
-    text-align: center;
-    transition: .16s ease;
-  }
-  .drop.drag { border-color: var(--accent); background: var(--accent-soft); }
-  .drop input { display: none; }
-  .file-button { display: inline-flex; align-items: center; justify-content: center; min-height: 40px; padding: 8px 14px; border: 1px solid var(--line); border-radius: 12px; background: #fff; cursor: pointer; font-weight: 750; }
-  .drop-note { display: block; margin-top: 7px; color: var(--muted); font-size: .82rem; }
   .editor-wrap { padding: 18px 24px 0; }
   .editor-label { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; font-size: .86rem; font-weight: 750; }
   .editor-label span:last-child { color: var(--muted); font-weight: 600; }
@@ -108,12 +95,134 @@
   .note { margin-top: 14px; padding: 0 4px; color: var(--muted); font-size: .82rem; }
 }
 
+
+/* uni-html-dropbox: HTMLファイル投入パネルをカード型ドロップゾーンに変更 */
+@layer uni-html-dropbox {
+  .uni-html-dropbox {
+    margin: 20px 24px 0;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.97);
+    border: 1px solid rgba(255, 255, 255, 0.9);
+    border-radius: 24px;
+    box-shadow: 0 8px 24px rgba(41, 50, 75, 0.07);
+  }
+
+  .uni-html-dropbox__zone {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 100%;
+    height: 220px;
+    overflow: hidden;
+    border: 1.5px dashed rgba(117, 103, 220, 0.28);
+    border-radius: 22px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,247,253,0.98));
+    cursor: pointer;
+    box-sizing: border-box;
+    transition: border-color .18s ease, transform .18s ease, box-shadow .18s ease;
+  }
+
+  .uni-html-dropbox__zone:hover,
+  .uni-html-dropbox__zone.is-dragging {
+    border-color: rgba(117, 103, 220, 0.58);
+    box-shadow: 0 12px 28px rgba(117, 103, 220, 0.10);
+    transform: translateY(-1px);
+  }
+
+  .uni-html-dropbox__inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 22px;
+    text-align: center;
+    pointer-events: none;
+  }
+
+  .uni-html-dropbox__icon {
+    display: grid;
+    place-items: center;
+    width: 54px;
+    height: 54px;
+    border-radius: 18px;
+    background: linear-gradient(135deg, rgba(117,103,220,0.12), rgba(217,137,180,0.16));
+  }
+
+  .uni-html-dropbox__icon svg {
+    width: 25px;
+    height: 25px;
+    stroke: #6e65ad;
+  }
+
+  .uni-html-dropbox__copy {
+    display: grid;
+    gap: 5px;
+    text-align: center;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans JP", sans-serif;
+  }
+
+  .uni-html-dropbox__title {
+    color: #182033;
+    font-size: 16px;
+    font-weight: 800;
+    line-height: 1.35;
+    letter-spacing: .01em;
+  }
+
+  .uni-html-dropbox__guide {
+    color: #667085;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.55;
+  }
+
+  .uni-html-dropbox__meta {
+    color: #98a2b3;
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.4;
+  }
+
+  .uni-html-dropbox__input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  .uni-html-dropbox__selected {
+    display: none;
+    align-items: center;
+    gap: 12px;
+    margin-top: 12px;
+    padding: 12px 14px;
+    border: 1px solid rgba(110,145,210,.16);
+    border-radius: 16px;
+    background: #fff;
+    color: #344054;
+    box-shadow: 0 8px 20px rgba(15,23,42,.05);
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .uni-html-dropbox__selected.is-visible { display: flex; }
+  .uni-html-dropbox__selected-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .uni-html-dropbox__selected-badge { flex: 0 0 auto; padding: 5px 8px; border-radius: 999px; background: #f0effb; color: #6e65ad; font-size: 11px; }
+
+  @media (max-width: 540px) {
+    .uni-html-dropbox { margin-inline: 16px; padding: 16px; }
+    .uni-html-dropbox__zone { height: 190px; }
+  }
+}
+
 /* utilities: 小画面調整 */
 @layer utilities {
   @media (max-width: 680px) {
     .page { width: min(100% - 20px, 1080px); padding-top: 24px; }
     .panel-head, .editor-wrap, .options { padding-left: 16px; padding-right: 16px; }
-    .drop { margin-left: 16px; margin-right: 16px; }
     #source { min-height: 300px; }
     .actions { width: 100%; }
     .btn { flex: 1 1 160px; }
@@ -138,10 +247,29 @@
       <span id="status" class="status">未解析</span>
     </div>
 
-    <div id="drop" class="drop">
-      <label class="file-button" for="file">HTMLファイルを選択</label>
-      <input id="file" type="file" accept=".html,.htm,text/html">
-      <span class="drop-note">または、ここへHTMLファイルをドラッグ＆ドロップ</span>
+    <div class="uni-html-dropbox">
+      <label id="drop" class="uni-html-dropbox__zone">
+        <span class="uni-html-dropbox__inner">
+          <span class="uni-html-dropbox__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2">
+              <path d="M7 3.5h7l4 4V20.5H7z"></path>
+              <path d="M14 3.5v4h4"></path>
+              <path d="M9.5 12.5h5"></path>
+              <path d="M9.5 16h5"></path>
+            </svg>
+          </span>
+          <span class="uni-html-dropbox__copy">
+            <span class="uni-html-dropbox__title">保存HTMLをアップロード</span>
+            <span class="uni-html-dropbox__guide">クリックして選択、またはここへドラッグ</span>
+            <span class="uni-html-dropbox__meta">HTML・HTMファイルに対応</span>
+          </span>
+        </span>
+        <input id="file" class="uni-html-dropbox__input" type="file" accept=".html,.htm,text/html">
+      </label>
+      <div id="selectedFile" class="uni-html-dropbox__selected" aria-live="polite">
+        <span class="uni-html-dropbox__selected-badge">HTML</span>
+        <span id="selectedFileName" class="uni-html-dropbox__selected-name"></span>
+      </div>
     </div>
 
     <div class="editor-wrap">
@@ -150,7 +278,7 @@
     </div>
 
     <div class="options">
-      <label class="check"><input id="collapseAssistant" type="checkbox"> ChatGPTの発言を閉じた状態で生成</label>
+      <label class="check"><input id="collapseAssistant" type="checkbox" checked> ChatGPTの発言を閉じた状態で生成</label>
       <div class="actions">
         <button id="preview" class="btn secondary" type="button">解析結果を確認</button>
         <button id="download" class="btn primary" type="button" disabled>整形HTMLをダウンロード</button>
@@ -167,6 +295,8 @@
   const file = document.getElementById('file');
   const drop = document.getElementById('drop');
   const collapseAssistant = document.getElementById('collapseAssistant');
+  const selectedFile = document.getElementById('selectedFile');
+  const selectedFileName = document.getElementById('selectedFileName');
   const preview = document.getElementById('preview');
   const download = document.getElementById('download');
   const status = document.getElementById('status');
@@ -189,6 +319,8 @@
   async function loadFile(selected) {
     if (!selected) return;
     source.value = await selected.text();
+    selectedFileName.textContent = selected.name || '選択したHTMLファイル';
+    selectedFile.classList.add('is-visible');
     updateMeta();
     analyze();
   }
@@ -470,11 +602,11 @@ ${cards}
 
   ['dragenter', 'dragover'].forEach(type => drop.addEventListener(type, event => {
     event.preventDefault();
-    drop.classList.add('drag');
+    drop.classList.add('is-dragging');
   }));
   ['dragleave', 'drop'].forEach(type => drop.addEventListener(type, event => {
     event.preventDefault();
-    drop.classList.remove('drag');
+    drop.classList.remove('is-dragging');
   }));
   drop.addEventListener('drop', event => loadFile(event.dataTransfer.files[0]));
 
