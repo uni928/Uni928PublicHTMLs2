@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI会話ログ HTML整形ジェネレーター</title>
+<style>
+@layer reset, base, components, utilities;
+
+/* base: ページ全体の基礎スタイル */
+@layer reset {
+  *, *::before, *::after { box-sizing: border-box; }
+  html { color-scheme: light; }
+  body, h1, h2, p { margin: 0; }
+  button, input, textarea { font: inherit; }
+}
+
+/* base: 色・余白・タイポグラフィ */
+@layer base {
+  :root {
+    --bg: #f5f7fb;
+    --surface: rgba(255,255,255,.92);
+    --surface-strong: #fff;
+    --ink: #18202b;
+    --muted: #667085;
+    --line: #dbe2ea;
+    --accent: #3348d8;
+    --accent-soft: #edf0ff;
+    --success: #167451;
+    --danger: #b42318;
+    --shadow: 0 18px 50px rgba(24,32,43,.09);
+  }
+  body {
+    min-height: 100vh;
+    background:
+      radial-gradient(circle at 10% 0%, #e9edff 0, transparent 30rem),
+      radial-gradient(circle at 92% 8%, #e8f7f2 0, transparent 26rem),
+      var(--bg);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    line-height: 1.65;
+  }
+  button { border: 0; }
+  textarea { color: var(--ink); }
+}
+
+/* components: 入力ページ */
+@layer components {
+  .page { width: min(1080px, calc(100% - 32px)); margin: 0 auto; padding: 42px 0 64px; }
+  .hero { padding: 8px 4px 28px; }
+  .eyebrow { color: var(--accent); font-size: .8rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+  .hero h1 { margin-top: 8px; font-size: clamp(1.9rem, 4vw, 3.2rem); line-height: 1.18; letter-spacing: -.035em; }
+  .hero p { max-width: 760px; margin-top: 14px; color: var(--muted); }
+  .panel {
+    overflow: hidden;
+    border: 1px solid rgba(219,226,234,.9);
+    border-radius: 24px;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(12px);
+  }
+  .panel-head { display: flex; gap: 16px; align-items: start; justify-content: space-between; padding: 22px 24px 18px; border-bottom: 1px solid var(--line); }
+  .panel-head h2 { font-size: 1.08rem; }
+  .panel-head p { margin-top: 4px; color: var(--muted); font-size: .9rem; }
+  .status { flex: 0 0 auto; border-radius: 999px; background: #eef2f6; padding: 6px 10px; color: var(--muted); font-size: .78rem; font-weight: 700; }
+  .status.ok { background: #e8f6ef; color: var(--success); }
+  .status.error { background: #fff0ee; color: var(--danger); }
+  .drop {
+    margin: 20px 24px 0;
+    border: 1.5px dashed #b8c3d1;
+    border-radius: 16px;
+    background: #fbfcfe;
+    padding: 16px;
+    text-align: center;
+    transition: .16s ease;
+  }
+  .drop.drag { border-color: var(--accent); background: var(--accent-soft); }
+  .drop input { display: none; }
+  .file-button { display: inline-flex; align-items: center; justify-content: center; min-height: 40px; padding: 8px 14px; border: 1px solid var(--line); border-radius: 12px; background: #fff; cursor: pointer; font-weight: 750; }
+  .drop-note { display: block; margin-top: 7px; color: var(--muted); font-size: .82rem; }
+  .editor-wrap { padding: 18px 24px 0; }
+  .editor-label { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; font-size: .86rem; font-weight: 750; }
+  .editor-label span:last-child { color: var(--muted); font-weight: 600; }
+  #source {
+    display: block;
+    width: 100%;
+    min-height: 360px;
+    resize: vertical;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background: var(--surface-strong);
+    padding: 15px 16px;
+    outline: none;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: .85rem;
+    line-height: 1.55;
+    tab-size: 2;
+  }
+  #source:focus { border-color: #95a2f0; box-shadow: 0 0 0 4px rgba(51,72,216,.09); }
+  .options { display: flex; gap: 14px; align-items: center; justify-content: space-between; flex-wrap: wrap; padding: 18px 24px 24px; }
+  .check { display: inline-flex; gap: 10px; align-items: center; cursor: pointer; user-select: none; font-weight: 700; }
+  .check input { width: 18px; height: 18px; accent-color: var(--accent); }
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  .btn { min-height: 44px; border-radius: 13px; padding: 10px 16px; cursor: pointer; font-weight: 800; }
+  .btn.secondary { border: 1px solid var(--line); background: #fff; color: var(--ink); }
+  .btn.primary { background: var(--ink); color: #fff; box-shadow: 0 8px 22px rgba(24,32,43,.16); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; }
+  .note { margin-top: 14px; padding: 0 4px; color: var(--muted); font-size: .82rem; }
+}
+
+/* utilities: 小画面調整 */
+@layer utilities {
+  @media (max-width: 680px) {
+    .page { width: min(100% - 20px, 1080px); padding-top: 24px; }
+    .panel-head, .editor-wrap, .options { padding-left: 16px; padding-right: 16px; }
+    .drop { margin-left: 16px; margin-right: 16px; }
+    #source { min-height: 300px; }
+    .actions { width: 100%; }
+    .btn { flex: 1 1 160px; }
+  }
+}
+</style>
+</head>
+<body>
+<main class="page">
+  <header class="hero">
+    <div class="eyebrow">Conversation archive formatter</div>
+    <h1>保存した会話HTMLを、読みやすい1枚のページへ。</h1>
+    <p>ブラウザで会話ページを右クリックして「名前を付けて保存」したHTMLを読み込み、会話部分だけを抽出します。元ページのサイドバーや操作UIは除外し、文章・見出し・リスト・コード・表を読みやすく整えて出力します。</p>
+  </header>
+
+  <section class="panel" aria-labelledby="panelTitle">
+    <div class="panel-head">
+      <div>
+        <h2 id="panelTitle">保存HTMLを入力</h2>
+        <p>ファイルを選ぶか、HTML全文を下の欄へ貼り付けてください。</p>
+      </div>
+      <span id="status" class="status">未解析</span>
+    </div>
+
+    <div id="drop" class="drop">
+      <label class="file-button" for="file">HTMLファイルを選択</label>
+      <input id="file" type="file" accept=".html,.htm,text/html">
+      <span class="drop-note">または、ここへHTMLファイルをドラッグ＆ドロップ</span>
+    </div>
+
+    <div class="editor-wrap">
+      <div class="editor-label"><span>HTMLソース</span><span id="meta">0文字</span></div>
+      <textarea id="source" spellcheck="false" placeholder="ここに、ブラウザから保存した会話ページのHTML全文を貼り付けてください。"></textarea>
+    </div>
+
+    <div class="options">
+      <label class="check"><input id="collapseAssistant" type="checkbox"> ChatGPTの発言を閉じた状態で生成</label>
+      <div class="actions">
+        <button id="preview" class="btn secondary" type="button">解析結果を確認</button>
+        <button id="download" class="btn primary" type="button" disabled>整形HTMLをダウンロード</button>
+      </div>
+    </div>
+  </section>
+  <p class="note">処理はこのページ内だけで行います。入力したHTMLを外部へ送信する処理はありません。</p>
+</main>
+<script>
+(() => {
+  'use strict';
+
+  const source = document.getElementById('source');
+  const file = document.getElementById('file');
+  const drop = document.getElementById('drop');
+  const collapseAssistant = document.getElementById('collapseAssistant');
+  const preview = document.getElementById('preview');
+  const download = document.getElementById('download');
+  const status = document.getElementById('status');
+  const meta = document.getElementById('meta');
+
+  let parsed = null;
+
+  const escapeHtml = (value) => String(value).replace(/[&<>"']/g, ch => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  })[ch]);
+
+  function updateMeta() {
+    meta.textContent = `${source.value.length.toLocaleString('ja-JP')}文字`;
+    parsed = null;
+    download.disabled = true;
+    status.className = 'status';
+    status.textContent = source.value.trim() ? '未解析' : '未入力';
+  }
+
+  async function loadFile(selected) {
+    if (!selected) return;
+    source.value = await selected.text();
+    updateMeta();
+    analyze();
+  }
+
+  function cleanNode(node) {
+    const clone = node.cloneNode(true);
+    clone.querySelectorAll('script, style, link, meta, iframe, object, embed, form, button, input, textarea, select, svg, canvas, video, audio, noscript').forEach(el => el.remove());
+
+    clone.querySelectorAll('*').forEach(el => {
+      [...el.attributes].forEach(attr => {
+        const name = attr.name.toLowerCase();
+        if (name.startsWith('on') || name === 'style' || name === 'class' || name === 'id' || name.startsWith('data-') || name.startsWith('aria-')) {
+          el.removeAttribute(attr.name);
+        }
+      });
+      if (el.tagName === 'A') {
+        const href = el.getAttribute('href') || '';
+        if (!/^(https?:|mailto:|#)/i.test(href)) el.removeAttribute('href');
+        else {
+          el.setAttribute('target', '_blank');
+          el.setAttribute('rel', 'noopener noreferrer');
+        }
+      }
+      if (el.tagName === 'IMG') {
+        const src = el.getAttribute('src') || '';
+        if (!/^(https?:|data:image\/)/i.test(src)) el.remove();
+        else el.removeAttribute('srcset');
+      }
+    });
+
+    return clone.innerHTML.trim();
+  }
+
+  function chooseContentNode(roleNode) {
+    const candidates = [
+      ...roleNode.querySelectorAll('.markdown.prose, .markdown, [class*="markdown"], [class*="prose"]')
+    ].filter(el => el.textContent.trim());
+    if (candidates.length) {
+      candidates.sort((a, b) => b.textContent.trim().length - a.textContent.trim().length);
+      return candidates[0];
+    }
+    return roleNode;
+  }
+
+  function normalizeMessageHtml(html) {
+    const box = document.createElement('div');
+    box.innerHTML = html;
+    box.querySelectorAll('p:empty, div:empty').forEach(el => el.remove());
+    return box.innerHTML.trim();
+  }
+
+  function extractMessages(doc) {
+    const roleNodes = [...doc.querySelectorAll('[data-message-author-role="user"], [data-message-author-role="assistant"]')];
+    const messages = [];
+
+    for (const roleNode of roleNodes) {
+      const role = roleNode.getAttribute('data-message-author-role');
+      const contentNode = chooseContentNode(roleNode);
+      const html = normalizeMessageHtml(cleanNode(contentNode));
+      const text = contentNode.textContent.trim();
+      if (!text && !html) continue;
+
+      const previous = messages[messages.length - 1];
+      if (previous && previous.role === role && previous.text === text) continue;
+      messages.push({ role, html, text });
+    }
+    return messages;
+  }
+
+  function analyze() {
+    const raw = source.value.trim();
+    if (!raw) {
+      status.className = 'status error';
+      status.textContent = 'HTMLが空です';
+      download.disabled = true;
+      return;
+    }
+
+    try {
+      const doc = new DOMParser().parseFromString(raw, 'text/html');
+      const messages = extractMessages(doc);
+      if (!messages.length) throw new Error('会話本文を検出できませんでした。');
+
+      parsed = {
+        title: (doc.querySelector('title')?.textContent || '会話ログ').trim(),
+        messages
+      };
+      const userCount = messages.filter(m => m.role === 'user').length;
+      const assistantCount = messages.filter(m => m.role === 'assistant').length;
+      status.className = 'status ok';
+      status.textContent = `${messages.length}件検出（自分 ${userCount} / AI ${assistantCount}）`;
+      download.disabled = false;
+    } catch (error) {
+      parsed = null;
+      download.disabled = true;
+      status.className = 'status error';
+      status.textContent = error.message || '解析エラー';
+    }
+  }
+
+  function buildOutput(data, collapsed) {
+    const title = data.title.replace(/\s*[|｜-]\s*ChatGPT\s*$/i, '').trim() || '会話ログ';
+    const cards = data.messages.map((message, index) => {
+      const body = message.html || `<p>${escapeHtml(message.text)}</p>`;
+      if (message.role === 'assistant') {
+        return `
+<details class="turn assistant"${collapsed ? '' : ' open'}>
+  <summary><span class="badge">AI</span><span class="summary-label">回答 ${index + 1}</span><span class="chevron" aria-hidden="true">⌄</span></summary>
+  <div class="message-body">${body}</div>
+</details>`;
+      }
+      return `
+<article class="turn user">
+  <div class="turn-head"><span class="badge">YOU</span><span>質問・指示 ${index + 1}</span></div>
+  <div class="message-body">${body}</div>
+</article>`;
+    }).join('\n');
+
+    return `<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${escapeHtml(title)} - 会話アーカイブ</title>
+<style>
+@layer reset, base, layout, message, content, table, code, utilities;
+
+/* base: ブラウザ差を整える */
+@layer reset {
+  *, *::before, *::after { box-sizing: border-box; }
+  body, h1, p { margin: 0; }
+  table { border-collapse: separate; border-spacing: 0; }
+  img { max-width: 100%; height: auto; }
+}
+
+/* base: 配色と本文 */
+@layer base {
+  :root {
+    --bg: #f6f7fa;
+    --paper: #fff;
+    --ink: #1b2430;
+    --muted: #667085;
+    --line: #dde3ea;
+    --user: #eef1ff;
+    --user-line: #cfd6ff;
+    --ai: #fff;
+    --accent: #3847c9;
+    --shadow: 0 12px 34px rgba(20,31,50,.07);
+  }
+  body {
+    background: linear-gradient(180deg, #fafbff 0, var(--bg) 260px);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    line-height: 1.75;
+  }
+  a { color: #2d49bd; text-underline-offset: .18em; }
+}
+
+/* layout: 読みやすい本文幅とヘッダー */
+@layer layout {
+  .shell { width: min(920px, calc(100% - 28px)); margin: 0 auto; padding: 42px 0 80px; }
+  .top { margin-bottom: 28px; padding: 0 4px; }
+  .kicker { color: var(--accent); font-size: .78rem; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; }
+  h1 { margin-top: 7px; font-size: clamp(1.65rem, 4vw, 2.65rem); line-height: 1.2; letter-spacing: -.035em; overflow-wrap: anywhere; }
+  .meta { margin-top: 10px; color: var(--muted); font-size: .9rem; }
+  .thread { display: grid; gap: 16px; }
+}
+
+/* message: 発言カードと開閉UI */
+@layer message {
+  .turn { overflow: hidden; border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); }
+  .turn.user { background: var(--user); border-color: var(--user-line); }
+  .turn.assistant { background: var(--ai); }
+  .turn-head, .turn summary { display: flex; align-items: center; gap: 9px; min-height: 48px; padding: 11px 16px; color: #46505d; font-size: .82rem; font-weight: 800; }
+  .turn-head { border-bottom: 1px solid rgba(207,214,255,.85); }
+  .turn summary { cursor: pointer; list-style: none; border-bottom: 0 solid var(--line); user-select: none; }
+  .turn summary::-webkit-details-marker { display: none; }
+  .turn[open] summary { border-bottom-width: 1px; }
+  .turn summary:hover { background: #fafbfc; }
+  .badge { display: inline-grid; min-width: 42px; height: 24px; place-items: center; border-radius: 999px; background: #27303b; color: #fff; font-size: .67rem; letter-spacing: .05em; }
+  .user .badge { background: var(--accent); }
+  .chevron { margin-left: auto; font-size: 1.1rem; transition: transform .18s ease; }
+  details[open] .chevron { transform: rotate(180deg); }
+  .message-body { padding: 19px 20px 22px; overflow-wrap: anywhere; }
+}
+
+/* content: 会話本文内の見出し・箇条書き */
+@layer content {
+  .message-body > :first-child { margin-top: 0; }
+  .message-body > :last-child { margin-bottom: 0; }
+  .message-body p { margin: .75em 0; }
+  .message-body h1, .message-body h2, .message-body h3, .message-body h4 { margin: 1.35em 0 .55em; line-height: 1.35; letter-spacing: -.018em; }
+  .message-body h1 { font-size: 1.45rem; }
+  .message-body h2 { font-size: 1.27rem; }
+  .message-body h3 { font-size: 1.12rem; }
+  .message-body ul, .message-body ol { margin: .75em 0; padding-left: 1.6em; }
+  .message-body li + li { margin-top: .32em; }
+  .message-body blockquote { margin: 1em 0; border-left: 4px solid #b7c1ce; background: #f8fafc; padding: .7em 1em; color: #475467; }
+  .message-body hr { border: 0; border-top: 1px solid var(--line); margin: 1.5em 0; }
+}
+
+/* table: 表をカード状に整え、狭い画面では横スクロール */
+@layer table {
+  .message-body table { display: block; width: 100%; max-width: 100%; margin: 1.2em 0; overflow-x: auto; border: 1px solid #d7dee8; border-radius: 14px; background: #fff; box-shadow: 0 5px 18px rgba(24,32,43,.05); }
+  .message-body thead { background: #f1f4f8; }
+  .message-body th, .message-body td { min-width: 9rem; border-right: 1px solid #e3e8ef; border-bottom: 1px solid #e3e8ef; padding: 11px 13px; text-align: left; vertical-align: top; line-height: 1.55; }
+  .message-body th { color: #344054; font-size: .88rem; font-weight: 800; white-space: nowrap; }
+  .message-body tbody tr:nth-child(even) td { background: #fafbfc; }
+  .message-body tbody tr:hover td { background: #f4f7ff; }
+  .message-body tr > :last-child { border-right: 0; }
+  .message-body tbody tr:last-child td { border-bottom: 0; }
+  .message-body table p { margin: 0; }
+}
+
+/* code: コードとインラインコード */
+@layer code {
+  .message-body pre { margin: 1.1em 0; overflow: auto; border: 1px solid #273341; border-radius: 14px; background: #17202a; padding: 15px 16px; color: #eef3f8; font: .88rem/1.65 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; tab-size: 2; }
+  .message-body code { border-radius: 6px; background: #eef1f5; padding: .14em .34em; font: .9em ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .message-body pre code { background: transparent; padding: 0; color: inherit; }
+}
+
+/* utilities: 印刷とモバイル */
+@layer utilities {
+  @media (max-width: 620px) {
+    .shell { width: min(100% - 16px, 920px); padding-top: 24px; }
+    .message-body { padding: 15px 14px 18px; }
+    .turn-head, .turn summary { padding-inline: 13px; }
+    .message-body th, .message-body td { min-width: 7.5rem; padding: 9px 10px; }
+  }
+  @media print {
+    body { background: #fff; }
+    .shell { width: 100%; padding: 0; }
+    .turn { break-inside: avoid; box-shadow: none; }
+    details.assistant:not([open]) > *:not(summary) { display: block; }
+    details.assistant:not([open]) summary { border-bottom-width: 1px; }
+    .chevron { display: none; }
+  }
+}
+</style>
+</head>
+<body>
+<main class="shell">
+  <header class="top">
+    <div class="kicker">Conversation archive</div>
+    <h1>${escapeHtml(title)}</h1>
+    <p class="meta">全${data.messages.length}件の発言を読みやすく再構成</p>
+  </header>
+  <section class="thread" aria-label="会話ログ">
+${cards}
+  </section>
+</main>
+</body>
+</html>`;
+  }
+
+  function saveFile(name, text) {
+    const blob = new Blob([text], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  source.addEventListener('input', updateMeta);
+  file.addEventListener('change', () => loadFile(file.files[0]));
+  preview.addEventListener('click', analyze);
+
+  download.addEventListener('click', () => {
+    if (!parsed) analyze();
+    if (!parsed) return;
+    const html = buildOutput(parsed, collapseAssistant.checked);
+    const safeName = (parsed.title || 'conversation').replace(/[\\/:*?"<>|]+/g, '_').slice(0, 80).trim() || 'conversation';
+    saveFile(`${safeName}-readable.html`, html);
+  });
+
+  ['dragenter', 'dragover'].forEach(type => drop.addEventListener(type, event => {
+    event.preventDefault();
+    drop.classList.add('drag');
+  }));
+  ['dragleave', 'drop'].forEach(type => drop.addEventListener(type, event => {
+    event.preventDefault();
+    drop.classList.remove('drag');
+  }));
+  drop.addEventListener('drop', event => loadFile(event.dataTransfer.files[0]));
+
+  updateMeta();
+})();
+</script>
+</body>
+</html>
