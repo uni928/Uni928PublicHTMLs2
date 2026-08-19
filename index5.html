@@ -1,0 +1,1086 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>かんたん表メーカー</title>
+  <meta name="description" content="サイズ、揃え方、文章を順番に決めて保存できる単一HTML版の表メーカー。">
+  <style>
+    @layer base, layout, components, responsive;
+
+    /* base: 色、フォント、共通リセットを定義 */
+    @layer base {
+      :root {
+        color-scheme: light;
+        --ink: #3c3024;
+        --ink-soft: #6f6255;
+        --muted: #998b7c;
+        --line: #eadfce;
+        --line-strong: #d8c5aa;
+        --paper: #fffdf8;
+        --paper-soft: #fff8e9;
+        --cream: #fff4d7;
+        --cream-deep: #f8e5b7;
+        --orange: #df7f42;
+        --orange-dark: #b9602b;
+        --orange-soft: #fff0dd;
+        --green: #638e66;
+        --green-soft: #edf7e9;
+        --shadow: 0 22px 60px rgba(112, 79, 40, 0.12);
+        --radius-large: 28px;
+      }
+
+      * { box-sizing: border-box; }
+      html { min-width: 320px; }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        color: var(--ink);
+        background: #fff7e8;
+        font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif;
+        line-height: 1.6;
+      }
+
+      button,
+      input,
+      textarea { font: inherit; }
+
+      button,
+      label { cursor: pointer; }
+
+      button:focus-visible,
+      input:focus-visible,
+      textarea:focus-visible {
+        outline: 3px solid rgba(223, 127, 66, 0.28);
+        outline-offset: 3px;
+      }
+
+      h1,
+      h2,
+      p { margin-top: 0; }
+    }
+
+    /* layout: ページの骨格、見出し、手順ナビゲーションを定義 */
+    @layer layout {
+      .site-shell {
+        min-height: 100vh;
+        padding: 34px 18px 48px;
+        background:
+          radial-gradient(circle at 10% 0%, rgba(248, 199, 122, 0.24), transparent 28rem),
+          radial-gradient(circle at 94% 16%, rgba(180, 207, 155, 0.24), transparent 25rem),
+          #fff7e8;
+      }
+
+      .app-container { width: min(980px, 100%); margin: 0 auto; }
+
+      .site-header {
+        position: relative;
+        display: grid;
+        grid-template-columns: 108px minmax(0, 1fr) 116px;
+        gap: 28px;
+        align-items: end;
+        min-height: 230px;
+        padding: 28px 34px 32px;
+        overflow: hidden;
+        border: 1px solid rgba(223, 127, 66, 0.2);
+        border-radius: var(--radius-large);
+        background: linear-gradient(125deg, #fffdf8 5%, #fff0d1 100%);
+        box-shadow: var(--shadow);
+      }
+
+      .brand-mark {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        align-self: start;
+        color: var(--orange-dark);
+        font-size: 0.66rem;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+        line-height: 1.15;
+      }
+
+      .brand-symbol {
+        display: grid;
+        width: 34px;
+        height: 34px;
+        place-items: center;
+        border-radius: 10px;
+        background: var(--orange);
+        color: #fff;
+        font-size: 1.25rem;
+        line-height: 1;
+      }
+
+      .header-copy { position: relative; z-index: 1; }
+
+      .eyebrow,
+      .kicker {
+        margin: 0;
+        color: var(--orange-dark);
+        font-size: 0.72rem;
+        font-weight: 900;
+        letter-spacing: 0.14em;
+      }
+
+      h1 {
+        margin-bottom: 13px;
+        font-size: clamp(2rem, 5vw, 3.4rem);
+        letter-spacing: -0.055em;
+        line-height: 1.16;
+      }
+
+      h1 span { color: var(--orange); }
+
+      .lead {
+        max-width: 540px;
+        margin-bottom: 0;
+        color: var(--ink-soft);
+        font-size: 0.96rem;
+      }
+
+      .header-decoration {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        align-self: center;
+        gap: 6px;
+        transform: rotate(-8deg);
+      }
+
+      .header-decoration span {
+        display: block;
+        height: 96px;
+        border: 1px solid rgba(223, 127, 66, 0.28);
+        background: rgba(255, 255, 255, 0.56);
+      }
+
+      .header-decoration span:nth-child(2) { margin-top: 20px; background: rgba(223, 127, 66, 0.12); }
+      .header-decoration span:nth-child(3) { margin-top: 40px; background: rgba(99, 142, 102, 0.18); }
+
+      .progress-nav {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
+        margin: 18px 0;
+      }
+
+      .progress-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+        padding: 13px 15px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: rgba(255, 253, 248, 0.72);
+        color: var(--muted);
+      }
+
+      .progress-item span {
+        display: grid;
+        width: 28px;
+        height: 28px;
+        flex: 0 0 28px;
+        place-items: center;
+        border-radius: 50%;
+        background: #f1e9dc;
+        color: #a99b8a;
+        font-size: 0.7rem;
+        font-weight: 900;
+      }
+
+      .progress-item small { overflow: hidden; font-size: 0.78rem; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
+      .progress-item.current { border-color: #e5b58f; background: #fffdf8; color: var(--orange-dark); box-shadow: 0 8px 22px rgba(223, 127, 66, 0.1); }
+      .progress-item.current span { background: var(--orange); color: #fff; }
+      .progress-item.done { border-color: #c8ddc0; background: rgba(237, 247, 233, 0.76); color: var(--green); }
+      .progress-item.done span { background: var(--green-soft); color: var(--green); }
+
+      .site-footer {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        margin: 18px 4px 0;
+        color: var(--muted);
+        font-size: 0.74rem;
+      }
+    }
+
+    /* components: 入力画面、操作ボタン、表プレビューを定義 */
+    @layer components {
+      .status-message {
+        margin: 0 0 14px;
+        padding: 12px 16px;
+        border: 1px solid #e6c995;
+        border-radius: 12px;
+        background: #fff7dd;
+        color: #8e5d23;
+        font-size: 0.86rem;
+        font-weight: 700;
+      }
+
+      .status-message.success { border-color: #c8dfbd; background: var(--green-soft); color: #4f7753; }
+      .status-message.error { border-color: #efc1b3; background: #fff1ed; color: #a24c35; }
+
+      .step-card {
+        padding: clamp(24px, 5vw, 44px);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-large);
+        background: var(--paper);
+        box-shadow: var(--shadow);
+      }
+
+      .step-card.wide-card { padding-bottom: 32px; }
+      .step-heading { display: flex; align-items: flex-start; gap: 16px; }
+
+      .step-number {
+        display: grid;
+        width: 45px;
+        height: 45px;
+        flex: 0 0 45px;
+        place-items: center;
+        border-radius: 14px;
+        background: var(--orange-soft);
+        color: var(--orange-dark);
+        font-size: 0.84rem;
+        font-weight: 900;
+      }
+
+      .step-heading h2 {
+        margin: 3px 0 0;
+        font-size: clamp(1.35rem, 3vw, 1.8rem);
+        letter-spacing: -0.04em;
+        line-height: 1.25;
+      }
+
+      .step-description { margin: 18px 0 0 61px; color: var(--ink-soft); font-size: 0.9rem; }
+
+      .dimension-fields { display: flex; align-items: end; justify-content: center; gap: 18px; max-width: 540px; margin: 38px auto 42px; }
+      .dimension-field { display: grid; width: min(190px, 36vw); gap: 7px; color: var(--ink-soft); font-size: 0.82rem; font-weight: 800; }
+      .dimension-field input { width: 100%; min-height: 72px; padding: 6px 12px; border: 1px solid var(--line-strong); border-radius: 16px; background: var(--paper-soft); color: var(--ink); font-size: 2.3rem; font-weight: 800; text-align: center; }
+      .dimension-field small { color: var(--muted); font-size: 0.72rem; font-weight: 500; text-align: center; }
+      .dimension-symbol { padding-bottom: 29px; color: #c5b4a0; font-size: 2rem; font-weight: 300; }
+
+      .step-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 34px; }
+      .first-step-actions { justify-content: center; flex-wrap: wrap; }
+
+      .button {
+        display: inline-flex;
+        min-height: 48px;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        padding: 0 20px;
+        border: 1px solid var(--line-strong);
+        border-radius: 13px;
+        background: #fff;
+        color: var(--ink);
+        font-size: 0.88rem;
+        font-weight: 800;
+        transition: background 0.16s ease, border-color 0.16s ease, transform 0.16s ease;
+      }
+
+      .button:hover,
+      .download-card:hover,
+      .chip-button:hover { transform: translateY(-1px); border-color: #c9a77d; }
+      .button.primary { min-width: 220px; border-color: var(--orange); background: var(--orange); color: #fff; box-shadow: 0 10px 22px rgba(223, 127, 66, 0.2); }
+      .button.primary:hover { border-color: var(--orange-dark); background: var(--orange-dark); }
+      .button.secondary { border-color: #dfc395; background: var(--orange-soft); color: var(--orange-dark); }
+      .button.ghost { color: var(--ink-soft); }
+      .button.ghost:hover { background: #fff8ed; color: var(--ink); }
+      .file-input { display: none; }
+
+      .helper-note { margin: 15px 0 0; color: var(--muted); font-size: 0.76rem; text-align: center; }
+
+      .quick-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 28px 0 16px 61px; }
+      .chip-button { min-height: 36px; padding: 0 12px; border: 1px solid #dfcda9; border-radius: 999px; background: #fff8e9; color: var(--orange-dark); font-size: 0.76rem; font-weight: 800; transition: transform 0.16s ease, border-color 0.16s ease; }
+
+      .alignment-list { display: grid; gap: 10px; margin-left: 61px; }
+      .alignment-row { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 15px; background: #fffaf1; }
+      .column-label { display: flex; align-items: center; gap: 10px; min-width: 80px; color: var(--ink); font-size: 0.84rem; font-weight: 800; }
+      .column-dot { display: grid; width: 28px; height: 28px; place-items: center; border-radius: 9px; background: var(--orange-soft); color: var(--orange-dark); font-size: 0.67rem; }
+      .segmented-control { display: grid; grid-template-columns: repeat(3, minmax(82px, 1fr)); gap: 4px; padding: 4px; border-radius: 11px; background: #f4ecdf; }
+      .segmented-control button { min-height: 35px; padding: 0 10px; border: 0; border-radius: 8px; background: transparent; color: #8e7d6b; font-size: 0.75rem; font-weight: 800; }
+      .segmented-control button.selected { background: #fffdf8; color: var(--orange-dark); box-shadow: 0 2px 8px rgba(112, 79, 40, 0.12); }
+
+      .input-grid { display: grid; grid-template-columns: repeat(var(--columns), minmax(0, 1fr)); gap: 12px; margin-top: 28px; }
+      .cell-field { display: grid; gap: 7px; min-width: 0; }
+      .cell-field span { overflow: hidden; color: var(--ink-soft); font-size: 0.7rem; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
+      .cell-field textarea { width: 100%; min-height: 82px; resize: vertical; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: #fffaf1; color: var(--ink); font-size: 0.84rem; line-height: 1.5; }
+      .cell-field textarea::placeholder { color: #b8aa98; }
+      .cell-field.header-cell textarea { border-color: #e5cda6; background: #fff5df; }
+
+      /* components: 表プレビューの視認性・立体感・テーマ表現を強化 */
+      .table-preview-wrap { overflow-x: auto; margin-top: 28px; border: 1px solid var(--line-strong); border-radius: 18px; background: #fff; box-shadow: 0 10px 28px rgba(76, 56, 34, 0.08); }
+      .sample-table-section { margin-top: 28px; }
+      .sample-table-label { margin: 0 0 8px; color: var(--orange-dark); font-size: 0.76rem; font-weight: 900; letter-spacing: 0.08em; }
+      .sample-table-section .table-preview-wrap { margin-top: 0; }
+      .table-preview { width: 100%; min-width: 520px; border-collapse: separate; border-spacing: 0; table-layout: fixed; --table-head-bg: #fff0d5; --table-head-border: #e0ba80; --table-head-ink: var(--table-ink); --table-row-even: #fffaf1; --table-row-odd: #fffdf8; --table-line: #eadfce; --table-ink: #3c3024; --table-accent: #df7f42; }
+      .table-preview td { position: relative; padding: 17px 18px; border-right: 1px solid var(--table-line); border-bottom: 1px solid var(--table-line); background: var(--table-row-odd); color: var(--table-ink); font-size: 0.86rem; line-height: 1.6; vertical-align: middle; white-space: pre-wrap; overflow-wrap: anywhere; transition: filter 0.15s ease, background 0.15s ease; }
+      .table-preview tr:nth-child(even) td { background: var(--table-row-even); }
+      .table-preview tr:hover td { filter: brightness(0.985); }
+      .table-preview td:last-child { border-right: 0; }
+      .table-preview tr:last-child td { border-bottom: 0; }
+      .table-preview td.preview-header { border-bottom: 1px solid var(--table-head-border); background: var(--table-head-bg); color: var(--table-head-ink); font-weight: 850; letter-spacing: 0.02em; }
+      .table-preview td.preview-header::before { content: ""; position: absolute; inset: 0 auto auto 0; width: 100%; height: 4px; background: var(--table-accent); }
+      .table-preview td.preview-header:first-child { border-top-left-radius: 17px; }
+      .table-preview td.preview-header:last-child { border-top-right-radius: 17px; }
+      .table-preview tr:last-child td:first-child { border-bottom-left-radius: 17px; }
+      .table-preview tr:last-child td:last-child { border-bottom-right-radius: 17px; }
+      .table-preview-wrap.style-classic { border-color: #d8c5aa; }
+      .table-preview-wrap.style-ocean { border-color: #9cb6d4; }
+      .table-preview-wrap.style-forest { border-color: #98bd9c; }
+      .table-preview-wrap.style-mono { border-color: #b6bdc6; }
+      .table-preview-wrap.style-midnight { border-color: #8ea0b7; }
+      .table-preview-wrap.style-rose { border-color: #d9a5b4; }
+      .table-preview-wrap.style-lavender { border-color: #b9a7e8; }
+      .table-preview-wrap.style-sky { border-color: #8dc9e8; }
+      .table-preview-wrap.style-mint { border-color: #8bcab7; }
+      .table-preview-wrap.style-sand { border-color: #cbb08b; }
+      .table-preview-wrap.style-coral { border-color: #e5a291; }
+      .table-preview-wrap.style-navy { border-color: #7f9bb6; }
+      .table-preview.style-ocean { --table-head-bg: #dbeafe; --table-head-border: #86aee0; --table-row-even: #f1f7ff; --table-row-odd: #ffffff; --table-line: #c7d6e8; --table-ink: #1f2d3d; --table-accent: #2c6edb; }
+      .table-preview.style-forest { --table-head-bg: #dff2e2; --table-head-border: #8eb991; --table-row-even: #f2faf2; --table-row-odd: #ffffff; --table-line: #c9e0cb; --table-ink: #29442d; --table-accent: #4f8d57; }
+      .table-preview.style-mono { --table-head-bg: #eceff1; --table-head-border: #9da5af; --table-row-even: #f7f8fa; --table-row-odd: #ffffff; --table-line: #d6d9de; --table-ink: #2d3742; --table-accent: #66717f; }
+      .table-preview.style-midnight { --table-head-bg: #26354a; --table-head-border: #152133; --table-head-ink: #ffffff; --table-row-even: #eef2f7; --table-row-odd: #ffffff; --table-line: #cfd8e5; --table-ink: #1e293b; --table-accent: #3e76c4; }
+      .table-preview.style-rose { --table-head-bg: #fde2e9; --table-head-border: #e397a9; --table-row-even: #fff4f6; --table-row-odd: #ffffff; --table-line: #efd2d9; --table-ink: #4a2833; --table-accent: #d05c79; }
+      .table-preview.style-lavender { --table-head-bg: #eee7ff; --table-head-border: #b9a7e8; --table-row-even: #faf8ff; --table-row-odd: #ffffff; --table-line: #ddd5f0; --table-ink: #392e52; --table-accent: #7c5cc4; }
+      .table-preview.style-sky { --table-head-bg: #dff4ff; --table-head-border: #8dc9e8; --table-row-even: #f4fbff; --table-row-odd: #ffffff; --table-line: #cde8f4; --table-ink: #17384a; --table-accent: #2694c7; }
+      .table-preview.style-mint { --table-head-bg: #dcf7ef; --table-head-border: #8bcab7; --table-row-even: #f3fcf9; --table-row-odd: #ffffff; --table-line: #cce9df; --table-ink: #20463c; --table-accent: #3b9b80; }
+      .table-preview.style-sand { --table-head-bg: #efe2cd; --table-head-border: #cbb08b; --table-row-even: #faf5ed; --table-row-odd: #fffdfa; --table-line: #e0d2bf; --table-ink: #46382a; --table-accent: #9a7345; }
+      .table-preview.style-coral { --table-head-bg: #ffe3dc; --table-head-border: #e5a291; --table-row-even: #fff7f4; --table-row-odd: #ffffff; --table-line: #f0d4cc; --table-ink: #542f28; --table-accent: #d86c54; }
+      .table-preview.style-navy { --table-head-bg: #16324f; --table-head-border: #0e2236; --table-head-ink: #ffffff; --table-row-even: #f2f6fa; --table-row-odd: #ffffff; --table-line: #ccd7e2; --table-ink: #1f2f3f; --table-accent: #3e7cb1; }
+      .empty-cell { color: #b6a895; font-style: italic; }
+
+      /* components: 表デザイン選択画面のカードと選択状態を定義 */
+      .style-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-top: 30px; }
+      .style-card { display: grid; gap: 12px; min-width: 0; padding: 12px; border: 2px solid var(--line); border-radius: 18px; background: #fff; color: var(--ink); text-align: left; transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease; }
+      .style-card:hover { border-color: #c9a77d; transform: translateY(-2px); }
+      .style-card.selected { border-color: var(--orange); box-shadow: 0 10px 24px rgba(223, 127, 66, 0.16); }
+      .style-card-preview { overflow: hidden; border: 1px solid var(--line); border-radius: 11px; background: #fff; }
+      .mini-table { display: grid; --table-head-bg: #fff0d5; --table-head-border: #e0ba80; --table-head-ink: var(--table-ink); --table-row-even: #fffaf1; --table-row-odd: #fffdf8; --table-line: #eadfce; --table-ink: #3c3024; --table-accent: #df7f42; }
+      .mini-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .mini-cell { display: grid; min-width: 0; min-height: 31px; place-items: center; padding: 6px 3px; border-right: 1px solid var(--table-line); border-bottom: 1px solid var(--table-line); background: var(--table-row-odd); color: var(--table-ink); font-size: 0.58rem; line-height: 1.2; overflow: hidden; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
+      .mini-row:nth-child(even) .mini-cell { background: var(--table-row-even); }
+      .mini-cell:last-child { border-right: 0; }
+      .mini-row:last-child .mini-cell { border-bottom: 0; }
+      .mini-cell.mini-header { border-top: 3px solid var(--table-accent); border-bottom-color: var(--table-head-border); background: var(--table-head-bg); color: var(--table-head-ink); font-weight: 800; }
+      .mini-table.style-ocean { --table-head-bg: #dbeafe; --table-head-border: #86aee0; --table-row-even: #f1f7ff; --table-row-odd: #ffffff; --table-line: #c7d6e8; --table-ink: #1f2d3d; --table-accent: #2c6edb; }
+      .mini-table.style-forest { --table-head-bg: #dff2e2; --table-head-border: #8eb991; --table-row-even: #f2faf2; --table-row-odd: #ffffff; --table-line: #c9e0cb; --table-ink: #29442d; --table-accent: #4f8d57; }
+      .mini-table.style-mono { --table-head-bg: #eceff1; --table-head-border: #9da5af; --table-row-even: #f7f8fa; --table-row-odd: #ffffff; --table-line: #d6d9de; --table-ink: #2d3742; --table-accent: #66717f; }
+      .mini-table.style-midnight { --table-head-bg: #26354a; --table-head-border: #152133; --table-head-ink: #ffffff; --table-row-even: #eef2f7; --table-row-odd: #ffffff; --table-line: #cfd8e5; --table-ink: #1e293b; --table-accent: #3e76c4; }
+      .mini-table.style-rose { --table-head-bg: #fde2e9; --table-head-border: #e397a9; --table-row-even: #fff4f6; --table-row-odd: #ffffff; --table-line: #efd2d9; --table-ink: #4a2833; --table-accent: #d05c79; }
+      .mini-table.style-lavender { --table-head-bg: #eee7ff; --table-head-border: #b9a7e8; --table-row-even: #faf8ff; --table-row-odd: #ffffff; --table-line: #ddd5f0; --table-ink: #392e52; --table-accent: #7c5cc4; }
+      .mini-table.style-sky { --table-head-bg: #dff4ff; --table-head-border: #8dc9e8; --table-row-even: #f4fbff; --table-row-odd: #ffffff; --table-line: #cde8f4; --table-ink: #17384a; --table-accent: #2694c7; }
+      .mini-table.style-mint { --table-head-bg: #dcf7ef; --table-head-border: #8bcab7; --table-row-even: #f3fcf9; --table-row-odd: #ffffff; --table-line: #cce9df; --table-ink: #20463c; --table-accent: #3b9b80; }
+      .mini-table.style-sand { --table-head-bg: #efe2cd; --table-head-border: #cbb08b; --table-row-even: #faf5ed; --table-row-odd: #fffdfa; --table-line: #e0d2bf; --table-ink: #46382a; --table-accent: #9a7345; }
+      .mini-table.style-coral { --table-head-bg: #ffe3dc; --table-head-border: #e5a291; --table-row-even: #fff7f4; --table-row-odd: #ffffff; --table-line: #f0d4cc; --table-ink: #542f28; --table-accent: #d86c54; }
+      .mini-table.style-navy { --table-head-bg: #16324f; --table-head-border: #0e2236; --table-head-ink: #ffffff; --table-row-even: #f2f6fa; --table-row-odd: #ffffff; --table-line: #ccd7e2; --table-ink: #1f2f3f; --table-accent: #3e7cb1; }
+      .style-card-copy { display: grid; gap: 3px; }
+      .style-card-copy strong { font-size: 0.86rem; }
+      .style-card-copy small { color: var(--ink-soft); font-size: 0.7rem; line-height: 1.45; }
+      .selected-badge { justify-self: start; padding: 3px 8px; border-radius: 999px; background: var(--orange-soft); color: var(--orange-dark); font-size: 0.66rem; font-weight: 900; }
+      .style-selection-note { margin: 16px 0 0; color: var(--muted); font-size: 0.76rem; }
+
+      .download-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 18px; }
+      .download-card { display: flex; align-items: center; gap: 14px; min-height: 78px; padding: 15px 17px; border: 1px solid var(--line-strong); border-radius: 15px; background: #fff; color: var(--ink); text-align: left; transition: transform 0.16s ease, border-color 0.16s ease; }
+      .download-card strong,
+      .download-card small { display: block; }
+      .download-card strong { font-size: 0.92rem; }
+      .download-card small { margin-top: 3px; color: var(--ink-soft); font-size: 0.72rem; }
+      .download-card.png-card { border-color: #e5c28b; background: #fff8e9; }
+      .download-card.markdown-card { border-color: #c8dfbd; background: #f5fbf1; }
+      .download-icon { display: grid; width: 38px; height: 38px; flex: 0 0 38px; place-items: center; border-radius: 11px; background: var(--orange); color: #fff; font-size: 1.35rem; line-height: 1; }
+      .markdown-card .download-icon { background: var(--green); }
+    }
+
+    /* responsive: 狭い画面では入力欄と手順を縦方向に切り替える */
+    @layer responsive {
+      @media (max-width: 900px) {
+        .style-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      }
+
+      @media (max-width: 720px) {
+        .site-shell { padding: 16px 12px 30px; }
+        .site-header { grid-template-columns: 1fr; gap: 16px; min-height: auto; padding: 24px 22px 28px; }
+        .brand-mark { align-self: auto; }
+        .header-decoration { position: absolute; right: 18px; bottom: 22px; width: 92px; opacity: 0.65; }
+        .header-decoration span { height: 72px; }
+        .progress-nav { gap: 6px; }
+        .progress-item { justify-content: center; padding: 10px 5px; }
+        .progress-item span { width: 24px; height: 24px; flex-basis: 24px; }
+        .progress-item small { font-size: 0.68rem; }
+        .step-card { padding: 22px 18px 26px; }
+        .step-description,
+        .quick-actions,
+        .alignment-list { margin-left: 0; }
+        .dimension-fields { margin: 30px auto 34px; }
+        .dimension-field { width: 38vw; }
+        .alignment-row { align-items: flex-start; flex-direction: column; gap: 10px; }
+        .segmented-control { width: 100%; }
+        .input-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .style-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .download-actions { grid-template-columns: 1fr; }
+        .site-footer { flex-direction: column; }
+      }
+
+      @media (max-width: 430px) {
+        h1 { font-size: 2rem; }
+        .progress-item small { display: none; }
+        .progress-item { padding: 8px; }
+        .step-heading { gap: 11px; }
+        .step-number { width: 38px; height: 38px; flex-basis: 38px; border-radius: 12px; }
+        .step-actions { align-items: stretch; flex-direction: column-reverse; }
+        .step-actions .button { width: 100%; }
+        .first-step-actions { flex-direction: column; }
+        .dimension-fields { gap: 10px; }
+        .dimension-symbol { padding-bottom: 25px; }
+        .input-grid { grid-template-columns: 1fr; }
+        .style-grid { grid-template-columns: 1fr; }
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="site-shell">
+    <div class="app-container">
+      <header class="site-header">
+        <div class="brand-mark" aria-label="かんたん表メーカー">
+          <span class="brand-symbol" aria-hidden="true">＋</span>
+          <span>TABLE<br>MAKER</span>
+        </div>
+        <div class="header-copy">
+          <p class="eyebrow">SIMPLE TABLE MAKER</p>
+          <h1>迷わず作れる、<br><span>小さな表メーカー。</span></h1>
+          <p class="lead">サイズ、揃え方、文章を順番に決めて、すぐに保存できます。</p>
+        </div>
+        <div class="header-decoration" aria-hidden="true"><span></span><span></span><span></span></div>
+      </header>
+
+      <nav id="progress-nav" class="progress-nav" aria-label="作成手順"></nav>
+      <div id="status" class="status-message" role="status" hidden></div>
+      <div id="app"></div>
+
+      <footer class="site-footer">
+        <span>入力内容はこの画面を開いている間保持されます</span>
+        <span>PNGからいつでも再開できます</span>
+      </footer>
+    </div>
+  </main>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const ALIGNMENTS = ["left", "center", "right"];
+      const ALIGNMENT_LABELS = { left: "左揃え", center: "中央揃え", right: "右揃え" };
+      const TABLE_STYLES = {
+        classic: { name: "やさしいクリーム", description: "あたたかく見やすい定番", canvas: { page: "#fffdf8", header: "#fff0d5", headerBorder: "#e0ba80", even: "#fffaf1", odd: "#fffdf8", line: "#eadfce", accent: "#df7f42", ink: "#3c3024", headerInk: "#3c3024" } },
+        ocean: { name: "さわやかブルー", description: "清潔感のある水色", canvas: { page: "#ffffff", header: "#dbeafe", headerBorder: "#86aee0", even: "#f1f7ff", odd: "#ffffff", line: "#c7d6e8", accent: "#2c6edb", ink: "#1f2d3d", headerInk: "#1f2d3d" } },
+        forest: { name: "ナチュラルグリーン", description: "落ち着いた自然色", canvas: { page: "#ffffff", header: "#dff2e2", headerBorder: "#8eb991", even: "#f2faf2", odd: "#ffffff", line: "#c9e0cb", accent: "#4f8d57", ink: "#29442d", headerInk: "#29442d" } },
+        mono: { name: "シンプルモノ", description: "資料になじむ無彩色", canvas: { page: "#ffffff", header: "#eceff1", headerBorder: "#9da5af", even: "#f7f8fa", odd: "#ffffff", line: "#d6d9de", accent: "#66717f", ink: "#2d3742", headerInk: "#2d3742" } },
+        midnight: { name: "ミッドナイト", description: "濃い見出しで引き締める", canvas: { page: "#ffffff", header: "#26354a", headerBorder: "#152133", even: "#eef2f7", odd: "#ffffff", line: "#cfd8e5", accent: "#3e76c4", ink: "#1e293b", headerInk: "#ffffff" } },
+        rose: { name: "やわらかローズ", description: "やさしく華やかな印象", canvas: { page: "#ffffff", header: "#fde2e9", headerBorder: "#e397a9", even: "#fff4f6", odd: "#ffffff", line: "#efd2d9", accent: "#d05c79", ink: "#4a2833", headerInk: "#4a2833" } },
+        lavender: { name: "ラベンダー", description: "上品でやわらかな紫", canvas: { page: "#ffffff", header: "#eee7ff", headerBorder: "#b9a7e8", even: "#faf8ff", odd: "#ffffff", line: "#ddd5f0", accent: "#7c5cc4", ink: "#392e52", headerInk: "#392e52" } },
+        sky: { name: "スカイ", description: "軽やかで明るい青空色", canvas: { page: "#ffffff", header: "#dff4ff", headerBorder: "#8dc9e8", even: "#f4fbff", odd: "#ffffff", line: "#cde8f4", accent: "#2694c7", ink: "#17384a", headerInk: "#17384a" } },
+        mint: { name: "ミント", description: "爽やかで清潔感のある緑", canvas: { page: "#ffffff", header: "#dcf7ef", headerBorder: "#8bcab7", even: "#f3fcf9", odd: "#ffffff", line: "#cce9df", accent: "#3b9b80", ink: "#20463c", headerInk: "#20463c" } },
+        sand: { name: "サンド", description: "落ち着いたベージュ資料向け", canvas: { page: "#fffdfa", header: "#efe2cd", headerBorder: "#cbb08b", even: "#faf5ed", odd: "#fffdfa", line: "#e0d2bf", accent: "#9a7345", ink: "#46382a", headerInk: "#46382a" } },
+        coral: { name: "コーラル", description: "明るく親しみやすい印象", canvas: { page: "#ffffff", header: "#ffe3dc", headerBorder: "#e5a291", even: "#fff7f4", odd: "#ffffff", line: "#f0d4cc", accent: "#d86c54", ink: "#542f28", headerInk: "#542f28" } },
+        navy: { name: "ネイビー", description: "ビジネス向けの端正な配色", canvas: { page: "#ffffff", header: "#16324f", headerBorder: "#0e2236", even: "#f2f6fa", odd: "#ffffff", line: "#ccd7e2", accent: "#3e7cb1", ink: "#1f2f3f", headerInk: "#ffffff" } }
+      };
+      const DEFAULT_STATE = {
+        rows: 3,
+        columns: 3,
+        alignments: ["center", "center", "center"],
+        style: "classic",
+        cells: [
+          ["項目", "内容", "備考"],
+          ["例1", "ここに文章", "右揃え"],
+          ["例2", "表を作れます", "自由入力"]
+        ]
+      };
+      const MAGIC = new Uint8Array([83, 84, 66, 76, 49, 0, 1, 0]);
+      const HEADER_SIZE = MAGIC.length + 8;
+      const encoder = new TextEncoder();
+      const decoder = new TextDecoder("utf-8", { fatal: true });
+      const progressNav = document.getElementById("progress-nav");
+      const statusElement = document.getElementById("status");
+      const app = document.getElementById("app");
+      let step = 0;
+      let table = normalizeState(DEFAULT_STATE);
+
+      function escapeHtml(value) {
+        return String(value)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#39;");
+      }
+
+      function clampDimension(value, fallback) {
+        if (!Number.isFinite(value)) return fallback;
+        return Math.min(12, Math.max(1, Math.round(value)));
+      }
+
+      function normalizeState(value) {
+        if (!value || typeof value !== "object") return null;
+        const candidate = value;
+        const rows = clampDimension(Number(candidate.rows), DEFAULT_STATE.rows);
+        const columns = clampDimension(Number(candidate.columns), DEFAULT_STATE.columns);
+        const alignments = Array.from({ length: columns }, (_, index) => {
+          const alignment = candidate.alignments && candidate.alignments[index];
+          return ALIGNMENTS.includes(alignment) ? alignment : "center";
+        });
+        const style = typeof candidate.style === "string" && TABLE_STYLES[candidate.style] ? candidate.style : DEFAULT_STATE.style;
+        const cells = Array.from({ length: rows }, (_, rowIndex) =>
+          Array.from({ length: columns }, (_, columnIndex) => {
+            const valueAtCell = candidate.cells && candidate.cells[rowIndex] && candidate.cells[rowIndex][columnIndex];
+            return typeof valueAtCell === "string" ? valueAtCell : "";
+          })
+        );
+        return { rows, columns, alignments, style, cells };
+      }
+
+      function resizeTable(previous, rows, columns) {
+        return {
+          rows,
+          columns,
+          alignments: Array.from({ length: columns }, (_, index) => previous.alignments[index] || "center"),
+          style: previous.style,
+          cells: Array.from({ length: rows }, (_, rowIndex) =>
+            Array.from({ length: columns }, (_, columnIndex) =>
+              previous.cells[rowIndex] && typeof previous.cells[rowIndex][columnIndex] === "string"
+                ? previous.cells[rowIndex][columnIndex]
+                : ""
+            )
+          )
+        };
+      }
+
+      function checksum(bytes) {
+        let hash = 2166136261;
+        for (const byte of bytes) {
+          hash ^= byte;
+          hash = Math.imul(hash, 16777619);
+        }
+        return hash >>> 0;
+      }
+
+      function writeUint32(target, offset, value) {
+        target[offset] = value & 255;
+        target[offset + 1] = (value >>> 8) & 255;
+        target[offset + 2] = (value >>> 16) & 255;
+        target[offset + 3] = (value >>> 24) & 255;
+      }
+
+      function readUint32(source, offset) {
+        return (
+          source[offset] |
+          (source[offset + 1] << 8) |
+          (source[offset + 2] << 16) |
+          (source[offset + 3] << 24)
+        ) >>> 0;
+      }
+
+      function makePayload(currentState) {
+        const body = encoder.encode(JSON.stringify({ format: "simple-table-maker", version: 1, ...currentState }));
+        const payload = new Uint8Array(HEADER_SIZE + body.length);
+        payload.set(MAGIC, 0);
+        writeUint32(payload, MAGIC.length, body.length);
+        writeUint32(payload, MAGIC.length + 4, checksum(body));
+        payload.set(body, HEADER_SIZE);
+        return payload;
+      }
+
+      function hasMagic(bytes) {
+        return MAGIC.every((value, index) => bytes[index] === value);
+      }
+
+      function decodeStateFromImageData(imageData) {
+        const data = imageData.data;
+        const maxPixels = imageData.width * imageData.height;
+        const decodeBytes = (byteCount) => {
+          if (byteCount * 2 > maxPixels) throw new Error("画像内に再開情報が見つかりません。");
+          const bytes = new Uint8Array(byteCount);
+          let channelIndex = 0;
+          for (let byteIndex = 0; byteIndex < byteCount; byteIndex += 1) {
+            let value = 0;
+            for (let bit = 0; bit < 8; bit += 1) {
+              value = (value << 1) | (data[channelIndex] & 1);
+              channelIndex += 1;
+            }
+            bytes[byteIndex] = value;
+          }
+          return bytes;
+        };
+
+        const header = decodeBytes(HEADER_SIZE);
+        if (!hasMagic(header)) throw new Error("このサイトで保存したPNGではないか、再開情報が失われています。");
+        const bodyLength = readUint32(header, MAGIC.length);
+        const totalLength = HEADER_SIZE + bodyLength;
+        if (bodyLength > 5000000 || totalLength * 2 > maxPixels) throw new Error("PNG内の再開情報の長さが不正です。");
+        const payload = decodeBytes(totalLength);
+        const body = payload.slice(HEADER_SIZE);
+        if (checksum(body) !== readUint32(header, MAGIC.length + 4)) throw new Error("PNG内の再開情報が破損しています。");
+
+        try {
+          const parsed = JSON.parse(decoder.decode(body));
+          if (!parsed || parsed.format !== "simple-table-maker") throw new Error();
+          const restored = normalizeState(parsed);
+          if (!restored) throw new Error();
+          return restored;
+        } catch {
+          throw new Error("PNG内の表データを読み取れませんでした。");
+        }
+      }
+
+      async function readPngImageData(file) {
+        const drawToImageData = (source, width, height) => {
+          const canvas = document.createElement("canvas");
+          canvas.width = width;
+          canvas.height = height;
+          const context = canvas.getContext("2d", { willReadFrequently: true });
+          if (!context) throw new Error("PNGを読み込めませんでした。");
+          context.drawImage(source, 0, 0);
+          return context.getImageData(0, 0, width, height);
+        };
+
+        if (typeof createImageBitmap === "function") {
+          try {
+            const bitmap = await createImageBitmap(file);
+            const imageData = drawToImageData(bitmap, bitmap.width, bitmap.height);
+            bitmap.close();
+            return imageData;
+          } catch {
+            // 一部のブラウザではFileからのcreateImageBitmapだけ失敗するため、Image経由へ切り替えます。
+          }
+        }
+
+        const objectUrl = URL.createObjectURL(file);
+        try {
+          const image = new Image();
+          image.decoding = "async";
+          await new Promise((resolve, reject) => {
+            image.onload = () => resolve();
+            image.onerror = () => reject(new Error("PNGの画像データを読み込めませんでした。"));
+            image.src = objectUrl;
+          });
+          return drawToImageData(image, image.naturalWidth, image.naturalHeight);
+        } finally {
+          URL.revokeObjectURL(objectUrl);
+        }
+      }
+
+      function wrapText(context, text, maxWidth) {
+        const lines = [];
+        for (const segment of text.replaceAll("\r\n", "\n").replaceAll("\r", "\n").split("\n")) {
+          let line = "";
+          for (const character of Array.from(segment)) {
+            const next = line + character;
+            if (line && context.measureText(next).width > maxWidth) {
+              lines.push(line);
+              line = character;
+            } else {
+              line = next;
+            }
+          }
+          lines.push(line);
+        }
+        return lines.length ? lines : [""];
+      }
+
+      function renderStateToCanvas(currentState) {
+        const canvas = document.createElement("canvas");
+        const context = canvas.getContext("2d", { willReadFrequently: true });
+        if (!context) throw new Error("画像を作成できませんでした。");
+
+        const design = TABLE_STYLES[currentState.style] || TABLE_STYLES.classic;
+        const scale = 2;
+        const tableWidth = Math.max(680, Math.min(1280, currentState.columns * 190));
+        const outerPadding = 44;
+        const cellPadding = 24;
+        const fontSize = currentState.columns >= 7 ? 22 : 27;
+        const lineHeight = Math.ceil(fontSize * 1.5);
+        const columnWidth = tableWidth / currentState.columns;
+
+        context.font = `500 ${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", "Yu Gothic", Meiryo, sans-serif`;
+        const rowLines = currentState.cells.map((row) =>
+          row.map((value) => wrapText(context, value || " ", columnWidth - cellPadding * 2))
+        );
+        const rowHeights = rowLines.map((row) =>
+          Math.max(1, ...row.map((lines) => lines.length)) * lineHeight + cellPadding * 2
+        );
+        const tableHeight = rowHeights.reduce((sum, height) => sum + height, 0);
+        const logicalWidth = Math.ceil(tableWidth + outerPadding * 2);
+        const physicalWidth = logicalWidth * scale;
+        const payload = makePayload(currentState);
+        const metadataRows = Math.max(1, Math.ceil((payload.length * 2) / physicalWidth));
+        const logicalHeight = metadataRows + outerPadding + tableHeight + outerPadding;
+
+        canvas.width = logicalWidth * scale;
+        canvas.height = Math.ceil(logicalHeight * scale);
+        context.setTransform(scale, 0, 0, scale, 0, 0);
+        context.fillStyle = design.canvas.page;
+        context.fillRect(0, 0, logicalWidth, logicalHeight);
+
+        let y = metadataRows + outerPadding;
+        currentState.cells.forEach((row, rowIndex) => {
+          row.forEach((value, columnIndex) => {
+            const x = outerPadding + columnIndex * columnWidth;
+            const width = columnWidth;
+            const height = rowHeights[rowIndex];
+            context.fillStyle = rowIndex === 0 ? design.canvas.header : rowIndex % 2 === 0 ? design.canvas.even : design.canvas.odd;
+            context.fillRect(x, y, width, height);
+            context.strokeStyle = rowIndex === 0 ? design.canvas.headerBorder : design.canvas.line;
+            context.lineWidth = 1;
+            context.strokeRect(x + 0.5, y + 0.5, width - 1, height - 1);
+            if (rowIndex === 0) {
+              context.fillStyle = design.canvas.accent;
+              context.fillRect(x, y, width, 5);
+            }
+
+            const alignment = currentState.alignments[columnIndex] || "center";
+            const textX = alignment === "right"
+              ? x + width - cellPadding
+              : alignment === "center"
+                ? x + width / 2
+                : x + cellPadding;
+            context.fillStyle = rowIndex === 0 ? design.canvas.headerInk : design.canvas.ink;
+            context.font = `${rowIndex === 0 ? 700 : 500} ${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", "Yu Gothic", Meiryo, sans-serif`;
+            context.textAlign = alignment;
+            context.textBaseline = "top";
+            wrapText(context, value || " ", width - cellPadding * 2).forEach((line, lineIndex) => {
+              context.fillText(line, textX, y + cellPadding + lineIndex * lineHeight);
+            });
+          });
+          y += rowHeights[rowIndex];
+        });
+
+        context.setTransform(1, 0, 0, 1, 0, 0);
+        const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+        let bitIndex = 0;
+        for (const byte of payload) {
+          for (let shift = 7; shift >= 0; shift -= 1) {
+            imageData.data[bitIndex] = (imageData.data[bitIndex] & 254) | ((byte >>> shift) & 1);
+            bitIndex += 1;
+          }
+        }
+        context.putImageData(imageData, 0, 0);
+        return canvas;
+      }
+
+      function downloadBlob(blob, filename) {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }
+
+      function canvasToBlob(canvas) {
+        return new Promise((resolve, reject) => {
+          canvas.toBlob((blob) => {
+            if (blob) resolve(blob);
+            else reject(new Error("PNGの作成に失敗しました。"));
+          }, "image/png");
+        });
+      }
+
+      function escapeMarkdown(value) {
+        return value.replaceAll("|", "\\|").replaceAll("\r\n", "<br>").replaceAll("\r", "<br>").replaceAll("\n", "<br>");
+      }
+
+      function makeMarkdown(currentState) {
+        const header = currentState.cells[0] || [];
+        const separator = currentState.alignments.map((alignment) => {
+          if (alignment === "center") return ":---:";
+          if (alignment === "right") return "---:";
+          return ":---";
+        });
+        const rows = currentState.cells.slice(1);
+        return [
+          `| ${header.map(escapeMarkdown).join(" | ")} |`,
+          `| ${separator.join(" | ")} |`,
+          ...rows.map((row) => `| ${row.map(escapeMarkdown).join(" | ")} |`),
+          ""
+        ].join("\n");
+      }
+
+      function updateCell(currentState, rowIndex, columnIndex, value) {
+        return {
+          ...currentState,
+          cells: currentState.cells.map((row, currentRow) =>
+            row.map((cell, currentColumn) =>
+              currentRow === rowIndex && currentColumn === columnIndex ? value : cell
+            )
+          )
+        };
+      }
+
+      function showStatus(message, tone) {
+        statusElement.textContent = message;
+        statusElement.className = `status-message ${tone || "info"}`;
+        statusElement.hidden = !message;
+      }
+
+      function renderProgress() {
+        const labels = ["サイズ", "揃え方", "文章", "デザイン", "保存"];
+        progressNav.innerHTML = labels.map((label, index) => {
+          const current = step === index ? " current" : "";
+          const done = step > index ? " done" : "";
+          const marker = step > index ? "✓" : String(index + 1).padStart(2, "0");
+          return `<div class="progress-item${current}${done}"><span>${marker}</span><small>${label}</small></div>`;
+        }).join("");
+      }
+
+      function renderTableMarkup(currentState, sample = false, wrapped = true) {
+        const styleId = TABLE_STYLES[currentState.style] ? currentState.style : DEFAULT_STATE.style;
+        const cells = sample
+          ? [["項目1", "項目2", "項目3"], ["要素1-1", "要素1-2", "要素1-3"], ["要素2-1", "要素2-2", "要素2-3"]]
+          : currentState.cells;
+        const alignments = sample ? ["center", "center", "center"] : currentState.alignments;
+        const tableMarkup = `
+            <table class="table-preview style-${styleId}"><tbody>
+              ${cells.map((row, rowIndex) => `<tr>${row.map((cell, columnIndex) => `<td class="${rowIndex === 0 ? "preview-header" : ""}" style="text-align: ${alignments[columnIndex] || "center"}">${cell ? escapeHtml(cell) : '<span class="empty-cell">空欄</span>'}</td>`).join("")}</tr>`).join("")}
+            </tbody></table>`;
+        return wrapped ? `<div class="table-preview-wrap style-${styleId}">${tableMarkup}</div>` : tableMarkup;
+      }
+
+      function renderSampleTable() {
+        return `
+          <div class="sample-table-section" aria-label="現在のサンプル表">
+            <p class="sample-table-label">CURRENT SAMPLE</p>
+            ${renderTableMarkup(table)}
+          </div>`;
+      }
+
+      function renderMiniTableMarkup(styleId) {
+        const previewRows = [["項目1", "項目2", "項目3"], ["要素1-1", "要素1-2", "要素1-3"], ["要素2-1", "要素2-2", "要素2-3"]];
+        return `<span class="mini-table style-${styleId}">${previewRows.map((row, rowIndex) => `<span class="mini-row">${row.map((cell) => `<span class="mini-cell${rowIndex === 0 ? " mini-header" : ""}">${escapeHtml(cell)}</span>`).join("")}</span>`).join("")}</span>`;
+      }
+
+      function renderStyleCard(styleId) {
+        const style = TABLE_STYLES[styleId];
+        const selected = table.style === styleId;
+        return `
+          <button class="style-card${selected ? " selected" : ""}" type="button" data-action="set-style" data-style="${styleId}" aria-pressed="${selected}">
+            <span class="style-card-preview">${renderMiniTableMarkup(styleId)}</span>
+            <span class="style-card-copy"><strong>${escapeHtml(style.name)}</strong><small>${escapeHtml(style.description)}</small></span>
+            ${selected ? '<span class="selected-badge">選択中</span>' : ""}
+          </button>`;
+      }
+
+      function renderStep() {
+        if (step === 0) {
+          return `
+            <section class="step-card" aria-labelledby="step-title">
+              <div class="step-heading">
+                <span class="step-number">01</span>
+                <div><p class="kicker">TABLE SIZE</p><h2 id="step-title">何×何の表を作りますか？</h2></div>
+              </div>
+              <p class="step-description">行数と列数を決めると、次の画面で列ごとの揃え方を設定できます。</p>
+              <div class="dimension-fields">
+                <label class="dimension-field"><span>行数</span><input data-dimension="rows" type="number" min="1" max="12" value="${table.rows}" aria-label="行数 1〜12行"><small>1〜12行</small></label>
+                <span class="dimension-symbol" aria-hidden="true">×</span>
+                <label class="dimension-field"><span>列数</span><input data-dimension="columns" type="number" min="1" max="12" value="${table.columns}" aria-label="列数 1〜12列"><small>1〜12列</small></label>
+              </div>
+              ${renderSampleTable()}
+              <div class="step-actions first-step-actions">
+                <button class="button primary" type="button" data-action="next">揃え方を決める <span aria-hidden="true">→</span></button>
+                <button class="button secondary" type="button" data-action="open-import"><span aria-hidden="true">↥</span> PNGから再開</button>
+                <input id="import-file" class="file-input" type="file" accept="image/png,.png" aria-label="PNGファイルを選択">
+              </div>
+              <p class="helper-note">保存したPNGを読み込むと、表のサイズ・揃え方・文章・見た目を復元します。</p>
+            </section>`;
+        }
+
+        if (step === 1) {
+          return `
+            <section class="step-card" aria-labelledby="step-title">
+              <div class="step-heading">
+                <span class="step-number">02</span>
+                <div><p class="kicker">ALIGNMENT</p><h2 id="step-title">各列の揃え方を選びます</h2></div>
+              </div>
+              <p class="step-description">列ごとに左揃え・中央揃え・右揃えを指定できます。</p>
+              <div class="quick-actions" aria-label="揃え方の一括設定">
+                ${ALIGNMENTS.map((alignment) => `<button class="chip-button" type="button" data-action="all-align" data-alignment="${alignment}">すべて${ALIGNMENT_LABELS[alignment]}</button>`).join("")}
+              </div>
+              <div class="alignment-list">
+                ${table.alignments.map((alignment, columnIndex) => `
+                  <div class="alignment-row">
+                    <div class="column-label"><span class="column-dot">${String(columnIndex + 1).padStart(2, "0")}</span><span>列 ${columnIndex + 1}</span></div>
+                    <div class="segmented-control" role="group" aria-label="列${columnIndex + 1}の揃え方">
+                      ${ALIGNMENTS.map((option) => `<button class="${alignment === option ? "selected" : ""}" type="button" data-action="set-align" data-column="${columnIndex}" data-alignment="${option}" aria-pressed="${alignment === option}">${ALIGNMENT_LABELS[option]}</button>`).join("")}
+                    </div>
+                  </div>`).join("")}
+              </div>
+              ${renderSampleTable()}
+              <div class="step-actions"><button class="button ghost" type="button" data-action="back">← 戻る</button><button class="button primary" type="button" data-action="next">文章を入力する <span aria-hidden="true">→</span></button></div>
+            </section>`;
+        }
+
+        if (step === 2) {
+          return `
+            <section class="step-card wide-card" aria-labelledby="step-title">
+              <div class="step-heading">
+                <span class="step-number">03</span>
+                <div><p class="kicker">CELL CONTENT</p><h2 id="step-title">各箇所に文章を入れます</h2></div>
+              </div>
+              <p class="step-description">空欄のままでも保存できます。長い文章は表の中で自動的に折り返します。</p>
+              <div class="input-grid" style="--columns: ${table.columns}">
+                ${table.cells.map((row, rowIndex) => row.map((cell, columnIndex) => `
+                  <label class="cell-field ${rowIndex === 0 ? "header-cell" : ""}">
+                    <span>行${rowIndex + 1}・列${columnIndex + 1}${rowIndex === 0 ? "（見出し）" : ""}</span>
+                    <textarea data-row="${rowIndex}" data-column="${columnIndex}" rows="${rowIndex === 0 ? 2 : 3}" placeholder="文章を入力" aria-label="行${rowIndex + 1}・列${columnIndex + 1}${rowIndex === 0 ? "（見出し）" : ""}">${escapeHtml(cell)}</textarea>
+                  </label>`).join("")).join("")}
+              </div>
+              ${renderSampleTable()}
+              <div class="step-actions"><button class="button ghost" type="button" data-action="back">← 戻る</button><button class="button primary" type="button" data-action="next">表の見た目を選ぶ <span aria-hidden="true">→</span></button></div>
+            </section>`;
+        }
+
+        if (step === 3) {
+          return `
+            <section class="step-card wide-card" aria-labelledby="step-title">
+              <div class="step-heading">
+                <span class="step-number">04</span>
+                <div><p class="kicker">TABLE DESIGN</p><h2 id="step-title">表の見た目を選びます</h2></div>
+              </div>
+              <p class="step-description">好きなデザインを選ぶと、下のサンプル表と保存するPNGに反映されます。</p>
+              <div class="style-grid" role="group" aria-label="表デザインの選択">
+                ${Object.keys(TABLE_STYLES).map(renderStyleCard).join("")}
+              </div>
+              <p class="style-selection-note">※ Markdownは標準仕様上、色や罫線などの見た目を保持できないため、選んだデザインはPNG保存に反映されます。</p>
+              ${renderSampleTable()}
+              <div class="step-actions"><button class="button ghost" type="button" data-action="back">← 戻る</button><button class="button primary" type="button" data-action="next">保存画面へ <span aria-hidden="true">→</span></button></div>
+            </section>`;
+        }
+
+        return `
+          <section class="step-card wide-card" aria-labelledby="step-title">
+            <div class="step-heading">
+              <span class="step-number">05</span>
+              <div><p class="kicker">SAVE &amp; RESUME</p><h2 id="step-title">表を保存します</h2></div>
+            </div>
+            <p class="step-description">選んだデザインをPNGに反映し、再開情報も埋め込みます。Markdownは表のデータを保存します。</p>
+            ${renderSampleTable()}
+            <div class="download-actions">
+              <button class="download-card png-card" type="button" data-action="download-png"><span class="download-icon" aria-hidden="true">↓</span><span><strong>ダウンロード</strong><small>再開情報入り PNG</small></span></button>
+              <button class="download-card markdown-card" type="button" data-action="download-md"><span class="download-icon" aria-hidden="true">↓</span><span><strong>Markdown</strong><small>Markdown形式（.md）</small></span></button>
+            </div>
+            <div class="step-actions"><button class="button ghost" type="button" data-action="back">← 内容を修正</button><button class="button primary" type="button" data-action="restart">最初の画面へ</button></div>
+          </section>`;
+      }
+
+      function render() {
+        renderProgress();
+        app.innerHTML = renderStep();
+      }
+
+      function moveTo(nextStep) {
+        step = Math.max(0, Math.min(4, nextStep));
+        showStatus("");
+        render();
+      }
+
+      async function handleImport(file) {
+        if (!file) return;
+        try {
+          const isPng = file.type === "image/png" || file.name.toLowerCase().endsWith(".png");
+          if (!isPng) throw new Error("PNG画像を選択してください。");
+          table = decodeStateFromImageData(await readPngImageData(file));
+          step = 0;
+          render();
+          showStatus("PNGから表の内容を復元しました。続きから編集できます。", "success");
+        } catch (error) {
+          showStatus(error instanceof Error ? error.message : "PNGを読み込めませんでした。", "error");
+        } finally {
+          const input = document.getElementById("import-file");
+          if (input) input.value = "";
+        }
+      }
+
+      app.addEventListener("input", (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLTextAreaElement)) return;
+        const rowIndex = Number(target.dataset.row);
+        const columnIndex = Number(target.dataset.column);
+        table = updateCell(table, rowIndex, columnIndex, target.value);
+      });
+
+      app.addEventListener("change", (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLInputElement)) return;
+        if (target.matches("[data-dimension]")) {
+          const key = target.dataset.dimension;
+          if (key !== "rows" && key !== "columns") return;
+          const nextValue = clampDimension(Number(target.value), table[key]);
+          table = resizeTable(table, key === "rows" ? nextValue : table.rows, key === "columns" ? nextValue : table.columns);
+          render();
+          return;
+        }
+        if (target.id === "import-file") void handleImport(target.files && target.files[0]);
+      });
+
+      app.addEventListener("click", async (event) => {
+        const target = event.target;
+        if (!(target instanceof Element)) return;
+        const button = target.closest("button");
+        if (!button) return;
+        const action = button.dataset.action;
+
+        if (action === "next") { moveTo(step + 1); return; }
+        if (action === "back") { moveTo(step - 1); return; }
+        if (action === "restart") { moveTo(0); return; }
+        if (action === "open-import") {
+          document.getElementById("import-file").click();
+          return;
+        }
+        if (action === "all-align") {
+          const alignment = button.dataset.alignment;
+          if (!ALIGNMENTS.includes(alignment)) return;
+          table = { ...table, alignments: table.alignments.map(() => alignment) };
+          render();
+          return;
+        }
+        if (action === "set-align") {
+          const alignment = button.dataset.alignment;
+          const columnIndex = Number(button.dataset.column);
+          if (!ALIGNMENTS.includes(alignment) || !Number.isInteger(columnIndex)) return;
+          table = { ...table, alignments: table.alignments.map((item, index) => index === columnIndex ? alignment : item) };
+          render();
+          return;
+        }
+        if (action === "set-style") {
+          const style = button.dataset.style;
+          if (!TABLE_STYLES[style]) return;
+          table = { ...table, style };
+          render();
+          return;
+        }
+        if (action === "download-png") {
+          try {
+            const blob = await canvasToBlob(renderStateToCanvas(table));
+            downloadBlob(blob, `simple-table-${new Date().toISOString().slice(0, 10)}.png`);
+            showStatus("再開情報を含むPNGを保存しました。", "success");
+          } catch (error) {
+            showStatus(error instanceof Error ? error.message : "PNGを保存できませんでした。", "error");
+          }
+          return;
+        }
+        if (action === "download-md") {
+          const blob = new Blob([makeMarkdown(table)], { type: "text/markdown;charset=utf-8" });
+          downloadBlob(blob, `simple-table-${new Date().toISOString().slice(0, 10)}.md`);
+          showStatus("Markdown形式で保存しました。", "success");
+        }
+      });
+
+      render();
+    })();
+  </script>
+</body>
+</html>
