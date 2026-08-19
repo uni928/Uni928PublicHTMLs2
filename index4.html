@@ -745,8 +745,8 @@
     <div class="modal">
       <h3>簡易説明</h3>
       <div class="helpText">
-        <p>検索とショートカットを、フォルダごとに整理できる検索画面です。</p>
-        <p>操作以外は長押しで編集モードに入り、移動・編集・削除が可能な状態になります。</p>
+        <p>検索とショートカットを、フォルダごとに整理できるホーム画面です。</p>
+        <p>「操作」から追加・検索・インポート・エクスポートができます。</p>
         <p>インポートは、このサイトでエクスポートしたJSONに対応しています。ブラウザで出力したお気に入りHTMLも読み込める可能性があります。</p>
       </div>
       <div class="actions">
@@ -928,11 +928,32 @@ async function addFolder(title) {
   return new Promise(resolve => tx.oncomplete = () => resolve(folderKey));
 }
 
-async function renameEntry(id, title) {
+async function updateEntry(id, title, url = '') {
+  const numericId = Number(id);
+  const current = window._cache.get(numericId);
+  if (!current) return false;
+
+  const nextTitle = title.trim() || current.title;
+  let updated = { ...current, title: nextTitle };
+
+  if (current.type === 'shortcut') {
+    const normalized = normUrl(url);
+    if (!normalized) throw new Error('invalid-url');
+
+    const all = await getAll();
+    const duplicate = all.some(item =>
+      item.id !== numericId &&
+      item.type === 'shortcut' &&
+      item.parentFolder === current.parentFolder &&
+      normUrl(item.url) === normalized
+    );
+    if (duplicate) return null;
+
+    updated = { ...updated, url: normalized };
+  }
+
   const { st, tx } = await txStore('readwrite');
-  const current = window._cache.get(Number(id));
-  if (!current) return;
-  st.put({ ...current, title: title.trim() || current.title });
+  st.put(updated);
   return new Promise(resolve => tx.oncomplete = () => resolve(true));
 }
 
@@ -1672,10 +1693,25 @@ okBtn.onclick = async () => {
 
   if (editingId) {
     const editedMode = modalMode;
-    await renameEntry(editingId, name || '名称未設定');
-    closeModal();
-    await render();
-    toast(editedMode === 'folder' ? 'フォルダ名を更新しました' : 'タイトルを更新しました');
+    const url = urlInput.value.trim();
+
+    try {
+      const updated = await updateEntry(editingId, name || '名称未設定', url);
+      if (updated === null) {
+        toast('同じURLがこのフォルダにあります');
+        return;
+      }
+      closeModal();
+      await render();
+      toast(editedMode === 'folder' ? 'フォルダ名を更新しました' : 'ショートカットを更新しました');
+    } catch {
+      if (editedMode === 'shortcut') {
+        toast('URLが正しくありません');
+        urlInput.focus();
+      } else {
+        toast('更新に失敗しました');
+      }
+    }
     return;
   }
 
