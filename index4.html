@@ -849,25 +849,56 @@ function normUrl(value) {
   }
 }
 
-function hostTitle(url) {
-  try { return new URL(url).hostname.replace(/^www\./, ''); }
-  catch { return url; }
-}
+// URLから表示用のサイト名を抽出する。
+// 1) 最初の / 以降（パス・クエリ・ハッシュ）を除外
+// 2) http(s):// と www. を除外
+// 3) .com / .net / .jp / .io / .co.jp などの末尾ドメインを除外
+// 4) 先頭文字を大文字化
+function extractSiteName(url) {
+  let value = String(url || '').trim();
+  if (!value) return '';
 
-function suggestedTitle(url) {
+  // URLとして扱えるように補完する。
+  if (!/^https?:\/\//i.test(value)) value = `https://${value}`;
+
   try {
-    const parsed = new URL(normUrl(url));
-    const host = parsed.hostname.replace(/^www\./, '');
-    const params = [...parsed.searchParams.entries()];
-    if (params.length) {
-      const suffix = params.slice(0, 2).map(([k, v]) => `${k}=${v}`.slice(0, 28)).join(' · ');
-      return `${host} · ${suffix}`;
+    const parsed = new URL(value);
+    let host = parsed.hostname
+      .replace(/^www\./i, '')
+      .replace(/\.$/, '');
+
+    const labels = host.split('.').filter(Boolean);
+    if (!labels.length) return '';
+
+    // 国別ドメインや一般的なTLD・SLDを末尾から取り除く。
+    // 例: example.com -> example / example.co.jp -> example / example.ne.jp -> example
+    const commonSuffixes = new Set([
+      'com','net','ne','org','or','gov','go','edu','ac','mil','int','co',
+      'jp','io','ai','me','tv','cc','us','uk','de','fr','it','es','ca','au','nz','cn','kr','tw','hk','sg','in','br','mx','ru','ch','se','no','fi','dk','nl','be','at','pl','cz','gr','pt','ie','za',
+      'info','biz','name','mobi','app','dev','tech','site','online','store','cloud','xyz','club','pro','shop','blog','design','digital','live','news','world','space','website','services','solutions','systems','network'
+    ]);
+
+    while (labels.length > 1) {
+      const tail = labels[labels.length - 1].toLowerCase();
+      if (commonSuffixes.has(tail) || /^[a-z]{2}$/.test(tail)) labels.pop();
+      else break;
     }
-    const path = parsed.pathname.split('/').filter(Boolean).pop();
-    return path ? `${host} · ${decodeURIComponent(path).slice(0, 28)}` : host;
+
+    const site = labels
+      .map(label => label ? label.charAt(0).toUpperCase() + label.slice(1) : '')
+      .join('');
+    return site;
   } catch {
     return '';
   }
+}
+
+function hostTitle(url) {
+  return extractSiteName(url);
+}
+
+function suggestedTitle(url) {
+  return extractSiteName(url);
 }
 
 function faviconUrl(url) {
@@ -1143,11 +1174,7 @@ function closeOperationMenu() {
 
 
 function siteNameFromUrl(url) {
-  try {
-    return new URL(url).hostname.replace(/^www\./i, '');
-  } catch {
-    return '';
-  }
+  return extractSiteName(url);
 }
 
 function normalizeSearchText(value) {
