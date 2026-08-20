@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>HTML圧縮専用ツール</title>
+<title>HTML整理専用ツール</title>
 <style>
 @layer base, components, utilities;
 @layer base {
@@ -58,11 +58,11 @@
 <main class="shell">
   <header class="header">
     <div class="header-mark" aria-hidden="true">H</div>
-    <h1>HTML圧縮専用</h1>
-    <p class="lead">HTMLファイルをドラッグ＆ドロップすると、元の圧縮サイトと同じHTML/CSS/JavaScript圧縮アルゴリズムで処理し、自動ダウンロードを試みます。自動保存が止められた場合は、結果欄のダウンロードボタンから保存できます。</p>
+    <h1>HTML整理専用</h1>
+    <p class="lead">HTMLファイルをドラッグ＆ドロップすると、元の整理サイトと同じHTML/CSS/JavaScript整理アルゴリズムで処理し、自動ダウンロードを試みます。自動保存が止められた場合は、結果欄のダウンロードボタンから保存できます。</p>
   </header>
 
-  <section class="card" aria-label="HTML圧縮">
+  <section class="card" aria-label="HTML整理">
     <div id="dropZone" class="drop-zone" role="button" tabindex="0" aria-label="HTMLファイルを追加">
       <input id="fileInput" type="file" accept=".html,.htm,text/html" multiple>
       <div>
@@ -72,10 +72,10 @@
       </div>
     </div>
 
-    <div class="options" aria-label="圧縮設定">
-      <label class="option"><input id="whitespaceToggle" type="checkbox" checked> 空白を圧縮</label>
+    <div class="options" aria-label="整理設定">
+      <label class="option"><input id="whitespaceToggle" type="checkbox" checked> 空白を整理</label>
       <label class="option"><input id="commentToggle" type="checkbox" checked> HTML / CSSコメントを削除</label>
-      <label class="option"><input id="autoDownloadToggle" type="checkbox" checked> 圧縮後に自動ダウンロード</label>
+      <label class="option"><input id="autoDownloadToggle" type="checkbox" checked> 整理後に自動ダウンロード</label>
     </div>
     <p class="notice"><strong>安全対策:</strong> JavaScriptの <code>//</code> 行コメントは後続コードと同じ行へ連結しません。ブラウザが複数ダウンロードや自動ダウンロードを制限した場合でも、結果はページ内に保持され、手動ダウンロードできます。</p>
     <div class="toolbar"><button id="clearBtn" class="clear-btn hidden" type="button">結果を消去</button></div>
@@ -387,7 +387,7 @@
       const reduction = item.beforeBytes > 0 ? Math.max(0, Math.round((1 - item.afterBytes / item.beforeBytes) * 100)) : 0;
       meta.textContent = `${formatBytes(item.beforeBytes)} → ${formatBytes(item.afterBytes)} / 約${reduction}%削減`;
       copy.append(name, meta);
-      const badge = document.createElement("span"); badge.className = "badge"; badge.textContent = "圧縮済み";
+      const badge = document.createElement("span"); badge.className = "badge"; badge.textContent = "整理済み";
       top.append(copy, badge);
       const actions = document.createElement("div"); actions.className = "result-actions";
       const download = document.createElement("button"); download.type = "button"; download.className = "download-btn"; download.textContent = "ダウンロード";
@@ -411,7 +411,7 @@
       return;
     }
     statusEl.className = "status";
-    statusEl.textContent = "圧縮中...";
+    statusEl.textContent = "整理中...";
     const newResults = [];
     for (const file of htmlFiles) {
       try {
@@ -431,7 +431,7 @@
     state.results = newResults;
     renderResults();
     const suffix = rejected ? `\nHTML以外の${rejected}件は無視しました。` : "";
-    statusEl.textContent = `${newResults.length}件を圧縮しました。${state.autoDownload ? "自動ダウンロードを試みます。" : "結果欄からダウンロードできます。"}${suffix}`;
+    statusEl.textContent = `${newResults.length}件を整理しました。${state.autoDownload ? "自動ダウンロードを試みます。" : "結果欄からダウンロードできます。"}${suffix}`;
     if (state.autoDownload) {
       newResults.forEach((item, index) => {
         window.setTimeout(() => downloadText(item.content, item.outputName), index * 180);
