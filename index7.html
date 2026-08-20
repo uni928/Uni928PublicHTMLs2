@@ -59,7 +59,7 @@
   <header class="header">
     <div class="header-mark" aria-hidden="true">H</div>
     <h1>HTML整理専用</h1>
-    <p class="lead">HTMLファイルをドラッグ＆ドロップすると、元の整理サイトと同じHTML/CSS/JavaScript整理アルゴリズムで処理し、自動ダウンロードを試みます。自動保存が止められた場合は、結果欄のダウンロードボタンから保存できます。</p>
+    <p class="lead">HTMLファイルをドラッグ＆ドロップすると、HTML本文の意味のある空白を保持しながら、コメント削除やCSS / JavaScriptの整理を行います。自動保存が止められた場合は、結果欄のダウンロードボタンから保存できます。</p>
   </header>
 
   <section class="card" aria-label="HTML整理">
@@ -73,11 +73,11 @@
     </div>
 
     <div class="options" aria-label="整理設定">
-      <label class="option"><input id="whitespaceToggle" type="checkbox" checked> 空白を整理</label>
+      <label class="option"><input id="whitespaceToggle" type="checkbox" checked> CSS / JavaScriptの空白を整理</label>
       <label class="option"><input id="commentToggle" type="checkbox" checked> HTML / CSSコメントを削除</label>
       <label class="option"><input id="autoDownloadToggle" type="checkbox" checked> 整理後に自動ダウンロード</label>
     </div>
-    <p class="notice"><strong>安全対策:</strong> JavaScriptの <code>//</code> 行コメントは後続コードと同じ行へ連結しません。ブラウザが複数ダウンロードや自動ダウンロードを制限した場合でも、結果はページ内に保持され、手動ダウンロードできます。</p>
+    <p class="notice"><strong>注意:</strong> HTML本文のテキストやタグ間の空白は、表示内容を変えないよう原則そのまま保持します。空白整理の対象は主にCSS / JavaScriptです。ただし、コードを機械的に整理する処理のため、特殊な記述では挙動が変わる可能性があります。整理後は必ず表示・動作を確認してください。JavaScriptの <code>//</code> 行コメントは後続コードと同じ行へ連結しません。</p>
     <div class="toolbar"><button id="clearBtn" class="clear-btn hidden" type="button">結果を消去</button></div>
     <div id="status" class="status" aria-live="polite"></div>
     <div id="results" class="results"></div>
@@ -340,15 +340,30 @@
   }
 
   function compactMarkup(value, removeComments) {
-    const blocks = protectBlocks(normalizeText(value));
-    let compacted = blocks.protectedText.split("\n").map((line) => line.trim()).filter(Boolean).join("");
+    // HTML本文の空白は表示上の意味を持つことがあるため変更しない。
+    // pre / textarea は完全保護し、script / style の中身だけを個別に整理する。
+    const protectedBlocks = [];
+    let compacted = normalizeText(value).replace(/<(pre|textarea)\b[^>]*>[\s\S]*?<\/\1>/gi, (block) => {
+      const marker = "\u0001" + protectedBlocks.length + "\u0002";
+      protectedBlocks.push(block);
+      return marker;
+    });
+
+    compacted = compacted.replace(/<(script|style)\b([^>]*)>([\s\S]*?)<\/\1\s*>/gi, (all, tagName, attrs, body) => {
+      if (!state.compactWhitespace) return all;
+      const name = tagName.toLowerCase();
+      const formattedBody = name === "script" ? compactFunctionCode(body) : compactCssOneRule(body);
+      return "<" + tagName + attrs + ">\n" + formattedBody + "\n</" + tagName + ">";
+    });
+
     if (removeComments) compacted = compacted.replace(/<!--[\s\S]*?-->/g, "");
-    return restoreBlocks(compacted.replace(/>\s+</g, "><").replace(/[ \t]{2,}/g, " ").trim(), blocks.protectedBlocks);
+    return restoreBlocks(compacted, protectedBlocks);
   }
 
   function compactHtml(value) {
-    const compacted = compactMarkup(value, state.removeMarkupComments);
-    return state.compactWhitespace ? nestMarkup(compacted) : compacted;
+    // nestMarkup() はインデント用の改行やtrimによりインライン要素間の空白を
+    // 追加・削除し得るため、出力HTML本文には使用しない。
+    return compactMarkup(value, state.removeMarkupComments);
   }
 
   function safeOutputName(name) {
