@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>HTML圧縮 復元</title>
+<style>
+@layer base,layout,components,responsive;
+@layer base{
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#f3f4f6;color:#111827;display:flex;align-items:center;justify-content:center;padding:24px}
+button,input{font:inherit}
+}
+@layer layout{
+.app{width:min(760px,100%);background:#fff;border-radius:18px;box-shadow:0 20px 60px #0002;padding:28px}
+}
+@layer components{
+h1{margin:0 0 10px;font-size:26px}
+.lead{margin:0 0 20px;color:#4b5563;line-height:1.7}
+.option{display:flex;align-items:flex-start;gap:10px;margin:0 0 18px;padding:14px;border:2px solid #e5e7eb;border-radius:14px;background:#f9fafb;cursor:pointer}
+.option input{margin-top:4px}
+.option b{display:block;margin-bottom:3px}
+.option span{display:block;color:#6b7280;font-size:13px;line-height:1.55}
+#drop{border:3px dashed #9ca3af;border-radius:16px;background:#f9fafb;padding:42px 20px;text-align:center;cursor:pointer;transition:.2s}
+#drop.over{border-color:#2563eb;background:#eff6ff}
+.title{font-size:20px;font-weight:700;margin-bottom:8px}
+.sub{color:#6b7280;line-height:1.6}
+#file{display:none}
+#status{margin-top:18px;padding:14px 16px;border-radius:12px;background:#f3f4f6;color:#374151;line-height:1.6;white-space:pre-wrap}
+.actions{display:flex;gap:10px;margin-top:12px}
+.actions button{flex:1;min-height:44px;border:0;border-radius:11px;background:#111827;color:#fff;font-weight:700;cursor:pointer}
+.actions button:disabled{opacity:.45;cursor:not-allowed}
+.note{margin-top:18px;padding:14px 16px;border-left:4px solid #f59e0b;background:#fffbeb;color:#78350f;border-radius:10px;line-height:1.7;font-size:14px}
+}
+@layer responsive{
+@media(max-width:640px){body{padding:12px}.app{padding:20px}.actions{flex-direction:column}}
+}
+</style>
+</head>
+<body>
+<main class="app">
+<h1>HTML圧縮 復元</h1>
+<p class="lead">ファイル名に <code>packed</code> を含む自己解凍HTMLは、Base64圧縮データを通常HTMLへ復元します。<code>packed</code> を含まないHTMLはそのまま読み込みます。</p>
+
+<label class="option">
+<input id="pretty" type="checkbox">
+<span><b>人間に見やすくする</b><span>デフォルトOFF。ONの場合、復元後または通常HTMLに対して、HTML構造を整え、CSS / JavaScriptでは安全な位置のセミコロン後などに改行を入れて読みやすくします。</span></span>
+</label>
+
+<div id="drop" role="button" tabindex="0" aria-label="HTMLファイルを追加">
+<div class="title">ここに .html をドロップ</div>
+<div class="sub">またはクリックして選択</div>
+<input id="file" type="file" accept=".html,.htm,text/html">
+</div>
+
+<div id="status">待機中です。</div>
+<div class="actions">
+<button id="downloadBtn" type="button" disabled>復元HTMLをダウンロード</button>
+</div>
+
+<div class="note">挑戦版で圧縮前に削除されたコメントや元の空白そのものは復元できません。「人間に見やすくする」は、復元後または通常HTMLへ改行・インデントを追加する整形機能です。</div>
+</main>
+<script>
+"use strict";
+(() => {
+  const drop = document.getElementById("drop");
+  const fileInput = document.getElementById("file");
+  const pretty = document.getElementById("pretty");
+  const status = document.getElementById("status");
+  const downloadBtn = document.getElementById("downloadBtn");
+  const VOID_TAGS = new Set(["area","base","br","col","embed","hr","img","input","link","meta","param","source","track","wbr"]);
+  let current = null;
+
+  drop.addEventListener("click", () => fileInput.click());
+  drop.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") { event.preventDefault(); fileInput.click(); }
+  });
+  fileInput.addEventListener("change", () => {
+    if (fileInput.files[0]) processFile(fileInput.files[0]);
+    fileInput.value = "";
+  });
+  for (const eventName of ["dragenter", "dragover"]) {
+    drop.addEventListener(eventName, (event) => { event.preventDefault(); drop.classList.add("over"); });
+  }
+  for (const eventName of ["dragleave", "drop"]) {
+    drop.addEventListener(eventName, (event) => { event.preventDefault(); drop.classList.remove("over"); });
+  }
+  drop.addEventListener("drop", (event) => {
+    const file = event.dataTransfer.files[0];
+    if (file) processFile(file);
+  });
+  downloadBtn.addEventListener("click", () => {
+    if (current) download(current.name, current.text);
+  });
+
+  async function processFile(file) {
+    if (!/\.html?$/i.test(file.name)) { setStatus("HTMLファイルを指定してください。"); return; }
+    try {
+      downloadBtn.disabled = true;
+      current = null;
+      setStatus("HTMLを確認しています...");
+      const source = await file.text();
+      const fileSaysPacked = /packed/i.test(file.name);
+      let packed = null;
+      let restored;
+      let kind;
+
+      if (fileSaysPacked) {
+        packed = parsePackedHtml(source);
+        if (!packed) throw Error("ファイル名に packed が含まれていますが、対応するBase64圧縮データを見つけられませんでした。");
+        if (!window.DecompressionStream) throw Error("このブラウザはDecompressionStreamに対応していません。");
+        setStatus("Base64圧縮データをHTMLへ復元しています...");
+        restored = await restorePacked(packed.base64, packed.format);
+        kind = packed.format + " / packed自己解凍HTMLから復元";
+      } else {
+        restored = source;
+        kind = "通常HTML（復元処理なし）";
+      }
+
+      if (pretty.checked) {
+        setStatus("人間に見やすく整形しています...");
+        restored = prettyHtml(restored);
+      }
+
+      const name = outputName(file.name, fileSaysPacked, pretty.checked);
+      current = { name, text: restored };
+      downloadBtn.disabled = false;
+      const before = new TextEncoder().encode(source).length;
+      const after = new TextEncoder().encode(restored).length;
+      setStatus(
+        "復元完了\n" +
+        "入力: " + file.name + "\n" +
+        "判定: " + kind + "\n" +
+        "人間向け整形: " + (pretty.checked ? "ON" : "OFF") + "\n" +
+        "入力サイズ: " + fmt(before) + "\n" +
+        "復元HTML: " + fmt(after) + "\n" +
+        "出力: " + name + "\n\n" +
+        "自動ダウンロードを開始しました。開始されない場合は下のボタンを押してください。"
+      );
+      download(name, restored);
+    } catch (error) {
+      setStatus("エラー: " + error.message);
+    }
+  }
+
+  function parsePackedHtml(source) {
+    const match = /\blet\s+b\s*=\s*(["'])([A-Za-z0-9+/=]+)\1\s*,\s*f\s*=\s*(["'])(brotli|deflate-raw|gzip)\3\s*;/.exec(source);
+    if (!match) return null;
+    if (!/DecompressionStream\s*\(\s*f\s*\)/.test(source)) return null;
+    return { base64: match[2], format: match[4] };
+  }
+
+  async function restorePacked(base64, format) {
+    const bytes = base64ToBytes(base64);
+    const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream(format));
+    return new TextDecoder().decode(await new Response(stream).arrayBuffer());
+  }
+
+  function base64ToBytes(base64) {
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+    return bytes;
+  }
+
+  function prettyHtml(value) {
+    const normalized = String(value || "").replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n").trim();
+    if (!normalized) return "";
+
+    const blocks = [];
+    // 人間向け整形でも内容の空白が値になる要素は完全保持する。
+    // textarea / pre / code の本文にはインデントや改行を追加しない。
+    const protectedHtml = normalized.replace(/<(script|style|pre|textarea|code)\b([^>]*)>([\s\S]*?)<\/\1\s*>/gi, (all, tagName, attrs, body) => {
+      const name = tagName.toLowerCase();
+      const preserveContent = name === "textarea" || name === "pre" || name === "code";
+      let inner = body;
+      if (!preserveContent && name === "style") inner = prettyDelimitedCode(body, "css");
+      else if (!preserveContent && name === "script") inner = prettyDelimitedCode(body, "js");
+      const marker = "<humanfmt-block data-index=\"" + blocks.length + "\"/>";
+      blocks.push({ tagName, attrs, inner, original: all, preserveContent });
+      return marker;
+    });
+
+    const tokens = tokenizeHtml(protectedHtml);
+    const lines = [];
+    let depth = 0;
+    const push = (text, level = depth) => {
+      const trimmed = text.trim();
+      if (trimmed) lines.push("  ".repeat(Math.max(0, level)) + trimmed);
+    };
+
+    for (const token of tokens) {
+      if (token.type === "text") {
+        const text = token.value.replace(/\s+/g, " ").trim();
+        if (text) push(text, depth);
+        continue;
+      }
+
+      const tag = token.value.trim();
+      const blockMarker = /^<humanfmt-block\s+data-index=["']?(\d+)["']?\s*\/>$/i.exec(tag);
+      if (blockMarker) {
+        const block = blocks[Number(blockMarker[1])];
+        if (block) {
+          if (block.preserveContent) {
+            // 開始タグの外側だけインデントし、タグ内部は元データを1文字も変更しない。
+            lines.push("  ".repeat(Math.max(0, depth)) + block.original);
+          } else {
+            push("<" + block.tagName + block.attrs + ">", depth);
+            const bodyLines = block.inner.replace(/^\n+|\n+$/g, "").split("\n");
+            for (const line of bodyLines) {
+              if (line.trim()) lines.push("  ".repeat(depth + 1) + line.replace(/[ \t]+$/g, ""));
+            }
+            push("</" + block.tagName + ">", depth);
+          }
+        }
+        continue;
+      }
+      const closing = /^<\//.test(tag);
+      const declaration = /^<!--|^<!|^<\?/.test(tag);
+      const selfClosing = /\/\s*>$/.test(tag);
+      const nameMatch = /^<\/?([A-Za-z][\w:-]*)/.exec(tag);
+      const tagName = nameMatch ? nameMatch[1].toLowerCase() : "";
+      if (closing) depth = Math.max(0, depth - 1);
+      push(tag, depth);
+      if (!closing && !declaration && !selfClosing && !VOID_TAGS.has(tagName)) depth += 1;
+    }
+
+    // 人間向け表示: 行は1回改行のみ。不要な空行は追加しない。
+    return lines.filter((line) => line !== "").join("\n");
+  }
+
+  function tokenizeHtml(source) {
+    const tokens = [];
+    let text = "";
+    const pushText = () => { if (text) tokens.push({ type: "text", value: text }); text = ""; };
+    for (let index = 0; index < source.length;) {
+      if (source[index] !== "<") { text += source[index++]; continue; }
+      const next = source[index + 1] || "";
+      if (!/[A-Za-z/!?]/.test(next)) { text += source[index++]; continue; }
+      if (source.startsWith("<!--", index)) {
+        const end = source.indexOf("-->", index + 4);
+        if (end < 0) { text += source.slice(index); break; }
+        pushText(); tokens.push({ type: "tag", value: source.slice(index, end + 3) }); index = end + 3; continue;
+      }
+      let quote = "", end = index + 1;
+      for (; end < source.length; end += 1) {
+        const ch = source[end];
+        if (quote) { if (ch === quote && source[end - 1] !== "\\") quote = ""; }
+        else if (ch === "'" || ch === '"') quote = ch;
+        else if (ch === ">") break;
+      }
+      if (end >= source.length) { text += source.slice(index); break; }
+      pushText(); tokens.push({ type: "tag", value: source.slice(index, end + 1) }); index = end + 1;
+    }
+    pushText();
+    return tokens;
+  }
+
+  function prettyDelimitedCode(value, kind) {
+    const source = String(value || "").replace(/\r\n?/g, "\n").trim();
+    if (!source) return "";
+
+    const lines = [];
+    let buffer = "";
+    let depth = 0;
+    let quote = "";
+    let escaped = false;
+    let lineComment = false;
+    let blockComment = false;
+
+    const flush = (blankAfter = false) => {
+      const text = buffer.trim();
+      if (text) lines.push("  ".repeat(Math.max(0, depth)) + text);
+      buffer = "";
+      if (blankAfter && lines.length && lines[lines.length - 1] !== "") lines.push("");
+    };
+
+    for (let index = 0; index < source.length; index += 1) {
+      const ch = source[index];
+      const next = source[index + 1] || "";
+
+      if (lineComment) {
+        buffer += ch;
+        if (ch === "\n") {
+          lineComment = false;
+          flush(false);
+        }
+        continue;
+      }
+      if (blockComment) {
+        buffer += ch;
+        if (ch === "*" && next === "/") {
+          buffer += "/";
+          index += 1;
+          blockComment = false;
+        }
+        continue;
+      }
+      if (quote) {
+        buffer += ch;
+        if (escaped) escaped = false;
+        else if (ch === "\\") escaped = true;
+        else if (ch === quote) quote = "";
+        continue;
+      }
+
+      if (kind === "js" && ch === "/" && next === "/") {
+        buffer += "//";
+        index += 1;
+        lineComment = true;
+        continue;
+      }
+      if (ch === "/" && next === "*") {
+        buffer += "/*";
+        index += 1;
+        blockComment = true;
+        continue;
+      }
+      if (ch === "'" || ch === '"' || (kind === "js" && ch === "`")) {
+        quote = ch;
+        escaped = false;
+        buffer += ch;
+        continue;
+      }
+
+      if (ch === "{") {
+        buffer += " {";
+        flush(false);
+        depth += 1;
+        continue;
+      }
+      if (ch === "}") {
+        flush(false);
+        depth = Math.max(0, depth - 1);
+        buffer = "}";
+
+        // 改行ルール: } の後も常に1回改行。2回改行へ増やす特別処理は行わない。
+        const rest = source.slice(index + 1);
+        const nextNonSpace = rest.match(/^\s*([^\s])/);
+        if (!nextNonSpace || (nextNonSpace[1] !== ";" && nextNonSpace[1] !== ",")) {
+          flush(false);
+        }
+        continue;
+      }
+      if (ch === ";") {
+        buffer += ";";
+        // 文字列・コメントの外にあるセミコロンの後ろは1回だけ改行する。
+        flush(false);
+        continue;
+      }
+      if (ch === "\n") {
+        flush(false);
+        continue;
+      }
+      if (/\s/.test(ch)) {
+        if (buffer && !/\s$/.test(buffer)) buffer += " ";
+        continue;
+      }
+      buffer += ch;
+    }
+    flush(false);
+
+    return lines.filter((line, index, array) => !(line === "" && array[index - 1] === "")).join("\n");
+  }
+
+  function outputName(name, wasPacked, isPretty) {
+    let base = name.replace(/\.html?$/i, "");
+    if (wasPacked) base = base.replace(/\.(?:safe|try)\.packed$/i, "");
+    const suffix = isPretty ? ".restored.pretty.html" : ".restored.html";
+    return base + suffix;
+  }
+
+  function download(name, text) {
+    const url = URL.createObjectURL(new Blob([text], { type: "text/html;charset=utf-8" }));
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = name;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  function fmt(bytes) {
+    return bytes < 1024 ? bytes + " B" : bytes < 1048576 ? (bytes / 1024).toFixed(1) + " KB" : (bytes / 1048576).toFixed(1) + " MB";
+  }
+
+  function setStatus(text) { status.textContent = text; }
+})();
+</script>
+</body>
+</html>
