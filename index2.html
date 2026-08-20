@@ -127,7 +127,7 @@ HTML / CSS / JavaScriptには一切手を加えず、
 <input type="radio" name="mode" value="try">
 <b>挑戦版</b>
 <span>
-圧縮前にHTML / CSS / JavaScriptを安全化済みアルゴリズムで整理してから圧縮します。
+圧縮前にHTML本文の意味ある空白を保持しながら、CSS / JavaScriptやコメントを整理してから圧縮します。
 </span>
 </label>
 
@@ -135,7 +135,7 @@ HTML / CSS / JavaScriptには一切手を加えず、
 <input type="radio" name="mode" value="clean">
 <b>整理のみ版</b>
 <span>
-挑戦版と同じ事前整理だけを行い、自己解凍圧縮はせず通常HTMLとして保存します。
+挑戦版と同じ保守的な事前整理だけを行い、自己解凍圧縮はせず通常HTMLとして保存します。
 </span>
 </label>
 
@@ -151,8 +151,8 @@ HTML / CSS / JavaScriptには一切手を加えず、
 
 <div class="n">
 安全版では元HTMLを一切変更しません。
-挑戦版はHTML / CSS / JavaScriptを安全化済みアルゴリズムで整理してから圧縮します。
-整理のみ版は挑戦版と同じ事前整理だけを行い、通常HTMLとして保存します。
+挑戦版と整理のみ版では、HTML本文のテキストやタグ間の空白は表示内容を変えないよう原則そのまま保持し、CSS / JavaScriptやコメントを整理します。
+ただし、コードを機械的に整理する処理のため、特殊な記述では挙動が変わる可能性があります。整理後は必ず表示・動作を確認してください。
 JavaScriptの // 行コメントは後続コードと同一行に連結しないよう保護します。
 </div>
 
@@ -596,15 +596,34 @@ function sameBytes(a,b){
   }
 
   function compactMarkup(value, removeComments) {
-    const blocks = protectBlocks(normalizeText(value));
-    let compacted = blocks.protectedText.split("\n").map((line) => line.trim()).filter(Boolean).join("");
+    /*
+      HTML本文の空白は表示上の意味を持つことがあるため変更しない。
+      pre / textarea は完全保護し、script / style の中身だけを個別に整理する。
+      この関数は挑戦版・整理のみ版の両方から compactHtml() 経由で利用される。
+    */
+    const protectedBlocks = [];
+    let compacted = normalizeText(value).replace(/<(pre|textarea)\b[^>]*>[\s\S]*?<\/\1>/gi, (block) => {
+      const marker = "\u0001" + protectedBlocks.length + "\u0002";
+      protectedBlocks.push(block);
+      return marker;
+    });
+
+    compacted = compacted.replace(/<(script|style)\b([^>]*)>([\s\S]*?)<\/\1\s*>/gi, (all, tagName, attrs, body) => {
+      const name = tagName.toLowerCase();
+      const formattedBody = name === "script" ? compactFunctionCode(body) : compactCssOneRule(body);
+      return "<" + tagName + attrs + ">\n" + formattedBody + "\n</" + tagName + ">";
+    });
+
     if (removeComments) compacted = compacted.replace(/<!--[\s\S]*?-->/g, "");
-    return restoreBlocks(compacted.replace(/>\s+</g, "><").replace(/[ \t]{2,}/g, " ").trim(), blocks.protectedBlocks);
+    return restoreBlocks(compacted, protectedBlocks);
   }
 
   function compactHtml(value) {
-    const compacted = compactMarkup(value, true);
-    return true ? nestMarkup(compacted) : compacted;
+    /*
+      nestMarkup() はtrim・改行挿入・テキスト中の \s+ 圧縮により、
+      インライン要素間などの意味ある空白を追加・削除し得るため出力には使わない。
+    */
+    return compactMarkup(value, true);
   }
 
 
