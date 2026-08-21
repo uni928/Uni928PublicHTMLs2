@@ -435,11 +435,28 @@ function sameBytes(a,b){
     return formatBlock(css);
   }
 
+  function canStartJavaScriptRegex(value) {
+    const trimmed = String(value || "").trim();
+    if (!trimmed) return true;
+    const lastCharacter = trimmed[trimmed.length - 1];
+    if ("([{,:;=!?&|+-*%^~<>".includes(lastCharacter)) return true;
+    return /(?:^|[\s.(?:])(?:return|throw|case|delete|void|typeof|instanceof|in|of|yield|await|else|do)$/.test(trimmed);
+  }
+
+  function isValidJavaScript(value) {
+    try {
+      Function(String(value || ""));
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
   function nestBraceCode(value, splitSemicolons = false) {
     const normalized = normalizeText(value).trim();
     if (!normalized) return "";
     const lines = [];
-    let buffer = "", depth = 0, quote = "", escaped = false, lineComment = false, blockComment = false;
+    let buffer = "", depth = 0, quote = "", escaped = false, regex = false, regexClass = false, regexEscaped = false, lineComment = false, blockComment = false;
     const pushLine = (text, lineDepth = depth) => { const trimmed = text.trim(); if (trimmed) lines.push("  ".repeat(Math.max(0, lineDepth)) + trimmed); };
     const flush = () => { pushLine(buffer, depth); buffer = ""; };
 
@@ -456,6 +473,15 @@ function sameBytes(a,b){
         if (character === "*" && next === "/") { buffer += "/"; index += 1; blockComment = false; }
         continue;
       }
+      if (regex) {
+        buffer += character;
+        if (regexEscaped) regexEscaped = false;
+        else if (character === "\\") regexEscaped = true;
+        else if (character === "[" && !regexClass) regexClass = true;
+        else if (character === "]" && regexClass) regexClass = false;
+        else if (character === "/" && !regexClass) regex = false;
+        continue;
+      }
       if (quote) {
         buffer += character;
         if (escaped) escaped = false;
@@ -466,6 +492,7 @@ function sameBytes(a,b){
       }
       if (character === "/" && next === "/") { buffer += "//"; index += 1; lineComment = true; continue; }
       if (character === "/" && next === "*") { buffer += "/*"; index += 1; blockComment = true; continue; }
+      if (character === "/" && canStartJavaScriptRegex(buffer)) { buffer += character; regex = true; regexClass = false; regexEscaped = false; continue; }
       if (["'", '"', "`"].includes(character)) { quote = character; escaped = false; buffer += character; continue; }
       if (/^}[,;,)\]]*$/.test(buffer.trim()) && !/[\s;,)\]]/.test(character)) flush();
       if (character === "{") { pushLine(buffer + "{", depth); buffer = ""; depth += 1; continue; }
@@ -479,6 +506,7 @@ function sameBytes(a,b){
   }
 
   function compactFunctionCode(value) {
+    const original = normalizeText(value).trim();
     const nested = nestBraceCode(value);
     const sourceLines = nested.split("\n").map((line) => line.trim()).filter(Boolean);
     if (!sourceLines.length) return "";
@@ -488,26 +516,44 @@ function sameBytes(a,b){
     const flush = () => { const trimmed = current.trim(); if (trimmed) output.push(trimmed); current = ""; };
     const startsNamedFunction = (line) => /^(?:async\s+)?function\s+[A-Za-z_$][\w$]*\s*\(/.test(line);
     const hasLineComment = (line) => {
-      let localQuote = "", localEscaped = false, localBlock = false;
+      let localQuote = "", localEscaped = false, localBlock = false, localRegex = false, localRegexClass = false, localRegexEscaped = false;
       for (let index = 0; index < line.length; index += 1) {
         const ch = line[index], next = line[index + 1] || "";
         if (localBlock) { if (ch === "*" && next === "/") { localBlock = false; index += 1; } continue; }
+        if (localRegex) {
+          if (localRegexEscaped) localRegexEscaped = false;
+          else if (ch === "\\") localRegexEscaped = true;
+          else if (ch === "[" && !localRegexClass) localRegexClass = true;
+          else if (ch === "]" && localRegexClass) localRegexClass = false;
+          else if (ch === "/" && !localRegexClass) localRegex = false;
+          continue;
+        }
         if (localQuote) { if (localEscaped) localEscaped = false; else if (ch === "\\") localEscaped = true; else if (ch === localQuote) localQuote = ""; continue; }
         if (ch === "/" && next === "*") { localBlock = true; index += 1; continue; }
         if (ch === "/" && next === "/") return true;
+        if (ch === "/" && canStartJavaScriptRegex(line.slice(0, index))) { localRegex = true; localRegexClass = false; localRegexEscaped = false; continue; }
         if (["'", '"', "`"].includes(ch)) localQuote = ch;
       }
       return false;
     };
     const braceDelta = (line) => {
-      let delta = 0, lineComment = false;
+      let delta = 0, lineComment = false, localRegex = false, localRegexClass = false, localRegexEscaped = false;
       for (let index = 0; index < line.length; index += 1) {
         const character = line[index], next = line[index + 1] || "";
         if (lineComment) break;
         if (blockComment) { if (character === "*" && next === "/") { blockComment = false; index += 1; } continue; }
+        if (localRegex) {
+          if (localRegexEscaped) localRegexEscaped = false;
+          else if (character === "\\") localRegexEscaped = true;
+          else if (character === "[" && !localRegexClass) localRegexClass = true;
+          else if (character === "]" && localRegexClass) localRegexClass = false;
+          else if (character === "/" && !localRegexClass) localRegex = false;
+          continue;
+        }
         if (quote) { if (escaped) escaped = false; else if (character === "\\") escaped = true; else if (character === quote) quote = ""; continue; }
         if (character === "/" && next === "/") { lineComment = true; break; }
         if (character === "/" && next === "*") { blockComment = true; index += 1; continue; }
+        if (character === "/" && canStartJavaScriptRegex(line.slice(0, index))) { localRegex = true; localRegexClass = false; localRegexEscaped = false; continue; }
         if (["'", '"', "`"].includes(character)) { quote = character; escaped = false; continue; }
         if (character === "{") delta += 1; else if (character === "}") delta -= 1;
       }
@@ -528,7 +574,8 @@ function sameBytes(a,b){
       }
     }
     flush();
-    return output.join("\n");
+    const formatted = output.join("\n");
+    return isValidJavaScript(formatted) ? formatted : original;
   }
 
   function nestMarkup(value) {
