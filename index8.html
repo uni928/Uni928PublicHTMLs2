@@ -40,7 +40,7 @@ h1{margin:0 0 10px;font-size:26px}
 <body>
 <main class="app">
 <h1>HTML圧縮 復元</h1>
-<p class="lead">ファイル名に <code>packed</code> を含む自己解凍HTMLは、Base64圧縮データを通常HTMLへ復元します。<code>packed</code> を含まないHTMLはそのまま読み込みます。</p>
+<p class="lead">ファイル名に <code>packed</code> を含む自己解凍HTMLは、Base64圧縮データを通常HTMLへ復元します。<code>.clean.html</code> は整理のみ版として認識し、通常HTMLとして読み込みます。それ以外のHTMLもそのまま読み込めます。</p>
 
 <label class="option">
 <input id="pretty" type="checkbox">
@@ -58,7 +58,7 @@ h1{margin:0 0 10px;font-size:26px}
 <button id="downloadBtn" type="button" disabled>復元HTMLをダウンロード</button>
 </div>
 
-<div class="note">挑戦版で圧縮前に削除されたコメントや元の空白そのものは復元できません。「人間に見やすくする」は、復元後または通常HTMLへ改行・インデントを追加する整形機能です。</div>
+<div class="note">挑戦版や整理のみ版で削除されたコメントなど、整理前の内容そのものは復元できません。整理のみ版（<code>.clean.html</code>）は既に編集しやすい形へ整理されているため、「人間に見やすくする」がONでもHTML本文の再整形は行わず、そのまま保持します。</div>
 </main>
 <script>
 "use strict";
@@ -101,6 +101,7 @@ h1{margin:0 0 10px;font-size:26px}
       setStatus("HTMLを確認しています...");
       const source = await file.text();
       const fileSaysPacked = /packed/i.test(file.name);
+      const fileSaysClean = /\.clean\.html?$/i.test(file.name);
       let packed = null;
       let restored;
       let kind;
@@ -114,15 +115,23 @@ h1{margin:0 0 10px;font-size:26px}
         kind = packed.format + " / packed自己解凍HTMLから復元";
       } else {
         restored = source;
-        kind = "通常HTML（復元処理なし）";
+        kind = fileSaysClean ? "整理のみ版HTML（.clean.html / 復元処理なし）" : "通常HTML（復元処理なし）";
       }
 
+      let prettyApplied = pretty.checked;
       if (pretty.checked) {
-        setStatus("人間に見やすく整形しています...");
-        restored = prettyHtml(restored);
+        if (fileSaysClean) {
+          setStatus("整理のみ版HTMLを確認しています...");
+          // 整理アルゴリズム側が保持したHTML本文の空白を再変更しない。
+          // .clean.html は script / style を含め既に整理済みなので、そのまま編集用HTMLとして扱う。
+          prettyApplied = false;
+        } else {
+          setStatus("人間に見やすく整形しています...");
+          restored = prettyHtml(restored);
+        }
       }
 
-      const name = outputName(file.name, fileSaysPacked, pretty.checked);
+      const name = outputName(file.name, fileSaysPacked, fileSaysClean, prettyApplied);
       current = { name, text: restored };
       downloadBtn.disabled = false;
       const before = new TextEncoder().encode(source).length;
@@ -131,7 +140,7 @@ h1{margin:0 0 10px;font-size:26px}
         "復元完了\n" +
         "入力: " + file.name + "\n" +
         "判定: " + kind + "\n" +
-        "人間向け整形: " + (pretty.checked ? "ON" : "OFF") + "\n" +
+        "人間向け整形: " + (pretty.checked ? (fileSaysClean ? "整理済みのため再整形なし" : "ON") : "OFF") + "\n" +
         "入力サイズ: " + fmt(before) + "\n" +
         "復元HTML: " + fmt(after) + "\n" +
         "出力: " + name + "\n\n" +
@@ -256,6 +265,14 @@ h1{margin:0 0 10px;font-size:26px}
     return tokens;
   }
 
+  function canStartJavaScriptRegex(value) {
+    const trimmed = String(value || "").trim();
+    if (!trimmed) return true;
+    const lastCharacter = trimmed[trimmed.length - 1];
+    if ("([{,:;=!?&|+-*%^~<>".includes(lastCharacter)) return true;
+    return /(?:^|[\s.(?:])(?:return|throw|case|delete|void|typeof|instanceof|in|of|yield|await|else|do)$/.test(trimmed);
+  }
+
   function prettyDelimitedCode(value, kind) {
     const source = String(value || "").replace(/\r\n?/g, "\n").trim();
     if (!source) return "";
@@ -267,6 +284,9 @@ h1{margin:0 0 10px;font-size:26px}
     let escaped = false;
     let lineComment = false;
     let blockComment = false;
+    let regex = false;
+    let regexClass = false;
+    let regexEscaped = false;
 
     const flush = (blankAfter = false) => {
       const text = buffer.trim();
@@ -296,6 +316,20 @@ h1{margin:0 0 10px;font-size:26px}
         }
         continue;
       }
+      if (regex) {
+        buffer += ch;
+        if (regexEscaped) regexEscaped = false;
+        else if (ch === "\\") regexEscaped = true;
+        else if (ch === "[" && !regexClass) regexClass = true;
+        else if (ch === "]" && regexClass) regexClass = false;
+        else if (ch === "/" && !regexClass) {
+          regex = false;
+          while (index + 1 < source.length && /[A-Za-z]/.test(source[index + 1])) {
+            buffer += source[++index];
+          }
+        }
+        continue;
+      }
       if (quote) {
         buffer += ch;
         if (escaped) escaped = false;
@@ -316,6 +350,13 @@ h1{margin:0 0 10px;font-size:26px}
         blockComment = true;
         continue;
       }
+      if (kind === "js" && ch === "/" && canStartJavaScriptRegex(buffer)) {
+        buffer += ch;
+        regex = true;
+        regexClass = false;
+        regexEscaped = false;
+        continue;
+      }
       if (ch === "'" || ch === '"' || (kind === "js" && ch === "`")) {
         quote = ch;
         escaped = false;
@@ -334,7 +375,6 @@ h1{margin:0 0 10px;font-size:26px}
         depth = Math.max(0, depth - 1);
         buffer = "}";
 
-        // 改行ルール: } の後も常に1回改行。2回改行へ増やす特別処理は行わない。
         const rest = source.slice(index + 1);
         const nextNonSpace = rest.match(/^\s*([^\s])/);
         if (!nextNonSpace || (nextNonSpace[1] !== ";" && nextNonSpace[1] !== ",")) {
@@ -344,7 +384,6 @@ h1{margin:0 0 10px;font-size:26px}
       }
       if (ch === ";") {
         buffer += ";";
-        // 文字列・コメントの外にあるセミコロンの後ろは1回だけ改行する。
         flush(false);
         continue;
       }
@@ -363,9 +402,10 @@ h1{margin:0 0 10px;font-size:26px}
     return lines.filter((line, index, array) => !(line === "" && array[index - 1] === "")).join("\n");
   }
 
-  function outputName(name, wasPacked, isPretty) {
+  function outputName(name, wasPacked, wasClean, isPretty) {
     let base = name.replace(/\.html?$/i, "");
     if (wasPacked) base = base.replace(/\.(?:safe|try)\.packed$/i, "");
+    if (wasClean) base = base.replace(/\.clean$/i, "");
     const suffix = isPretty ? ".restored.pretty.html" : ".restored.html";
     return base + suffix;
   }
