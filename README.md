@@ -13,7 +13,7 @@ https://uni928.github.io/Uni928PublicHTMLs2/ファイル名
 ## ルート直下のHTML・ツール
 
 | ファイル | 紹介 |
-| --- | --- |
+| --- | --------- |
 | [index1.html](https://uni928.github.io/Uni928PublicHTMLs2/index1.html) | APIの入力トークン数・出力トークン数・為替レート・1日あたりの実行回数などから、1リクエストあたりと30日間の料金を試算します。モデル別の料金比較と、入力値を含むURLの共有に対応しています。[旧版はこちら](https://uni928.github.io/Uni928PublicHTMLs/index14.html) |
 | [index2.html](https://uni928.github.io/Uni928PublicHTMLs2/index2.html) | HTMLをドラッグ＆ドロップして圧縮します。元のコードを変更しない「安全版」、CSS・JavaScript・コメントなどを整理してから圧縮する「挑戦版」、整理だけを行う「整理のみ版」を選べます。 |
 | [index3.html](https://uni928.github.io/Uni928PublicHTMLs2/index3.html) | 複数のHTML・CSS・JavaScript・画像などをAndroid WebView用プロジェクトにまとめ、Android Studioで開けるZIPを生成します。画像1枚から各解像度のアプリアイコンも作成できます。ZIP生成用ライブラリを外部から読み込むため、利用時にはインターネット接続が必要です。 |
