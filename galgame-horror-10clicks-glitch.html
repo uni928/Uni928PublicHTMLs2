@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="ja">
 <head>
@@ -111,14 +112,14 @@ const data=[
 
 const glitchParts=["̶","̷","̴","̵","̸","͏","̀","́","͘","͝","͞","͟","͠","̨","̧","͜","͢","҉","■","▪","█","▓","▒","░"];
 const combiningParts=new Set(["̶","̷","̴","̵","̸","͏","̀","́","͘","͝","͞","͟","͠","̨","̧","͜","͢","҉"]);
-const glitchLevels=[0,0,0,1,1,2,3,5,8,10];
+const glitchLevels=[0,0,0,1,1,2,3,4,3,1];
 
 function randInt(min,max){return Math.floor(Math.random()*(max-min+1))+min}
 function pick(arr){return arr[Math.floor(Math.random()*arr.length)]}
 
 function makeGlitchChunk(level){
 const min=Math.max(1,Math.floor(level/3));
-const max=Math.max(2,Math.ceil(level*.9));
+const max=Math.max(2,Math.ceil(level*.7));
 const count=randInt(min,max);
 let chunk="";
 for(let n=0;n<count;n++){
@@ -130,7 +131,7 @@ return chunk;
 }
 
 function glitchProbability(level){
-const map=[0,.10,.18,.28,.39,.52,.63,.73,.82,.96];
+const map=[0,.08,.15,.23,.32,.43,.54,.64,.74,.84];
 return map[level]??0;
 }
 
@@ -144,7 +145,7 @@ result+=chars[n];
 const next=chars[n+1];
 if(next===undefined||chars[n]==="\n"||next==="\n")continue;
 if(Math.random()<probability)result+=makeGlitchChunk(level);
-if(level>=7&&Math.random()<(level-6)*.06)result+=makeGlitchChunk(Math.max(2,level-2));
+if(level>=7&&Math.random()<(level-6)*.035)result+=makeGlitchChunk(Math.max(2,level-2));
 }
 return result;
 }
@@ -167,8 +168,7 @@ timer=setInterval(()=>{
 message.textContent+=chars[p++]??"";
 if(p>=chars.length){clearInterval(timer);typing=false}
 },i>=7?42:28);
-if(i===8)navigator.vibrate?.([45,35,70]);
-if(i===9)navigator.vibrate?.([80,40,80,40,130]);
+
 }
 
 dialog.onclick=()=>{
@@ -180,6 +180,10 @@ return;
 }
 i=i<9?i+1:0;
 show();
+if(i===6)navigator.vibrate?.(35);
+if(i===7)navigator.vibrate?.([45,30,55]);
+if(i===8)navigator.vibrate?.([60,35,80]);
+if(i===9)navigator.vibrate?.([90,45,90,45,150]);
 };
 
 show();
