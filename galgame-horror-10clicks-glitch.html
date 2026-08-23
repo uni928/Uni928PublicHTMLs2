@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>放課後の会話</title>
+<style>
+@layer reset,base,scene,dialog,horror,responsive;
+
+/* reset: basic reset */
+@layer reset{
+*{box-sizing:border-box}html,body{margin:0;min-height:100%}button{font:inherit}
+}
+
+/* base: overall appearance */
+@layer base{
+:root{--ink:#2b2630;--panel:rgba(255,255,255,.9);--line:rgba(64,48,70,.18)}
+body{overflow:hidden;color:var(--ink);background:linear-gradient(145deg,#f5dfe8,#efe8f7);font-family:"Yu Gothic",system-ui,sans-serif;transition:.5s}
+button{border:0;color:inherit;background:transparent}
+}
+
+/* scene: background and geometric character */
+@layer scene{
+.game{position:relative;width:100vw;height:100dvh;min-height:520px;isolation:isolate}
+.title{position:absolute;top:18px;left:22px;z-index:4;font-size:12px;letter-spacing:.16em;opacity:.5}
+.window{position:absolute;inset:7% 6% 24%;overflow:hidden;border:1px solid #ffffff73;border-radius:26px;background:linear-gradient(#ffffff55,#ffffff12);box-shadow:inset 0 0 90px #ffffff55;transition:.5s}
+.character{position:absolute;left:50%;bottom:6%;width:min(31vw,280px);height:min(48vw,440px);transform:translateX(-50%);transition:.35s}
+.head{position:absolute;left:50%;top:0;width:42%;aspect-ratio:1;transform:translateX(-50%);border-radius:50%;background:#e4b6c7;transition:.3s}
+.hair{position:absolute;left:50%;top:-4%;width:47%;height:31%;transform:translateX(-50%);border-radius:52% 52% 36% 36%;background:#4b3d50}
+.eye{position:absolute;top:43%;width:10%;height:4%;border-radius:99px;background:#3a2d3d;transition:.25s}
+.eye.left{left:37%}.eye.right{right:37%}
+.body-shape{position:absolute;left:50%;bottom:0;width:72%;height:68%;transform:translateX(-50%);clip-path:polygon(28% 0,72% 0,100% 100%,0 100%);background:linear-gradient(#a881a2,#6f5b82);border-radius:22px}
+.ribbon{position:absolute;left:50%;top:31%;width:23%;height:7%;transform:translateX(-50%) rotate(45deg);background:#ead9e4}
+}
+
+/* dialog: visual novel message box */
+@layer dialog{
+.dialog{position:absolute;left:5%;right:5%;bottom:4%;z-index:6;min-height:174px;padding:28px 28px 20px;border:1px solid var(--line);border-radius:20px;background:var(--panel);box-shadow:0 16px 40px #28192d2e;backdrop-filter:blur(12px);cursor:pointer;user-select:none;transition:.35s}
+.name{position:absolute;top:-17px;left:24px;min-width:128px;padding:7px 16px;border:1px solid var(--line);border-radius:999px;background:#fff;font-size:14px;font-weight:700;text-align:center;transition:.25s}
+.message{min-height:76px;font-size:clamp(18px,2.25vw,28px);line-height:1.75;letter-spacing:.03em;transition:.25s}
+.hint{display:flex;justify-content:space-between;margin-top:8px;color:#2b263084;font-size:12px}
+.next{animation:pulse 1s infinite}
+@keyframes pulse{50%{transform:translateY(3px);opacity:.55}}
+}
+
+/* horror: progressive distortion by click count */
+@layer horror{
+body.stage-4{background:linear-gradient(145deg,#d9d0d5,#cfcfd7)}
+body.stage-5 .character{transform:translateX(-50%) scale(1.04)}
+body.stage-6 .eye{height:7%;background:#111}
+body.stage-7{background:#171619;color:#eee}
+body.stage-7 .window{border-radius:7px;background:#0c0c0e66}
+body.stage-7 .dialog{color:#eee;background:#141316ee;border-color:#ffffff22}
+body.stage-7 .name{color:#eee;background:#1f1d21;border-color:#ffffff22}
+body.stage-7 .hint{color:#ffffff66}
+body.stage-8 .character{transform:translateX(-50%) scale(1.12)}
+body.stage-8 .eye{top:41%;width:13%;height:10%;border-radius:50%;background:#030303}
+body.stage-8 .message{letter-spacing:.12em;text-shadow:1px 0 #6b1111,-1px 0 #1b5364}
+body.stage-9 .game::before,body.stage-10 .game::before{content:"";position:absolute;inset:0;z-index:5;pointer-events:none;background:repeating-linear-gradient(0deg,transparent 0 2px,#ffffff09 3px 4px);animation:scan .15s steps(2) infinite}
+body.stage-9 .character,body.stage-10 .character{animation:twitch .12s steps(2) infinite}
+body.stage-9 .dialog{border-radius:3px}
+body.stage-9 .name{color:#c66}
+body.stage-10{background:#050506}
+body.stage-10 .window{inset:0;border:0;border-radius:0;background:#09090a}
+body.stage-10 .character{width:min(43vw,420px);height:min(65vw,620px);bottom:-5%;filter:grayscale(1) contrast(1.7)}
+body.stage-10 .hair,body.stage-10 .body-shape{background:#111}
+body.stage-10 .head{background:#a9989f}
+body.stage-10 .eye{top:38%;width:17%;height:17%;background:#000;box-shadow:0 0 0 2px #7d1111 inset}
+body.stage-10 .dialog{left:2.5%;right:2.5%;bottom:2%;color:#eee;background:#000000ee;border:1px solid #4e0d0d}
+body.stage-10 .name{color:#b83a3a;background:#050505;border-color:#4e0d0d;text-shadow:2px 0 #621010,-2px 0 #173f46}
+@keyframes twitch{33%{transform:translateX(-50%) translate(2px,-1px)}66%{transform:translateX(-50%) translate(-2px,1px)}}
+@keyframes scan{to{transform:translateY(3px)}}
+}
+
+/* responsive: mobile layout */
+@layer responsive{
+@media(max-width:640px){
+.window{inset:5% 3% 29%}.character{width:58vw;height:86vw;max-height:430px}.dialog{left:3%;right:3%;bottom:2.5%;min-height:190px;padding:28px 18px 18px}.message{font-size:18px}body.stage-10 .character{width:75vw;height:110vw;max-height:560px}
+}
+}
+</style>
+</head>
+<body>
+<div class="game">
+<div class="title">AFTER SCHOOL / 17:42</div>
+<div class="window">
+<div class="character">
+<div class="body-shape"></div><div class="ribbon"></div><div class="head"></div><div class="hair"></div><div class="eye left"></div><div class="eye right"></div>
+</div>
+</div>
+<button class="dialog" id="dialog" type="button">
+<span class="name" id="name"></span>
+<div class="message" id="message"></div>
+<div class="hint"><span id="progress"></span><span class="next">クリックして進む ▼</span></div>
+</button>
+</div>
+<script>
+(()=>{
+const data=[
+["美月","あ、まだ帰ってなかったんだ。ちょうどよかった。"],
+["美月","ねえ。少しだけ、話していかない？"],
+["美月","……今日は、教室が静かだね。"],
+["美月","ところで。さっきから、後ろを見ないの？"],
+["美月","ううん。何もいないよ。……たぶん。"],
+["美月","変だな。今、私の顔を見てるよね？"],
+["美月","じゃあ、画面の中で笑ってる私は、誰？"],
+["？？？","み つ け た"],
+["？？？","次に押したら、こっちを見る。"],
+["■■■","ずっと、あなたの方を見てたよ。"]
+];
+
+const glitchParts=["̶","̷","̴","̵","̸","͏","̀","́","͘","͝","͞","͟","͠","̨","̧","͜","͢","҉","■","▪","█","▓","▒","░"];
+const combiningParts=new Set(["̶","̷","̴","̵","̸","͏","̀","́","͘","͝","͞","͟","͠","̨","̧","͜","͢","҉"]);
+const glitchLevels=[0,0,0,1,1,2,3,5,8,10];
+
+function randInt(min,max){return Math.floor(Math.random()*(max-min+1))+min}
+function pick(arr){return arr[Math.floor(Math.random()*arr.length)]}
+
+function makeGlitchChunk(level){
+const min=Math.max(1,Math.floor(level/3));
+const max=Math.max(2,Math.ceil(level*.9));
+const count=randInt(min,max);
+let chunk="";
+for(let n=0;n<count;n++){
+let part=pick(glitchParts);
+if(n===0&&combiningParts.has(part)&&Math.random()<.3)part=Math.random()<.5?"■":"█";
+chunk+=part;
+}
+return chunk;
+}
+
+function glitchProbability(level){
+const map=[0,.10,.18,.28,.39,.52,.63,.73,.82,.96];
+return map[level]??0;
+}
+
+function glitchText(text,level){
+if(level<=0)return text;
+const chars=Array.from(text);
+let result="";
+const probability=glitchProbability(level);
+for(let n=0;n<chars.length;n++){
+result+=chars[n];
+const next=chars[n+1];
+if(next===undefined||chars[n]==="\n"||next==="\n")continue;
+if(Math.random()<probability)result+=makeGlitchChunk(level);
+if(level>=7&&Math.random()<(level-6)*.06)result+=makeGlitchChunk(Math.max(2,level-2));
+}
+return result;
+}
+
+const dialog=document.getElementById("dialog"),name=document.getElementById("name"),message=document.getElementById("message"),progress=document.getElementById("progress");
+let i=0,timer=0,typing=false,currentRenderedText="";
+
+function show(){
+document.body.className="stage-"+(i+1);
+const level=glitchLevels[i];
+name.textContent=glitchText(data[i][0],Math.max(0,level-2));
+progress.textContent=(i+1)+" / 10";
+message.textContent="";
+typing=true;
+currentRenderedText=glitchText(data[i][1],level);
+const chars=Array.from(currentRenderedText);
+let p=0;
+clearInterval(timer);
+timer=setInterval(()=>{
+message.textContent+=chars[p++]??"";
+if(p>=chars.length){clearInterval(timer);typing=false}
+},i>=7?42:28);
+if(i===8)navigator.vibrate?.([45,35,70]);
+if(i===9)navigator.vibrate?.([80,40,80,40,130]);
+}
+
+dialog.onclick=()=>{
+if(typing){
+clearInterval(timer);
+message.textContent=currentRenderedText;
+typing=false;
+return;
+}
+i=i<9?i+1:0;
+show();
+};
+
+show();
+})();
+</script>
+</body>
+</html>
