@@ -682,22 +682,36 @@ let combiningParts = new Set([
   //if (!window.matchMedia('(max-width: 620px)').matches) return;
 
   const mobileGlitchParts = [
-    "\u0341", // ́
-    "\u0489", // ҉
-    "\u0334", // ̴
-    "\u0338", // ̸
-    "\u0336", // ̶
-    "\u0327", // ̧
-    "\u035D", // ͝
-    "\u0331", // ̱
-    "\u0330", // ̰
-    "\u0303", // ̃
-    "\u030C", // ̌
-    "\u0329", // ̩
-    "\u031A", // ̚
-    "\u0348", // ͈
-    "\u0319"  // ̙
+  "́",
+  "҉",
+  "̃",
+  "̌",
+  "̣",
+  "̀",
+  "́",
+  "̄",
+  "̇",
+  "̉"
+  "̌",
+  "̣",
+  "҈"
   ];
+
+  const mobileGlitchParts = [
+  "́",
+  "҉",
+  "̃",
+  "̌",
+  "̣",
+  "̀",
+  "́",
+  "̄",
+  "̇",
+  "̉"
+  "̌",
+  "̣",
+  "҈"
+];
 
   glitchParts = mobileGlitchParts.slice();
   combiningParts = new Set(mobileGlitchParts);
