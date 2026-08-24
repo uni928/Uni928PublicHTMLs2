@@ -674,14 +674,7 @@ let combiningParts = new Set([
 
   copy.addEventListener('click', () => copyText(output.value));
 
-  generate();
-})();
-</script>
- <script>
-(() => {
-  //if (!window.matchMedia('(max-width: 620px)').matches) return;
-
-  const mobileGlitchParts = [
+   const mobileGlitchParts = [
   "́",
   "҉",
   "̃",
@@ -699,9 +692,9 @@ let combiningParts = new Set([
 
   glitchParts = mobileGlitchParts.slice();
   combiningParts = new Set(mobileGlitchParts);
-
+ 
   generate();
 })();
- </script>
+</script>
 </body>
 </html>
