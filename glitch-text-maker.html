@@ -1,502 +1,73 @@
-<!doctype html>
-<html lang="ja">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="color-scheme" content="dark">
-<title>文字化けメーカー</title>
-<style>
-@layer reset, base, components, utilities;
+const glitchParts = [
+  "̶", "̷", "̷", "̷", "̷", "̴", "̵", "̸", "̸", "̸", "͏", "̀", "́", "͘", "͝", "͞", "͟", "͠",
+  "̨", "̧", "͜", "͢", "҉", "҉", "҉", "■", "▪", "̶", "̷", "̴", "̵", "̸", "͏", "̀", "́", "͘", "͝", "͞", "͟", "͠",
+  "̨", "̧", "͜", "͢", "҉", "҉", "҉", "▪", "̶", "̷", "̴", "̵", "̸", "͏", "̀", "́", "͘", "͝", "͞", "͟", "͠",
+  "̨", "̧", "͜", "͢", "҉", "▪", "█", "▓", "▒", "░", " ", " ", " "
+];
 
-/* reset: 基本リセット */
-@layer reset {
-  * { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; }
-  button, input, textarea { font: inherit; }
+const combiningParts = new Set([
+  "̶", "̷", "̷", "̷", "̴", "̵", "̸", "̸", "̸", "͏", "̀", "́", "͘", "͝", "͞", "͟", "͠", "̨", "̧", "͜", "͢", "̀", "́", "̀", "́", "̀", "́", "҉"
+]);
+
+function randomInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-/* base: 画面全体の基本デザイン */
-@layer base {
-  :root {
-    --bg: #0e0f12;
-    --panel: #17191f;
-    --panel-2: #111318;
-    --text: #f3f4f6;
-    --muted: #a7abb4;
-    --border: #2b2f39;
-    --accent: #d7dae1;
-    --accent-text: #101114;
-    --danger: #ffb4b4;
-  }
-
-  body {
-    min-height: 100vh;
-    background: var(--bg);
-    color: var(--text);
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  }
-
-  main {
-    width: min(920px, calc(100% - 28px));
-    margin: 0 auto;
-    padding: 34px 0 48px;
-  }
-
-  h1 {
-    margin: 0;
-    font-size: clamp(28px, 7vw, 48px);
-    letter-spacing: .04em;
-  }
-
-  p { line-height: 1.7; }
-
-  textarea {
-    width: 100%;
-    resize: vertical;
-    color: var(--text);
-    background: var(--panel-2);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    outline: none;
-  }
-
-  textarea:focus, input:focus-visible, button:focus-visible {
-    outline: 2px solid #8a8f9b;
-    outline-offset: 2px;
-  }
+function pickRandom(array) {
+  return array[Math.floor(Math.random() * array.length)];
 }
 
-/* components: パネル・入力欄・候補・ボタン */
-@layer components {
-  .lead {
-    margin: 8px 0 26px;
-    color: var(--muted);
-  }
+function makeGlitchChunk(level) {
+  const min = Math.max(1, Math.floor(level / 3));
+  const max = Math.max(2, Math.ceil(level * 0.7));
+  const count = randomInt(min, max);
+  let chunk = "";
 
-  .panel {
-    padding: 18px;
-    margin-top: 14px;
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 18px;
-  }
+  for (let i = 0; i < count; i++) {
+    let part = pickRandom(glitchParts);
 
-  .label-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 10px;
-  }
-
-  .label {
-    font-size: 14px;
-    font-weight: 700;
-  }
-
-  .count {
-    color: var(--muted);
-    font-size: 12px;
-  }
-
-  .input {
-    min-height: 150px;
-    padding: 14px 15px;
-  }
-
-  .source-actions {
-    display: flex;
-    justify-content: flex-end;
-    margin-top: 10px;
-  }
-
-  .source-actions .btn {
-    width: 100%;
-  }
-
-  .output {
-    min-height: 190px;
-    padding: 16px;
-    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-    font-size: 16px;
-    line-height: 1.9;
-    overflow-wrap: anywhere;
-  }
-
-  .range-wrap {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    align-items: center;
-    gap: 14px;
-  }
-
-  .range {
-    width: 100%;
-    accent-color: var(--accent);
-  }
-
-  .level {
-    min-width: 46px;
-    padding: 7px 10px;
-    text-align: center;
-    border-radius: 999px;
-    background: var(--panel-2);
-    border: 1px solid var(--border);
-    font-weight: 800;
-  }
-
-  .scale {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 8px;
-    color: var(--muted);
-    font-size: 11px;
-  }
-
-  .choices {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-  }
-
-  .choice {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    min-width: 0;
-    min-height: 74px;
-    padding: 12px;
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    color: var(--text);
-    background: #20232b;
-    text-align: left;
-    cursor: pointer;
-    transition: border-color .16s ease, background-color .16s ease, transform .16s ease;
-  }
-
-  .choice:hover {
-    border-color: #737986;
-    background: #272b34;
-    transform: translateY(-1px);
-  }
-
-  .choice[aria-pressed="true"] {
-    border-color: var(--accent);
-    background: #30343d;
-    box-shadow: 0 0 0 1px var(--accent) inset;
-  }
-
-  .choice-number {
-    flex: 0 0 auto;
-    min-width: 2.2em;
-    color: var(--muted);
-    font-size: 12px;
-    font-weight: 800;
-    line-height: 1.6;
-  }
-
-  .choice-text {
-    min-width: 0;
-    max-height: 7.8em;
-    color: var(--text);
-    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-    line-height: 1.6;
-    white-space: pre-wrap;
-    overflow-wrap: anywhere;
-    overflow: auto;
-  }
-
-  .actions {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-    margin-top: 14px;
-  }
-
-  .btn {
-    min-height: 46px;
-    padding: 10px 14px;
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    color: var(--text);
-    background: #20232b;
-    cursor: pointer;
-  }
-
-  .btn.primary {
-    color: var(--accent-text);
-    background: var(--accent);
-    border-color: var(--accent);
-    font-weight: 800;
-  }
-
-  .status {
-    min-height: 1.5em;
-    margin: 10px 2px 0;
-    color: var(--muted);
-    font-size: 12px;
-  }
-
-  .note {
-    color: var(--muted);
-    font-size: 12px;
-  }
-}
-
-/* utilities: スマホ向け調整 */
-@layer utilities {
-  @media (max-width: 620px) {
-    main { width: min(100% - 18px, 920px); padding-top: 22px; }
-    .panel { padding: 14px; border-radius: 15px; }
-    .choices { grid-template-columns: 1fr; }
-    .actions { grid-template-columns: 1fr; }
-  }
-}
-</style>
-</head>
-<body>
-<main>
-  <h1>文字化けメーカー</h1>
-  <p class="lead">文章の文字間へ、Unicodeの文字化け風断片をランダムに挿入します。</p>
-
-  <section class="panel">
-    <div class="label-row">
-      <div class="label">元の文章</div>
-      <div class="count" id="inputCount">0文字</div>
-    </div>
-    <textarea id="source" class="input" placeholder="ここに文章を入力してください">怖い文字列を作成します</textarea>
-    <div class="source-actions">
-      <button id="clearSource" class="btn" type="button">元の文章をクリア</button>
-    </div>
-  </section>
-
-  <section class="panel">
-    <div class="label-row">
-      <div class="label">埋め込み頻度</div>
-      <div class="level" id="levelValue">3</div>
-    </div>
-    <div class="range-wrap">
-      <input id="level" class="range" type="range" min="1" max="10" value="3" step="1" aria-label="埋め込み頻度">
-      <span> / 10</span>
-    </div>
-    <div class="scale">
-      <span>少なめ</span>
-      <span>標準</span>
-      <span>多め</span>
-    </div>
-    <p class="note">3は、原文の読みやすさを残しつつ、文字化け感も出しやすい初期値です。</p>
-  </section>
-
-  <section class="panel">
-    <div class="label-row">
-      <div class="label">候補から選択</div>
-      <div class="count" id="candidateCount">20個</div>
-    </div>
-    <p class="note">20個の候補から選択できます。候補を再生成すると、すべての候補が作り直されます。</p>
-    <div id="choices" class="choices" role="group" aria-label="生成候補"></div>
-  </section>
-
-  <section class="panel">
-    <div class="label-row">
-      <div class="label">生成結果</div>
-      <div class="count" id="outputCount">0文字</div>
-    </div>
-    <textarea id="output" class="output" readonly></textarea>
-
-    <div class="actions">
-      <button id="regenerate" class="btn primary" type="button">候補を再生成</button>
-      <button id="copy" class="btn" type="button">コピー</button>
-      <button id="clear" class="btn" type="button">クリア</button>
-    </div>
-    <div class="status" id="status" aria-live="polite"></div>
-  </section>
-</main>
-
-<script>
-(() => {
-  const source = document.getElementById('source');
-  const output = document.getElementById('output');
-  const level = document.getElementById('level');
-  const levelValue = document.getElementById('levelValue');
-  const inputCount = document.getElementById('inputCount');
-  const outputCount = document.getElementById('outputCount');
-  const candidateCount = document.getElementById('candidateCount');
-  const choices = document.getElementById('choices');
-  const regenerate = document.getElementById('regenerate');
-  const copy = document.getElementById('copy');
-  const clear = document.getElementById('clear');
-  const clearSource = document.getElementById('clearSource');
-  const status = document.getElementById('status');
-
-  const OPTION_COUNT = 20;
-  let candidates = [];
-  let selectedIndex = 0;
-
-  const glitchParts = [
-    '̶','̷','̷','̷','̷','̴','̵','̸','̸','̸','͏','̀','́','͘','͝','͞','͟','͠',
-    '̨','̧','͜','͢','҉','҉','҉','■','▪','̶','̷','̴','̵','̸','͏','̀','́','͘','͝','͞','͟','͠',
-    '̨','̧','͜','͢','҉','҉','҉','▪','̶','̷','̴','̵','̸','͏','̀','́','͘','͝','͞','͟','͠',
-    '̨','̧','͜','͢','҉','▪','█','▓','▒','░',' ',' ',' '
-  ];
-
-  const combiningParts = new Set([
-    '̶','̷','̷','̷','̴','̵','̸','̸','̸','͏','̀','́','͘','͝','͞','͟','͠','̨','̧','͜','͢','̀','́','̀','́','̀','́','҉'
-  ]);
-
-  function randInt(min, max) {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
-  }
-
-  function pick(arr) {
-    return arr[Math.floor(Math.random() * arr.length)];
-  }
-
-  function makeChunk(currentLevel) {
-    const min = Math.max(1, Math.floor(currentLevel / 3));
-    const max = Math.max(2, Math.ceil(currentLevel * 0.9));
-    const count = randInt(min, max);
-    let chunk = '';
-
-    for (let i = 0; i < count; i++) {
-      let part = pick(glitchParts);
-
-      if (i === 0 && combiningParts.has(part) && Math.random() < 0.3) {
-        part = Math.random() < 0.5 ? '■' : '█';
-      }
-
-      chunk += part;
+    if (i === 0 && combiningParts.has(part) && Math.random() < 0.3) {
+      part = Math.random() < 0.5 ? "■" : "█";
     }
 
-    return chunk;
+    chunk += part;
   }
 
-  function probabilityFor(currentLevel) {
-    const map = [0.10, 0.18, 0.28, 0.39, 0.52, 0.63, 0.73, 0.82, 0.90, 0.96];
-    return map[currentLevel - 1];
-  }
+  return chunk;
+}
 
-  function glitchText(text, currentLevel) {
-    const chars = Array.from(text);
-    if (!chars.length) return '';
+function glitchProbability(level) {
+  const probabilities = [0, 0.08, 0.15, 0.23, 0.32, 0.43, 0.54, 0.64, 0.74, 0.84];
+  return probabilities[level] ?? 0;
+}
 
-    const probability = probabilityFor(currentLevel);
-    let result = '';
+/**
+ * 文字列に結合文字・記号を挿入して文字化け風の文字列を返します。
+ * @param {string} text 対象文字列
+ * @param {number} level 文字化け強度。0〜9。省略時は3。
+ * @returns {string}
+ */
+function glitchText(text, level = 3) {
+  if (level <= 0) return String(text);
 
-    for (let i = 0; i < chars.length; i++) {
-      const char = chars[i];
-      result += char;
+  const chars = Array.from(String(text));
+  const probability = glitchProbability(level);
+  let result = "";
 
-      const next = chars[i + 1];
-      if (next === undefined) continue;
-      if (char === '\n' || next === '\n') continue;
+  for (let i = 0; i < chars.length; i++) {
+    result += chars[i];
 
-      if (Math.random() < probability) {
-        result += makeChunk(currentLevel);
-      }
+    const next = chars[i + 1];
+    if (next === undefined || chars[i] === "\n" || next === "\n") continue;
 
-      if (currentLevel >= 7 && Math.random() < (currentLevel - 6) * 0.06) {
-        result += makeChunk(Math.max(2, currentLevel - 2));
-      }
+    if (Math.random() < probability) {
+      result += makeGlitchChunk(level);
     }
 
-    return result;
-  }
-
-  function updateCounts() {
-    inputCount.textContent = `${Array.from(source.value).length}文字`;
-    outputCount.textContent = `${Array.from(output.value).length}文字`;
-    candidateCount.textContent = `${candidates.length}個`;
-  }
-
-  function updateChoiceState() {
-    Array.from(choices.children).forEach((button, index) => {
-      button.setAttribute('aria-pressed', index === selectedIndex ? 'true' : 'false');
-    });
-  }
-
-  async function copyText(text, successMessage = 'コピーしました。') {
-    if (!text) {
-      status.textContent = 'コピーする文字列がありません。';
-      return;
-    }
-
-    try {
-      await navigator.clipboard.writeText(text);
-      status.textContent = successMessage;
-    } catch {
-      output.focus();
-      output.select();
-      document.execCommand('copy');
-      status.textContent = successMessage;
+    if (level >= 7 && Math.random() < (level - 6) * 0.035) {
+      result += makeGlitchChunk(Math.max(2, level - 2));
     }
   }
 
-  async function selectCandidate(index) {
-    selectedIndex = index;
-    output.value = candidates[selectedIndex] || '';
-    updateChoiceState();
-    updateCounts();
-    await copyText(output.value, `候補${selectedIndex + 1}を選択してコピーしました。`);
-  }
-
-  function renderCandidates() {
-    choices.replaceChildren();
-
-    candidates.forEach((candidate, index) => {
-      const button = document.createElement('button');
-      const number = document.createElement('span');
-      const text = document.createElement('span');
-
-      button.type = 'button';
-      button.className = 'choice';
-      button.setAttribute('aria-pressed', index === selectedIndex ? 'true' : 'false');
-      button.setAttribute('aria-label', `候補${index + 1}を選択`);
-      button.addEventListener('click', () => selectCandidate(index));
-
-      number.className = 'choice-number';
-      number.textContent = String(index + 1).padStart(2, '0');
-
-      text.className = 'choice-text';
-      text.textContent = candidate || '（空の候補）';
-
-      button.append(number, text);
-      choices.appendChild(button);
-    });
-  }
-
-  function generate() {
-    const currentLevel = Number(level.value);
-    levelValue.textContent = currentLevel;
-    candidates = Array.from({ length: OPTION_COUNT }, () => glitchText(source.value, currentLevel));
-    selectedIndex = 0;
-    renderCandidates();
-    output.value = candidates[0] || '';
-    status.textContent = '';
-    updateCounts();
-  }
-
-  source.addEventListener('input', generate);
-  level.addEventListener('input', generate);
-  regenerate.addEventListener('click', generate);
-
-  clearSource.addEventListener('click', () => {
-    source.value = '';
-    generate();
-    source.focus();
-  });
-
-  clear.addEventListener('click', () => {
-    output.value = '';
-    status.textContent = '';
-    updateCounts();
-    output.focus();
-  });
-
-  copy.addEventListener('click', () => copyText(output.value));
-
-  generate();
-})();
-</script>
-</body>
-</html>
+  return result;
+}
