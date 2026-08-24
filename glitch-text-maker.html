@@ -333,7 +333,7 @@
   let candidates = [];
   let selectedIndex = 0;
 
-const glitchParts = [
+let glitchParts = [
   // 強い横線・斜線
   "\u0336", "\u0336", "\u0336", "\u0336", "\u0336", "\u0336",
   "\u0337", "\u0337", "\u0337", "\u0337", "\u0337", "\u0337",
@@ -448,7 +448,7 @@ const glitchParts = [
   " ", " ", " "
 ];
 
-const combiningParts = new Set([
+let combiningParts = new Set([
   "\u0300", "\u0301", "\u0302", "\u0303", "\u0304",
   "\u0305", "\u0306", "\u0307", "\u0308", "\u0309",
   "\u030A", "\u030B", "\u030C", "\u030D", "\u030E", "\u030F",
