@@ -554,7 +554,8 @@ let combiningParts = new Set([
       let part = pick(glitchParts);
 
       if (i === 0 && combiningParts.has(part) && Math.random() < 0.3) {
-        part = Math.random() < 0.5 ? '■' : '█';
+        if (!window.matchMedia('(max-width: 820px)').matches) glitchParts = mobileGlitchParts.slice();
+ part = Math.random() < 0.5 ? '■' : '█';
       }
 
       chunk += part;
