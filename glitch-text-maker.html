@@ -484,8 +484,8 @@ let combiningParts = new Set([
   "҈"
   ];
 
-  glitchParts = mobileGlitchParts.slice();
-  combiningParts = new Set(mobileGlitchParts);
+  if (!window.matchMedia('(max-width: 620px)').matches) glitchParts = mobileGlitchParts.slice();
+  if (!window.matchMedia('(max-width: 620px)').matches) combiningParts = new Set(mobileGlitchParts);
 
  (() => {
   let assignedRegex = null;
