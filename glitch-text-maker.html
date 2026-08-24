@@ -66,7 +66,7 @@
   }
 }
 
-/* components: パネル・入力欄・ボタン */
+/* components: パネル・入力欄・候補・ボタン */
 @layer components {
   .lead {
     margin: 8px 0 26px;
@@ -102,6 +102,16 @@
   .input {
     min-height: 150px;
     padding: 14px 15px;
+  }
+
+  .source-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 10px;
+  }
+
+  .source-actions .btn {
+    width: 100%;
   }
 
   .output {
@@ -141,6 +151,60 @@
     margin-top: 8px;
     color: var(--muted);
     font-size: 11px;
+  }
+
+  .choices {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .choice {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    min-width: 0;
+    min-height: 74px;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    color: var(--text);
+    background: #20232b;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color .16s ease, background-color .16s ease, transform .16s ease;
+  }
+
+  .choice:hover {
+    border-color: #737986;
+    background: #272b34;
+    transform: translateY(-1px);
+  }
+
+  .choice[aria-pressed="true"] {
+    border-color: var(--accent);
+    background: #30343d;
+    box-shadow: 0 0 0 1px var(--accent) inset;
+  }
+
+  .choice-number {
+    flex: 0 0 auto;
+    min-width: 2.2em;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1.6;
+  }
+
+  .choice-text {
+    min-width: 0;
+    max-height: 7.8em;
+    color: var(--text);
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    overflow: auto;
   }
 
   .actions {
@@ -185,6 +249,7 @@
   @media (max-width: 620px) {
     main { width: min(100% - 18px, 920px); padding-top: 22px; }
     .panel { padding: 14px; border-radius: 15px; }
+    .choices { grid-template-columns: 1fr; }
     .actions { grid-template-columns: 1fr; }
   }
 }
@@ -201,15 +266,18 @@
       <div class="count" id="inputCount">0文字</div>
     </div>
     <textarea id="source" class="input" placeholder="ここに文章を入力してください">怖い文字列を作成します</textarea>
+    <div class="source-actions">
+      <button id="clearSource" class="btn" type="button">元の文章をクリア</button>
+    </div>
   </section>
 
   <section class="panel">
     <div class="label-row">
       <div class="label">埋め込み頻度</div>
-      <div class="level" id="levelValue">5</div>
+      <div class="level" id="levelValue">3</div>
     </div>
     <div class="range-wrap">
-      <input id="level" class="range" type="range" min="1" max="10" value="5" step="1" aria-label="埋め込み頻度">
+      <input id="level" class="range" type="range" min="1" max="10" value="3" step="1" aria-label="埋め込み頻度">
       <span> / 10</span>
     </div>
     <div class="scale">
@@ -217,7 +285,16 @@
       <span>標準</span>
       <span>多め</span>
     </div>
-    <p class="note">5は、原文の読みやすさをある程度残しつつ、十分に文字化け感が出る量です。</p>
+    <p class="note">3は、原文の読みやすさを残しつつ、文字化け感も出しやすい初期値です。</p>
+  </section>
+
+  <section class="panel">
+    <div class="label-row">
+      <div class="label">候補から選択</div>
+      <div class="count" id="candidateCount">20個</div>
+    </div>
+    <p class="note">20個の候補から選択できます。候補を再生成すると、すべての候補が作り直されます。</p>
+    <div id="choices" class="choices" role="group" aria-label="生成候補"></div>
   </section>
 
   <section class="panel">
@@ -228,7 +305,7 @@
     <textarea id="output" class="output" readonly></textarea>
 
     <div class="actions">
-      <button id="regenerate" class="btn primary" type="button">再生成</button>
+      <button id="regenerate" class="btn primary" type="button">候補を再生成</button>
       <button id="copy" class="btn" type="button">コピー</button>
       <button id="clear" class="btn" type="button">クリア</button>
     </div>
@@ -244,10 +321,17 @@
   const levelValue = document.getElementById('levelValue');
   const inputCount = document.getElementById('inputCount');
   const outputCount = document.getElementById('outputCount');
+  const candidateCount = document.getElementById('candidateCount');
+  const choices = document.getElementById('choices');
   const regenerate = document.getElementById('regenerate');
   const copy = document.getElementById('copy');
   const clear = document.getElementById('clear');
+  const clearSource = document.getElementById('clearSource');
   const status = document.getElementById('status');
+
+  const OPTION_COUNT = 20;
+  let candidates = [];
+  let selectedIndex = 0;
 
   const glitchParts = [
     '̶','̷','̴','̵','̸','͏','̀','́','͘','͝','͞','͟','͠',
@@ -320,12 +404,72 @@
   function updateCounts() {
     inputCount.textContent = `${Array.from(source.value).length}文字`;
     outputCount.textContent = `${Array.from(output.value).length}文字`;
+    candidateCount.textContent = `${candidates.length}個`;
+  }
+
+  function updateChoiceState() {
+    Array.from(choices.children).forEach((button, index) => {
+      button.setAttribute('aria-pressed', index === selectedIndex ? 'true' : 'false');
+    });
+  }
+
+  async function copyText(text, successMessage = 'コピーしました。') {
+    if (!text) {
+      status.textContent = 'コピーする文字列がありません。';
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(text);
+      status.textContent = successMessage;
+    } catch {
+      output.focus();
+      output.select();
+      document.execCommand('copy');
+      status.textContent = successMessage;
+    }
+  }
+
+  async function selectCandidate(index) {
+    selectedIndex = index;
+    output.value = candidates[selectedIndex] || '';
+    updateChoiceState();
+    updateCounts();
+    await copyText(output.value, `候補${selectedIndex + 1}を選択してコピーしました。`);
+  }
+
+  function renderCandidates() {
+    choices.replaceChildren();
+
+    candidates.forEach((candidate, index) => {
+      const button = document.createElement('button');
+      const number = document.createElement('span');
+      const text = document.createElement('span');
+
+      button.type = 'button';
+      button.className = 'choice';
+      button.setAttribute('aria-pressed', index === selectedIndex ? 'true' : 'false');
+      button.setAttribute('aria-label', `候補${index + 1}を選択`);
+      button.addEventListener('click', () => selectCandidate(index));
+
+      number.className = 'choice-number';
+      number.textContent = String(index + 1).padStart(2, '0');
+
+      text.className = 'choice-text';
+      text.textContent = candidate || '（空の候補）';
+
+      button.append(number, text);
+      choices.appendChild(button);
+    });
   }
 
   function generate() {
     const currentLevel = Number(level.value);
     levelValue.textContent = currentLevel;
-    output.value = glitchText(source.value, currentLevel);
+    candidates = Array.from({ length: OPTION_COUNT }, () => glitchText(source.value, currentLevel));
+    selectedIndex = 0;
+    renderCandidates();
+    output.value = candidates[0] || '';
     status.textContent = '';
     updateCounts();
   }
@@ -334,30 +478,20 @@
   level.addEventListener('input', generate);
   regenerate.addEventListener('click', generate);
 
-  clear.addEventListener('click', () => {
+  clearSource.addEventListener('click', () => {
     source.value = '';
-    output.value = '';
-    status.textContent = '';
-    updateCounts();
+    generate();
     source.focus();
   });
 
-  copy.addEventListener('click', async () => {
-    if (!output.value) {
-      status.textContent = 'コピーする文字列がありません。';
-      return;
-    }
-
-    try {
-      await navigator.clipboard.writeText(output.value);
-      status.textContent = 'コピーしました。';
-    } catch {
-      output.focus();
-      output.select();
-      document.execCommand('copy');
-      status.textContent = 'コピーしました。';
-    }
+  clear.addEventListener('click', () => {
+    output.value = '';
+    status.textContent = '';
+    updateCounts();
+    output.focus();
   });
+
+  copy.addEventListener('click', () => copyText(output.value));
 
   generate();
 })();
