@@ -471,6 +471,25 @@ let combiningParts = new Set([
   "\u20EF", "\u20F0"
 ]);
 
+    const mobileGlitchParts = [
+  "́",
+  "҉",
+  "̃",
+  "̌",
+  "̣",
+  "̀",
+  "́",
+  "̄",
+  "̇",
+  "̉"
+  "̌",
+  "̣",
+  "҈"
+  ];
+
+  glitchParts = mobileGlitchParts.slice();
+  combiningParts = new Set(mobileGlitchParts);
+
  (() => {
   let assignedRegex = null;
 
@@ -673,27 +692,6 @@ let combiningParts = new Set([
   });
 
   copy.addEventListener('click', () => copyText(output.value));
-
-   const mobileGlitchParts = [
-  "́",
-  "҉",
-  "̃",
-  "̌",
-  "̣",
-  "̀",
-  "́",
-  "̄",
-  "̇",
-  "̉"
-  "̌",
-  "̣",
-  "҈"
-  ];
-
-  glitchParts = mobileGlitchParts.slice();
-  combiningParts = new Set(mobileGlitchParts);
- 
-  generate();
 })();
 </script>
 </body>
