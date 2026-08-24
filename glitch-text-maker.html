@@ -471,6 +471,58 @@ const combiningParts = new Set([
   "\u20EF", "\u20F0"
 ]);
 
+ (() => {
+  let assignedRegex = null;
+
+  try {
+    assignedRegex = new RegExp("^\\p{Assigned}+$", "u");
+  } catch {
+    assignedRegex = null;
+  }
+
+  const isDefinedUnicodeString = (value) => {
+    if (typeof value !== "string" || value.length === 0) {
+      return false;
+    }
+
+    for (const char of value) {
+      const codePoint = char.codePointAt(0);
+
+      if (
+        codePoint === undefined ||
+        codePoint > 0x10FFFF ||
+        (codePoint >= 0xD800 && codePoint <= 0xDFFF)
+      ) {
+        return false;
+      }
+
+      if (assignedRegex && !assignedRegex.test(char)) {
+        return false;
+      }
+    }
+
+    return true;
+  };
+
+  const removedGlitchParts = glitchParts.filter(
+    (part) => !isDefinedUnicodeString(part)
+  );
+
+  const removedCombiningParts = [...combiningParts].filter(
+    (part) => !isDefinedUnicodeString(part)
+  );
+
+  // 既存の配列から、存在しない文字だけ削除
+  glitchParts = glitchParts.filter(isDefinedUnicodeString);
+
+  combiningParts = new Set(
+    [...combiningParts].filter(isDefinedUnicodeString)
+  );
+
+  console.log("削除されたglitchParts:", removedGlitchParts);
+  console.log("削除されたcombiningParts:", removedCombiningParts);
+})();
+
   function randInt(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
   }
