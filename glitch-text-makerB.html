@@ -32,7 +32,7 @@
     --orange-soft: rgba(255, 180, 92, .12);
     --green: #b6e6c4;
     --shadow: 0 20px 55px rgba(0, 0, 0, .22);
-    --embed-font: "Yu Gothic UI", Meiryo, "MS Gothic", Consolas, system-ui, sans-serif;
+    --embed-font: system-ui, ui-monospace, SFMono-Regular, Consolas, monospace;
   }
 
   html { scroll-behavior: smooth; }
@@ -316,6 +316,8 @@
     color: var(--text);
     background: #0d0f13;
     font-family: var(--embed-font);
+    font-variant-ligatures: none;
+    font-feature-settings: "liga" 0, "clig" 0;
     font-size: 16px;
     line-height: 1.9;
     white-space: pre-wrap;
@@ -598,7 +600,7 @@
     <textarea id="source" class="source-input" aria-label="元の文章">※ホラー注意です。そこまで怖くありませんが、ホラーが苦手な方はご注意ください。</textarea>
     <div class="toolbar">
       <button id="clearSource" class="button small" type="button">元の文章をクリア</button>
-      <span class="help">スマホでも左側の文字へ結合しやすい8種類の記号だけを使い、指定箇所作成では各記号の個数を個別に設定できます。</span>
+      <span class="help">結合記号を重ね、▒・⛧・▪・†などの可視ノイズも混ぜて、指定箇所ごとに個数を個別設定できます。</span>
     </div>
   </section>
 
@@ -609,12 +611,12 @@
     </button>
     <button id="manualTab" class="mode-button" type="button" role="tab" data-mode="manual" aria-selected="false" aria-controls="manualPanel">
       <span class="mode-title">指定箇所作成</span>
-      <span class="mode-description">文字の間ごとに8種類を個別設定</span>
+      <span class="mode-description">文字の間ごとに記号を個別設定</span>
     </button>
   </nav>
 
   <section id="autoPanel" class="panel mode-panel" role="tabpanel" aria-labelledby="autoTab">
-    <div class="intro-box">自動作成の結果は、下の「指定箇所作成で調整」からそのまま引き継げます。間へ挿入する際は、8種類の中からランダムに1種類を選び、その記号の個数をさらに1個増やします。</div>
+    <div class="intro-box">自動作成の結果は、下の「指定箇所作成で調整」からそのまま引き継げます。結合記号の重ね掛けと、可視ノイズの混在に対応しています。</div>
 
     <div class="row-head">
       <div>
@@ -650,7 +652,7 @@
     <div class="result-box">
       <div class="result-head">
         <strong>使用する記号</strong>
-        <span class="count">8種類</span>
+      <span class="count" id="symbolCount">0種類</span>
       </div>
       <div id="symbolGuide" class="symbol-guide" aria-label="使用する記号一覧"></div>
     </div>
@@ -679,7 +681,7 @@
       <div id="manualStatus" class="status" aria-live="polite"></div>
     </div>
 
-    <div class="rule-intro">下の各カードが「文字と文字の間」です。8種類それぞれの個数を入力すると、その位置へすぐ反映されます。各位置のランダムボタンで組み合わせを試せます。左側が結合できない文字や、文字判定が不安定な位置には付けません。</div>
+    <div class="rule-intro">下の各カードが「文字と文字の間」です。各記号の個数を入力すると、その位置へすぐ反映されます。結合記号と可視ノイズを混ぜた組み合わせも、各位置のランダムボタンで試せます。左側が結合できない文字や、文字判定が不安定な位置には付けません。</div>
     <div id="ruleList" class="rule-list" aria-label="文字と文字の間の指定一覧"></div>
   </section>
 </main>
@@ -688,16 +690,55 @@
 (() => {
   'use strict';
 
-  const SYMBOLS = Object.freeze([
-    { value: "̃", code: 'U+0303' },
-    { value: "̣", code: 'U+0323' },
-    { value: "̀", code: 'U+0300' },
-    { value: "́", code: 'U+0301' },
-    { value: "̉", code: 'U+0309' },
-    { value: "̌", code: 'U+030C' },
-    { value: "̄", code: 'U+0304' },
-    { value: "̇", code: 'U+0307' }
+  // 添付Markdownの重み付けを保った結合記号。U+0309・U+0323は除外する。
+  const REFERENCE_COMBINING_PARTS = Object.freeze([
+    [0x0336, 6], [0x0337, 6], [0x0338, 6], [0x0334, 3], [0x0335, 3],
+    [0x0300, 3], [0x0301, 4], [0x0302, 3], [0x0303, 4], [0x0304, 3],
+    [0x0307, 4], [0x0308, 3], [0x030A, 3], [0x030B, 3], [0x030C, 3],
+    [0x030D, 3], [0x030E, 3], [0x030F, 3], [0x0310, 3], [0x0311, 3],
+    [0x0312, 3], [0x0315, 3], [0x0316, 3], [0x0317, 3], [0x0318, 3],
+    [0x0319, 3], [0x031A, 3], [0x031B, 3], [0x0320, 3], [0x0321, 3],
+    [0x0322, 3], [0x0324, 3], [0x0325, 3], [0x0326, 3], [0x0327, 3],
+    [0x0328, 3], [0x0329, 3], [0x032A, 3], [0x032B, 3], [0x032C, 3],
+    [0x032D, 3], [0x032E, 3], [0x032F, 3], [0x0330, 3], [0x0331, 3],
+    [0x0332, 4], [0x0333, 3], [0x0346, 3], [0x0347, 3], [0x0348, 3],
+    [0x034D, 3], [0x034E, 3], [0x0350, 3], [0x0351, 3], [0x0352, 3],
+    [0x0353, 3], [0x0354, 3], [0x0355, 3], [0x0356, 3], [0x0357, 3],
+    [0x0358, 3], [0x0359, 3], [0x035A, 3], [0x035B, 3], [0x035C, 3],
+    [0x035D, 3], [0x035E, 3], [0x035F, 3], [0x0360, 3], [0x0361, 3],
+    [0x0362, 3], [0x0488, 3], [0x0489, 4], [0x20E0, 3], [0x20E2, 3],
+    [0x20E4, 3], [0x20E5, 3], [0x20E8, 3], [0x20EA, 3], [0x20EB, 3],
+    [0x20EC, 3], [0x20ED, 3], [0x20EE, 3], [0x20EF, 3], [0x20F0, 3]
   ]);
+
+  const REFERENCE_VISIBLE_PARTS = Object.freeze([
+    ["█", 4], ["▓", 3], ["▒", 3], ["░", 3], ["■", 3], ["▪", 3],
+    ["◼", 2], ["◾", 2], ["▚", 2], ["▞", 2], ["†", 2], ["‡", 1],
+    ["⸸", 1], ["☠", 1], ["☣", 1], ["⛧", 1]
+  ]);
+
+  const SYMBOLS = Object.freeze([
+    ...REFERENCE_COMBINING_PARTS.map(([codePoint, weight]) => ({
+      value: String.fromCodePoint(codePoint),
+      code: `U+${codePoint.toString(16).toUpperCase().padStart(4, '0')}`,
+      kind: 'combining',
+      weight
+    })),
+    ...REFERENCE_VISIBLE_PARTS.map(([value, weight]) => ({
+      value,
+      code: `U+${value.codePointAt(0).toString(16).toUpperCase().padStart(4, '0')}`,
+      kind: 'visible',
+      weight
+    }))
+  ]);
+
+  const SYMBOL_INDEX = new Map(SYMBOLS.map(({ value }, index) => [value, index]));
+  const COMBINING_VALUES = new Set(SYMBOLS
+    .filter(({ kind }) => kind === 'combining')
+    .map(({ value }) => value));
+  const GLITCH_PARTS = Object.freeze(SYMBOLS.flatMap(({ value, weight }) => (
+    Array.from({ length: weight }, () => value)
+  )));
 
   const source = document.getElementById('source');
   const sourceCount = document.getElementById('sourceCount');
@@ -706,6 +747,7 @@
   const levelValue = document.getElementById('levelValue');
   const autoPanel = document.getElementById('autoPanel');
   const manualPanel = document.getElementById('manualPanel');
+  const symbolCount = document.getElementById('symbolCount');
   const modeButtons = [...document.querySelectorAll('.mode-button')];
   const autoOutput = document.getElementById('autoOutput');
   const autoOutputCount = document.getElementById('autoCount');
@@ -725,7 +767,6 @@
   const STARTER_TEXT = source.value;
   const PROBABILITIES = [0.08, 0.16, 0.26, 0.38, 0.5, 0.62, 0.72, 0.81, 0.89, 0.95];
   const MAX_SYMBOL_COUNT = 99;
-  const ANCHOR_SYMBOL_INDICES = Object.freeze([1, 4]);
 
   let activeMode = 'auto';
   let units = splitText(source.value);
@@ -735,14 +776,7 @@
   let autoState = { source: '', result: '', rules: [] };
 
   function splitText(text) {
-    if (!text) return [];
-
-    if (typeof Intl !== 'undefined' && Intl.Segmenter) {
-      const segmenter = new Intl.Segmenter('ja', { granularity: 'grapheme' });
-      return [...segmenter.segment(text)].map(({ segment }) => segment);
-    }
-
-    return Array.from(text);
+    return text ? Array.from(text) : [];
   }
 
   function emptyRules(targetUnits) {
@@ -750,7 +784,10 @@
   }
 
   function cloneRules(rules) {
-    return rules.map((rule) => rule ? { counts: [...rule.counts] } : null);
+    return rules.map((rule) => rule ? {
+      counts: [...rule.counts],
+      sequence: rule.sequence || ''
+    } : null);
   }
 
   function isLineBreakUnit(unit) {
@@ -769,24 +806,14 @@
     );
   }
 
-  function countsToMarks(counts, ruleIndex = 0) {
+  function countsToMarks(counts, sequence = '') {
     const effectiveCounts = counts.map((count) => Number.isFinite(Number(count)) ? Number(count) : 0);
-    const hasAnchor = ANCHOR_SYMBOL_INDICES.some((symbolIndex) => effectiveCounts[symbolIndex] > 0);
-    const hasOtherSymbol = effectiveCounts.some((count, symbolIndex) => (
-      count > 0 && !ANCHOR_SYMBOL_INDICES.includes(symbolIndex)
-    ));
 
-    // ạ・ảの両方が0で別の記号だけがある場合は、内部的にどちらかを1個補う。
-    if (hasOtherSymbol && !hasAnchor) {
-      const fallbackIndex = ANCHOR_SYMBOL_INDICES[ruleIndex % ANCHOR_SYMBOL_INDICES.length];
-      effectiveCounts[fallbackIndex] = 1;
-    }
+    if (sequence) return sequence;
 
     return effectiveCounts
       .map((count, symbolIndex) => count > 0 ? SYMBOLS[symbolIndex].value.repeat(count) : '')
-      .join('')
-      // 結合クラスの順序を整え、複数の記号が同じ文字へ重なるようにする。
-      .normalize('NFD');
+      .join('');
   }
 
   function isEmbeddableUnit(unit) {
@@ -816,6 +843,41 @@
     return randomInt(min, Math.max(min, max));
   }
 
+  function pickGlitchPart() {
+    return GLITCH_PARTS[randomInt(0, GLITCH_PARTS.length - 1)];
+  }
+
+  function makeChunk(currentLevel) {
+    const min = Math.max(1, Math.floor(currentLevel / 3));
+    const max = Math.max(2, Math.ceil(currentLevel * 0.9));
+    const count = randomInt(min, max);
+    let sequence = '';
+
+    for (let index = 0; index < count; index += 1) {
+      let part = pickGlitchPart();
+
+      // 添付と同じく、先頭が結合記号の場合は一部を可視ノイズへ置き換える。
+      if (index === 0 && COMBINING_VALUES.has(part) && Math.random() < 0.3) {
+        part = Math.random() < 0.5 ? '■' : '█';
+      }
+
+      sequence += part;
+    }
+
+    return sequence;
+  }
+
+  function countsFromSequence(sequence) {
+    const counts = Array(SYMBOLS.length).fill(0);
+
+    for (const part of sequence) {
+      const symbolIndex = SYMBOL_INDEX.get(part);
+      if (symbolIndex !== undefined) counts[symbolIndex] += 1;
+    }
+
+    return counts;
+  }
+
   function composeText(targetUnits, rules) {
     const marksByUnit = Array.from({ length: targetUnits.length }, () => '');
 
@@ -827,11 +889,11 @@
 
       const anchorIndex = findGapAnchor(index, targetUnits);
       if (anchorIndex < 0) return;
-      marksByUnit[anchorIndex] += countsToMarks(rule.counts, index);
+      marksByUnit[anchorIndex] += countsToMarks(rule.counts, rule.sequence);
     });
 
     return targetUnits
-      .map((unit, index) => `${unit}${marksByUnit[index].normalize('NFD')}`)
+      .map((unit, index) => `${unit}${marksByUnit[index]}`)
       .join('');
   }
 
@@ -844,14 +906,11 @@
       if (!canUseGap(index)) return;
       if (Math.random() >= probability) return;
 
-      const counts = Array(SYMBOLS.length).fill(0);
-      const baseIndex = randomInt(0, SYMBOLS.length - 1);
-      const extraIndex = randomInt(0, SYMBOLS.length - 1);
-
-      counts[baseIndex] = autoCount(currentLevel);
-      // 自動挿入時は、さらにランダムな記号を1種類選んで個数を+1する。
-      counts[extraIndex] += 1;
-      nextRules[index] = { counts };
+      const sequence = makeChunk(currentLevel);
+      nextRules[index] = {
+        counts: countsFromSequence(sequence),
+        sequence
+      };
     });
 
     return {
@@ -930,14 +989,7 @@
   }
 
   function createRandomCounts() {
-    const counts = Array(SYMBOLS.length).fill(0);
-    const currentLevel = Number(level.value);
-    const baseIndex = randomInt(0, SYMBOLS.length - 1);
-    const extraIndex = randomInt(0, SYMBOLS.length - 1);
-
-    counts[baseIndex] = autoCount(currentLevel);
-    counts[extraIndex] += 1;
-    return counts;
+    return countsFromSequence(makeChunk(Number(level.value)));
   }
 
   function renderRuleList() {
@@ -1000,7 +1052,7 @@
       position.append(number, positionBody);
 
       controls.className = 'rule-controls';
-      SYMBOLS.forEach(({ value, code }, symbolIndex) => {
+      SYMBOLS.forEach(({ value, code, kind }, symbolIndex) => {
         const label = document.createElement('label');
         const name = document.createElement('span');
         const countInput = document.createElement('input');
@@ -1008,7 +1060,7 @@
         label.className = 'symbol-count-control';
         label.title = code;
         name.className = 'symbol-count-name';
-        name.textContent = `a${value}`;
+        name.textContent = kind === 'combining' ? `a${value}` : value;
         countInput.className = 'input-control';
         countInput.type = 'number';
         countInput.min = '0';
@@ -1163,14 +1215,14 @@
   function renderSymbolGuide() {
     symbolGuide.replaceChildren();
 
-    SYMBOLS.forEach(({ value, code }) => {
+    SYMBOLS.forEach(({ value, code, kind }) => {
       const chip = document.createElement('span');
       const sample = document.createElement('span');
       const codeLabel = document.createElement('span');
 
       chip.className = 'symbol-chip';
       sample.className = 'symbol-sample';
-      sample.textContent = `a${value}`;
+      sample.textContent = kind === 'combining' ? `a${value}` : value;
       codeLabel.textContent = code;
       chip.title = code;
       chip.append(sample, codeLabel);
@@ -1224,6 +1276,7 @@
   });
 
   renderSymbolGuide();
+  symbolCount.textContent = `${SYMBOLS.length}種類`;
   updateSourceCount();
   generateAuto();
   updateManualView();
