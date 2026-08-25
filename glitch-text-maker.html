@@ -8,688 +8,1230 @@
 <style>
 @layer reset, base, components, utilities;
 
-/* reset: 基本リセット */
+/* reset: 要素の初期差を小さくする */
 @layer reset {
-  * { box-sizing: border-box; }
+  *, *::before, *::after { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
-  button, input, textarea { font: inherit; }
+  button, input, select, textarea { font: inherit; }
+  button, select { -webkit-tap-highlight-color: transparent; }
 }
 
-/* base: 画面全体の基本デザイン */
+/* base: 画面全体と基本要素のデザイン */
 @layer base {
   :root {
-    --bg: #0e0f12;
+    --bg: #0d0e12;
     --panel: #17191f;
     --panel-2: #111318;
-    --text: #f3f4f6;
+    --panel-3: #20232b;
+    --text: #f4f5f7;
     --muted: #a7abb4;
-    --border: #2b2f39;
-    --accent: #d7dae1;
-    --accent-text: #101114;
-    --danger: #ffb4b4;
+    --border: #2d313c;
+    --accent: #d9dce3;
+    --accent-text: #111217;
+    --orange: #ffb45c;
+    --orange-soft: rgba(255, 180, 92, .12);
+    --green: #b6e6c4;
+    --shadow: 0 20px 55px rgba(0, 0, 0, .22);
+    --embed-font: Consolas, "Yu Gothic UI", Meiryo, "MS Gothic", system-ui, sans-serif;
   }
+
+  html { scroll-behavior: smooth; }
 
   body {
     min-height: 100vh;
-    background: var(--bg);
+    background:
+      radial-gradient(circle at 50% -10%, rgba(109, 113, 128, .18), transparent 42rem),
+      var(--bg);
     color: var(--text);
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-family: var(--embed-font);
   }
 
-  main {
-    width: min(920px, calc(100% - 28px));
-    margin: 0 auto;
-    padding: 34px 0 48px;
+  button, input, select, textarea { font-family: var(--embed-font); }
+
+  button, input, select, textarea { color: inherit; }
+
+  button { border: 0; }
+
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: 2px solid var(--orange);
+    outline-offset: 2px;
   }
 
-  h1 {
-    margin: 0;
-    font-size: clamp(28px, 7vw, 48px);
-    letter-spacing: .04em;
+  textarea,
+  input,
+  select {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
   }
+
+  textarea {
+    display: block;
+    width: 100%;
+    resize: vertical;
+  }
+
+  h1, h2, h3, p { margin-top: 0; }
+
+  h1, h2, h3 { line-height: 1.25; }
+
+  h1 { margin-bottom: 12px; }
+
+  h2 { margin-bottom: 0; font-size: 18px; }
 
   p { line-height: 1.7; }
 
-  textarea {
-    width: 100%;
-    resize: vertical;
-    color: var(--text);
-    background: var(--panel-2);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    outline: none;
-  }
-
-  textarea:focus, input:focus-visible, button:focus-visible {
-    outline: 2px solid #8a8f9b;
-    outline-offset: 2px;
-  }
+  [hidden] { display: none; }
 }
 
-/* components: パネル・入力欄・候補・ボタン */
+/* components: 見出し、入力、モード切替、指定位置編集の部品 */
 @layer components {
+  .app {
+    width: min(1040px, calc(100% - 28px));
+    margin: 0 auto;
+    padding: 34px 0 64px;
+  }
+
+  .hero {
+    padding: 8px 0 24px;
+  }
+
+  .eyebrow,
+  .section-kicker {
+    margin-bottom: 9px;
+    color: var(--orange);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: .16em;
+  }
+
+  .hero h1 {
+    font-size: clamp(30px, 7vw, 52px);
+    letter-spacing: .045em;
+  }
+
   .lead {
-    margin: 8px 0 26px;
+    max-width: 700px;
+    margin-bottom: 0;
     color: var(--muted);
+    font-size: 14px;
   }
 
   .panel {
-    padding: 18px;
-    margin-top: 14px;
-    background: var(--panel);
+    margin-top: 15px;
+    padding: 19px;
+    background: rgba(23, 25, 31, .94);
     border: 1px solid var(--border);
     border-radius: 18px;
+    box-shadow: var(--shadow);
   }
 
-  .label-row {
+  .section-head,
+  .row-head,
+  .toolbar,
+  .result-head {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    margin-bottom: 10px;
   }
 
-  .label {
-    font-size: 14px;
-    font-weight: 700;
-  }
+  .section-kicker { margin-bottom: 4px; }
 
-  .count {
+  .count,
+  .muted,
+  .note,
+  .status,
+  .help {
     color: var(--muted);
     font-size: 12px;
   }
 
-  .input {
-    min-height: 150px;
+  .source-input {
+    min-height: 152px;
+    margin-top: 13px;
     padding: 14px 15px;
+    line-height: 1.75;
   }
 
-  .source-actions {
-    display: flex;
-    justify-content: flex-end;
-    margin-top: 10px;
+  .toolbar {
+    align-items: flex-start;
+    margin-top: 11px;
   }
 
-  .source-actions .btn {
-    width: 100%;
-  }
+  .toolbar .help { max-width: 640px; line-height: 1.6; }
 
-  .output {
-    min-height: 190px;
-    padding: 16px;
-    font-family: system-ui, ui-monospace, SFMono-Regular, Consolas, monospace;
-    font-size: 16px;
-    line-height: 1.9;
-    overflow-wrap: anywhere;
-  }
-
-  .range-wrap {
+  .mode-switch {
     display: grid;
-    grid-template-columns: 1fr auto;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 18px;
+    padding: 6px;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+  }
+
+  .mode-button {
+    min-height: 58px;
+    padding: 10px 14px;
+    color: var(--muted);
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 11px;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color .16s ease, border-color .16s ease, color .16s ease;
+  }
+
+  .mode-button:hover { color: var(--text); background: #1c1f26; }
+
+  .mode-button[aria-selected="true"] {
+    color: var(--accent-text);
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .mode-title,
+  .mode-description {
+    display: block;
+  }
+
+  .mode-title { font-weight: 800; }
+
+  .mode-description {
+    margin-top: 3px;
+    font-size: 11px;
+    line-height: 1.4;
+    opacity: .78;
+  }
+
+  .mode-panel { margin-top: 15px; }
+
+  .intro-box {
+    margin: 0 0 15px;
+    padding: 13px 15px;
+    color: var(--muted);
+    background: var(--orange-soft);
+    border: 1px solid rgba(255, 180, 92, .32);
+    border-radius: 13px;
+    font-size: 13px;
+    line-height: 1.65;
+  }
+
+  .control-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
-    gap: 14px;
+    gap: 16px;
+    margin-top: 16px;
   }
 
   .range {
     width: 100%;
-    accent-color: var(--accent);
+    accent-color: var(--orange);
   }
 
   .level {
-    min-width: 46px;
-    padding: 7px 10px;
-    text-align: center;
-    border-radius: 999px;
+    min-width: 54px;
+    padding: 8px 10px;
+    color: var(--text);
     background: var(--panel-2);
     border: 1px solid var(--border);
+    border-radius: 999px;
+    text-align: center;
     font-weight: 800;
   }
 
   .scale {
     display: flex;
     justify-content: space-between;
-    margin-top: 8px;
+    margin-top: 6px;
     color: var(--muted);
     font-size: 11px;
   }
 
-  .choices {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-  }
-
-  .choice {
+  .button-row {
     display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    min-width: 0;
-    min-height: 74px;
-    padding: 12px;
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    color: var(--text);
-    background: #20232b;
-    text-align: left;
-    cursor: pointer;
-    transition: border-color .16s ease, background-color .16s ease, transform .16s ease;
-  }
-
-  .choice:hover {
-    border-color: #737986;
-    background: #272b34;
-    transform: translateY(-1px);
-  }
-
-  .choice[aria-pressed="true"] {
-    border-color: var(--accent);
-    background: #30343d;
-    box-shadow: 0 0 0 1px var(--accent) inset;
-  }
-
-  .choice-number {
-    flex: 0 0 auto;
-    min-width: 2.2em;
-    color: var(--muted);
-    font-size: 12px;
-    font-weight: 800;
-    line-height: 1.6;
-  }
-
-  .choice-text {
-    min-width: 0;
-    max-height: 7.8em;
-    color: var(--text);
-    font-family: system-ui, ui-monospace, SFMono-Regular, Consolas, monospace;
-    line-height: 1.6;
-    white-space: pre-wrap;
-    overflow-wrap: anywhere;
-    overflow: auto;
-  }
-
-  .actions {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
+    flex-wrap: wrap;
+    gap: 9px;
     margin-top: 14px;
   }
 
-  .btn {
-    min-height: 46px;
-    padding: 10px 14px;
-    border: 1px solid var(--border);
-    border-radius: 12px;
+  .button {
+    min-height: 43px;
+    padding: 9px 14px;
     color: var(--text);
-    background: #20232b;
+    background: var(--panel-3);
+    border: 1px solid var(--border);
+    border-radius: 11px;
     cursor: pointer;
+    transition: background-color .16s ease, border-color .16s ease, transform .16s ease;
   }
 
-  .btn.primary {
+  .button:hover {
+    background: #292d37;
+    border-color: #707682;
+    transform: translateY(-1px);
+  }
+
+  .button.primary {
     color: var(--accent-text);
     background: var(--accent);
     border-color: var(--accent);
     font-weight: 800;
   }
 
+  .button.orange {
+    color: #1b130b;
+    background: var(--orange);
+    border-color: var(--orange);
+    font-weight: 800;
+  }
+
+  .button.small {
+    min-height: 36px;
+    padding: 7px 10px;
+    font-size: 12px;
+  }
+
+  .button:disabled,
+  .input-control:disabled { cursor: not-allowed; opacity: .42; }
+
+  .result-box {
+    margin-top: 17px;
+    padding: 15px;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+  }
+
+  .result-textarea {
+    min-height: 188px;
+    margin-top: 10px;
+    padding: 15px;
+    color: var(--text);
+    background: #0d0f13;
+    font-family: var(--embed-font);
+    font-size: 16px;
+    line-height: 1.9;
+    white-space: pre-wrap;
+    word-break: normal;
+    overflow-wrap: normal;
+  }
+
+  .result-textarea[readonly] { cursor: text; }
+
   .status {
-    min-height: 1.5em;
+    min-height: 1.6em;
     margin: 10px 2px 0;
+    line-height: 1.5;
+  }
+
+  .status.success { color: var(--green); }
+
+  .symbol-guide {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-top: 12px;
+  }
+
+  .symbol-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 31px;
+    padding: 4px 8px;
+    background: #20232b;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: var(--embed-font);
+    font-size: 12px;
+  }
+
+  .symbol-sample {
+    color: var(--orange);
+    font-size: 17px;
+  }
+
+  .manual-summary {
+    margin-top: 5px;
     color: var(--muted);
     font-size: 12px;
   }
 
-  .note {
+  .rule-intro {
+    margin: 17px 0 12px;
+    padding: 13px 15px;
+    background: #12151a;
+    border: 1px solid var(--border);
+    border-radius: 13px;
     color: var(--muted);
     font-size: 12px;
+    line-height: 1.7;
+  }
+
+  .rule-list {
+    display: grid;
+    gap: 9px;
+  }
+
+  .rule-card {
+    display: grid;
+    grid-template-columns: minmax(220px, 1fr) minmax(510px, 2.2fr) auto;
+    align-items: center;
+    gap: 13px;
+    padding: 12px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 13px;
+  }
+
+  .rule-card[data-active="true"] {
+    border-color: rgba(255, 180, 92, .68);
+    box-shadow: 0 0 0 1px rgba(255, 180, 92, .14) inset;
+  }
+
+  .rule-card.is-break { opacity: .58; }
+
+  .rule-position {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .position-number {
+    flex: 0 0 auto;
+    min-width: 2.4em;
+    padding-top: 2px;
+    color: var(--orange);
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  .position-title {
+    display: block;
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  .boundary {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    min-width: 0;
+    margin-top: 6px;
+    color: var(--muted);
+    font-family: var(--embed-font);
+    font-size: 13px;
+  }
+
+  .boundary-unit {
+    display: inline-block;
+    max-width: 7em;
+    padding: 3px 6px;
+    overflow: hidden;
+    background: #101216;
+    border: 1px solid #363a45;
+    border-radius: 6px;
+    color: var(--text);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .boundary-gap { color: var(--orange); }
+
+  .gap-preview {
+    display: block;
+    margin-top: 9px;
+    padding: 7px 8px;
+    color: var(--muted);
+    background: #101216;
+    border: 1px solid #363a45;
+    border-radius: 7px;
+    font-size: 11px;
+    line-height: 1.55;
+  }
+
+  .gap-preview-label {
+    display: block;
+    margin-bottom: 2px;
+    color: var(--orange);
+    font-size: 10px;
+  }
+
+  .gap-preview-text {
+    display: block;
+    min-height: 1.55em;
+    color: var(--text);
+    font-family: var(--embed-font);
+    font-size: 15px;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+  }
+
+  .rule-controls {
+    display: grid;
+    grid-template-columns: repeat(8, minmax(42px, 1fr));
+    gap: 6px;
+  }
+
+  .symbol-count-control {
+    display: grid;
+    min-width: 0;
+    gap: 5px;
+    color: var(--muted);
+    font-size: 10px;
+    text-align: center;
+  }
+
+  .symbol-count-name {
+    min-height: 16px;
+    color: var(--orange);
+    font-family: var(--embed-font);
+    font-size: 14px;
+    line-height: 1.1;
+  }
+
+  .input-control {
+    width: 100%;
+    min-height: 37px;
+    padding: 6px 9px;
+    color: var(--text);
+    text-align: center;
+  }
+
+  .clear-gap {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+
+  .rule-state {
+    min-width: 112px;
+    max-width: 240px;
+    color: var(--muted);
+    font-size: 11px;
+    text-align: right;
+    overflow-wrap: anywhere;
+    line-height: 1.5;
+  }
+
+  .rule-card[data-active="true"] .rule-state { color: var(--orange); }
+
+  .empty-rules {
+    padding: 25px 15px;
+    color: var(--muted);
+    background: var(--panel);
+    border: 1px dashed var(--border);
+    border-radius: 13px;
+    text-align: center;
+    font-size: 13px;
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
   }
 }
 
-/* utilities: スマホ向け調整 */
+/* utilities: 小さい画面でのレイアウト調整 */
 @layer utilities {
-  @media (max-width: 620px) {
-    main { width: min(100% - 18px, 920px); padding-top: 22px; }
+  @media (max-width: 780px) {
+    .rule-card {
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .rule-controls {
+      grid-column: 1 / -1;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .rule-state { grid-column: 2; grid-row: 1; }
+  }
+
+  @media (max-width: 560px) {
+    .app { width: min(100% - 18px, 1040px); padding-top: 22px; }
     .panel { padding: 14px; border-radius: 15px; }
-    .choices { grid-template-columns: 1fr; }
-    .actions { grid-template-columns: 1fr; }
+    .section-head, .toolbar, .result-head { align-items: flex-start; }
+    .toolbar { flex-direction: column; }
+    .mode-switch { grid-template-columns: 1fr; }
+    .mode-button { min-height: 52px; }
+    .control-grid { grid-template-columns: minmax(0, 1fr) 52px; gap: 10px; }
+    .button-row { display: grid; grid-template-columns: 1fr; }
+    .button-row .button { width: 100%; }
+    .rule-card { grid-template-columns: 1fr; }
+    .rule-state { grid-column: auto; grid-row: auto; text-align: left; }
+    .rule-controls { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .rule-controls .clear-gap { grid-column: 1 / -1; }
+    .result-textarea { min-height: 160px; }
   }
 }
 </style>
 </head>
 <body>
-<main>
-  <h1>文字化けメーカー</h1>
-  <p class="lead">文章の文字間へ、Unicodeの文字化け風断片をランダムに挿入します。</p>
+<main class="app">
+  <header class="hero">
+    <p class="eyebrow">UNICODE GLITCH TOOL</p>
+    <h1>文字化けメーカー</h1>
+    <p class="lead">自動作成で大まかな形を作り、指定箇所作成で文字と文字の間を一つずつ調整できます。</p>
+  </header>
 
-  <section class="panel">
-    <div class="label-row">
-      <div class="label">元の文章</div>
-      <div class="count" id="inputCount">0文字</div>
+  <section class="panel" aria-labelledby="sourceTitle">
+    <div class="section-head">
+      <div>
+        <p class="section-kicker">COMMON</p>
+        <h2 id="sourceTitle">元の文章</h2>
+      </div>
+      <span class="count" id="sourceCount">0文字</span>
     </div>
-    <textarea id="source" class="input" placeholder="ここに文章を入力してください">※ホラー注意です。そこまで怖くありませんが、ホラーが苦手な方はご注意ください。</textarea>
-    <div class="source-actions">
-      <button id="clearSource" class="btn" type="button">元の文章をクリア</button>
+    <textarea id="source" class="source-input" aria-label="元の文章">※ホラー注意です。そこまで怖くありませんが、ホラーが苦手な方はご注意ください。</textarea>
+    <div class="toolbar">
+      <button id="clearSource" class="button small" type="button">元の文章をクリア</button>
+      <span class="help">スマホでも左側の文字へ結合しやすい8種類の記号だけを使い、指定箇所作成では各記号の個数を個別に設定できます。</span>
     </div>
   </section>
 
-  <section class="panel">
-    <div class="label-row">
-      <div class="label">埋め込み頻度</div>
-      <div class="level" id="levelValue">3</div>
+  <nav class="mode-switch" aria-label="作成方法" role="tablist">
+    <button id="autoTab" class="mode-button" type="button" role="tab" data-mode="auto" aria-selected="true" aria-controls="autoPanel">
+      <span class="mode-title">自動作成</span>
+      <span class="mode-description">頻度を選んで大まかに作る</span>
+    </button>
+    <button id="manualTab" class="mode-button" type="button" role="tab" data-mode="manual" aria-selected="false" aria-controls="manualPanel">
+      <span class="mode-title">指定箇所作成</span>
+      <span class="mode-description">文字の間ごとに8種類を個別設定</span>
+    </button>
+  </nav>
+
+  <section id="autoPanel" class="panel mode-panel" role="tabpanel" aria-labelledby="autoTab">
+    <div class="intro-box">自動作成の結果は、下の「指定箇所作成で調整」からそのまま引き継げます。間へ挿入する際は、8種類の中からランダムに1種類を選び、その記号の個数をさらに1個増やします。</div>
+
+    <div class="row-head">
+      <div>
+        <p class="section-kicker">AUTO</p>
+        <h2>埋め込み頻度</h2>
+      </div>
+      <span class="level" id="levelValue">3 / 10</span>
     </div>
-    <div class="range-wrap">
+    <div class="control-grid">
       <input id="level" class="range" type="range" min="1" max="10" value="3" step="1" aria-label="埋め込み頻度">
-      <span> / 10</span>
+      <span class="sr-only">1が少なめ、10が多め</span>
     </div>
-    <div class="scale">
-      <span>少なめ</span>
-      <span>標準</span>
-      <span>多め</span>
+    <div class="scale"><span>少なめ</span><span>標準</span><span>多め</span></div>
+    <p class="note">初期値3は、原文の読みやすさを残しつつ、文字化け感を出しやすい設定です。</p>
+
+    <div class="button-row">
+      <button id="generateAuto" class="button primary" type="button">自動で作成</button>
+      <button id="copyAuto" class="button" type="button">自動結果をコピー</button>
     </div>
-    <p class="note">3は、原文の読みやすさを残しつつ、文字化け感も出しやすい初期値です。</p>
+
+    <div class="result-box">
+      <div class="result-head">
+        <strong>自動作成の結果</strong>
+        <span class="count" id="autoCount">0文字</span>
+      </div>
+      <textarea id="autoOutput" class="result-textarea" readonly aria-label="自動作成の結果"></textarea>
+      <div class="button-row">
+        <button id="useAutoResult" class="button orange" type="button">この結果を指定箇所作成で調整</button>
+      </div>
+      <div id="autoStatus" class="status" aria-live="polite"></div>
+    </div>
+
+    <div class="result-box">
+      <div class="result-head">
+        <strong>使用する記号</strong>
+        <span class="count">8種類</span>
+      </div>
+      <div id="symbolGuide" class="symbol-guide" aria-label="使用する記号一覧"></div>
+    </div>
   </section>
 
-  <section class="panel">
-    <div class="label-row">
-      <div class="label">候補から選択</div>
-      <div class="count" id="candidateCount">20個</div>
+  <section id="manualPanel" class="panel mode-panel" role="tabpanel" aria-labelledby="manualTab" hidden>
+    <div class="row-head">
+      <div>
+        <p class="section-kicker">MANUAL</p>
+        <h2>指定箇所作成</h2>
+        <p id="manualSummary" class="manual-summary">指定箇所はまだありません。</p>
+      </div>
+      <span class="count" id="manualCount">0文字</span>
     </div>
-    <p class="note">20個の候補から選択できます。候補を再生成すると、すべての候補が作り直されます。</p>
-    <div id="choices" class="choices" role="group" aria-label="生成候補"></div>
-  </section>
 
-  <section class="panel">
-    <div class="label-row">
-      <div class="label">生成結果</div>
-      <div class="count" id="outputCount">0文字</div>
+    <div class="result-box">
+      <div class="result-head">
+        <strong>完成途中の文章</strong>
+        <span class="count">リアルタイム更新</span>
+      </div>
+      <textarea id="manualOutput" class="result-textarea" readonly aria-label="指定箇所作成の結果"></textarea>
+      <div class="button-row">
+        <button id="copyManual" class="button primary" type="button">指定結果をコピー</button>
+        <button id="clearRules" class="button" type="button">指定をすべてクリア</button>
+      </div>
+      <div id="manualStatus" class="status" aria-live="polite"></div>
     </div>
-    <textarea id="output" class="output" readonly></textarea>
 
-    <div class="actions">
-      <button id="regenerate" class="btn primary" type="button">候補を再生成</button>
-      <button id="copy" class="btn" type="button">コピー</button>
-      <button id="clear" class="btn" type="button">クリア</button>
-    </div>
-    <div class="status" id="status" aria-live="polite"></div>
+    <div class="rule-intro">下の各カードが「文字と文字の間」です。8種類それぞれの個数を入力すると、その位置へすぐ反映されます。各位置のランダムボタンで組み合わせを試せます。左側が結合できない文字や、文字判定が不安定な位置には付けません。</div>
+    <div id="ruleList" class="rule-list" aria-label="文字と文字の間の指定一覧"></div>
   </section>
 </main>
 
 <script>
 (() => {
+  'use strict';
+
+  const SYMBOLS = Object.freeze([
+    { value: "̃", code: 'U+0303' },
+    { value: "̣", code: 'U+0323' },
+    { value: "̀", code: 'U+0300' },
+    { value: "́", code: 'U+0301' },
+    { value: "̉", code: 'U+0309' },
+    { value: "̌", code: 'U+030C' },
+    { value: "̄", code: 'U+0304' },
+    { value: "̇", code: 'U+0307' }
+  ]);
+
   const source = document.getElementById('source');
-  const output = document.getElementById('output');
+  const sourceCount = document.getElementById('sourceCount');
+  const clearSource = document.getElementById('clearSource');
   const level = document.getElementById('level');
   const levelValue = document.getElementById('levelValue');
-  const inputCount = document.getElementById('inputCount');
-  const outputCount = document.getElementById('outputCount');
-  const candidateCount = document.getElementById('candidateCount');
-  const choices = document.getElementById('choices');
-  const regenerate = document.getElementById('regenerate');
-  const copy = document.getElementById('copy');
-  const clear = document.getElementById('clear');
-  const clearSource = document.getElementById('clearSource');
-  const status = document.getElementById('status');
+  const autoPanel = document.getElementById('autoPanel');
+  const manualPanel = document.getElementById('manualPanel');
+  const modeButtons = [...document.querySelectorAll('.mode-button')];
+  const autoOutput = document.getElementById('autoOutput');
+  const autoOutputCount = document.getElementById('autoCount');
+  const autoStatus = document.getElementById('autoStatus');
+  const generateAutoButton = document.getElementById('generateAuto');
+  const copyAutoButton = document.getElementById('copyAuto');
+  const useAutoResultButton = document.getElementById('useAutoResult');
+  const symbolGuide = document.getElementById('symbolGuide');
+  const manualOutput = document.getElementById('manualOutput');
+  const manualCount = document.getElementById('manualCount');
+  const manualSummary = document.getElementById('manualSummary');
+  const manualStatus = document.getElementById('manualStatus');
+  const copyManualButton = document.getElementById('copyManual');
+  const clearRulesButton = document.getElementById('clearRules');
+  const ruleList = document.getElementById('ruleList');
 
-  const OPTION_COUNT = 20;
-  let candidates = [];
-  let selectedIndex = 0;
+  const STARTER_TEXT = source.value;
+  const PROBABILITIES = [0.08, 0.16, 0.26, 0.38, 0.5, 0.62, 0.72, 0.81, 0.89, 0.95];
+  const MAX_SYMBOL_COUNT = 99;
+  const ANCHOR_SYMBOL_INDICES = Object.freeze([1, 4]);
+  const PREVIEW_DUMMY_UNIT = 'a';
 
-let glitchParts = [
-  // 強い横線・斜線
-  "\u0336", "\u0336", "\u0336", "\u0336", "\u0336", "\u0336",
-  "\u0337", "\u0337", "\u0337", "\u0337", "\u0337", "\u0337",
-  "\u0338", "\u0338", "\u0338", "\u0338", "\u0338", "\u0338",
-  "\u0334", "\u0334", "\u0334", "\u0335", "\u0335", "\u0335",
+  let activeMode = 'auto';
+  let units = splitText(source.value);
+  let manualRules = emptyRules(units);
+  let manualSource = source.value;
+  let manualDirty = false;
+  let autoState = { source: '', result: '', rules: [] };
 
-  // 上下に現れる濁点・崩れ
-  "\u0300", "\u0300", "\u0300",
-  "\u0301", "\u0301", "\u0301", "\u0301",
-  "\u0302", "\u0302", "\u0302",
-  "\u0303", "\u0303", "\u0303", "\u0303",
-  "\u0304", "\u0304", "\u0304",
-  "\u0307", "\u0307", "\u0307", "\u0307",
-  "\u0308", "\u0308", "\u0308",
-  "\u030A", "\u030A", "\u030A",
-  "\u030B", "\u030B", "\u030B",
-  "\u030C", "\u030C", "\u030C",
-  "\u0310", "\u0310", "\u0310",
-  "\u0311", "\u0311", "\u0311",
-  "\u0312", "\u0312", "\u0312",
-  "\u0315", "\u0315", "\u0315",
-  "\u0316", "\u0316", "\u0316",
-  "\u0317", "\u0317", "\u0317",
-  "\u0318", "\u0318", "\u0318",
-  "\u0319", "\u0319", "\u0319",
-  "\u031A", "\u031A", "\u031A",
+  function splitText(text) {
+    if (!text) return [];
 
-  // 下方向の崩れ
-  "\u031B", "\u031B", "\u031B",
-  "\u0320", "\u0320", "\u0320",
-  "\u0321", "\u0321", "\u0321",
-  "\u0322", "\u0322", "\u0322",
-  "\u0323", "\u0323", "\u0323", "\u0323",
-  "\u0324", "\u0324", "\u0324",
-  "\u0325", "\u0325", "\u0325",
-  "\u0326", "\u0326", "\u0326",
-  "\u0327", "\u0327", "\u0327",
-  "\u0328", "\u0328", "\u0328",
-  "\u0329", "\u0329", "\u0329",
-  "\u032A", "\u032A", "\u032A",
-  "\u032B", "\u032B", "\u032B",
-  "\u032C", "\u032C", "\u032C",
-  "\u032D", "\u032D", "\u032D",
-  "\u032E", "\u032E", "\u032E",
-  "\u032F", "\u032F", "\u032F",
-  "\u0330", "\u0330", "\u0330",
-  "\u0331", "\u0331", "\u0331",
-  "\u0332", "\u0332", "\u0332", "\u0332",
-  "\u0333", "\u0333", "\u0333",
+    if (typeof Intl !== 'undefined' && Intl.Segmenter) {
+      const segmenter = new Intl.Segmenter('ja', { granularity: 'grapheme' });
+      return [...segmenter.segment(text)].map(({ segment }) => segment);
+    }
 
-  // 文字を囲む・侵食する記号
-  "\u0346", "\u0346", "\u0346",
-  "\u0347", "\u0347", "\u0347",
-  "\u0348", "\u0348", "\u0348",
-  "\u034D", "\u034D", "\u034D",
-  "\u034E", "\u034E", "\u034E",
-  "\u0350", "\u0350", "\u0350",
-  "\u0351", "\u0351", "\u0351",
-  "\u0352", "\u0352", "\u0352",
-  "\u0353", "\u0353", "\u0353",
-  "\u0354", "\u0354", "\u0354",
-  "\u0355", "\u0355", "\u0355",
-  "\u0356", "\u0356", "\u0356",
-  "\u0357", "\u0357", "\u0357",
-  "\u0358", "\u0358", "\u0358",
-  "\u0359", "\u0359", "\u0359",
-  "\u035A", "\u035A", "\u035A",
-  "\u035B", "\u035B", "\u035B",
-  "\u035C", "\u035C", "\u035C",
-  "\u035D", "\u035D", "\u035D",
-  "\u035E", "\u035E", "\u035E",
-  "\u035F", "\u035F", "\u035F",
-  "\u0360", "\u0360", "\u0360",
-  "\u0361", "\u0361", "\u0361",
-  "\u0362", "\u0362", "\u0362",
-
-  // 特に不気味な記号
-  "\u0488", "\u0488", "\u0488",
-  "\u0489", "\u0489", "\u0489", "\u0489",
-  "\u20E0", "\u20E0", "\u20E0",
-  "\u20E2", "\u20E2", "\u20E2",
-  "\u20E4", "\u20E4", "\u20E4",
-  "\u20E5", "\u20E5", "\u20E5",
-  "\u20E8", "\u20E8", "\u20E8",
-  "\u20EA", "\u20EA", "\u20EA",
-  "\u20EB", "\u20EB", "\u20EB",
-  "\u20EC", "\u20EC", "\u20EC",
-  "\u20ED", "\u20ED", "\u20ED",
-  "\u20EE", "\u20EE", "\u20EE",
-  "\u20EF", "\u20EF", "\u20EF",
-  "\u20F0", "\u20F0", "\u20F0",
-
-  // 見えるノイズ
-  "█", "█", "█", "█",
-  "▓", "▓", "▓",
-  "▒", "▒", "▒",
-  "░", "░", "░",
-  "■", "■", "■",
-  "▪", "▪", "▪",
-  "◼", "◼",
-  "◾", "◾",
-  "▚", "▚",
-  "▞", "▞",
-  "†", "†",
-  "‡",
-  "⸸",
-  "☠",
-  "☣",
-  "⛧",
-
-  // まれに余白で欠落したように見せる
-  " ", " ", " "
-];
-
-let combiningParts = new Set([
-  "\u0300", "\u0301", "\u0302", "\u0303", "\u0304",
-  "\u0305", "\u0306", "\u0307", "\u0308", "\u0309",
-  "\u030A", "\u030B", "\u030C", "\u030D", "\u030E", "\u030F",
-  "\u0310", "\u0311", "\u0312", "\u0313", "\u0314", "\u0315",
-  "\u0316", "\u0317", "\u0318", "\u0319", "\u031A",
-  "\u031B", "\u031C", "\u031D", "\u031E", "\u031F",
-  "\u0320", "\u0321", "\u0322", "\u0323", "\u0324",
-  "\u0325", "\u0326", "\u0327", "\u0328", "\u0329",
-  "\u032A", "\u032B", "\u032C", "\u032D", "\u032E", "\u032F",
-  "\u0330", "\u0331", "\u0332", "\u0333", "\u0334",
-  "\u0335", "\u0336", "\u0337", "\u0338",
-  "\u0346", "\u0347", "\u0348", "\u034D", "\u034E",
-  "\u0350", "\u0351", "\u0352", "\u0353", "\u0354",
-  "\u0355", "\u0356", "\u0357", "\u0358", "\u0359",
-  "\u035A", "\u035B", "\u035C", "\u035D", "\u035E",
-  "\u035F", "\u0360", "\u0361", "\u0362",
-  "\u0488", "\u0489",
-  "\u20E0", "\u20E2", "\u20E4", "\u20E5", "\u20E8",
-  "\u20EA", "\u20EB", "\u20EC", "\u20ED", "\u20EE",
-  "\u20EF", "\u20F0"
-]);
-
-    const mobileGlitchParts = [
-  "̃",
-  "̣",
-  "̀",
-  "́",
-  "̉",
-  "̌",
-  "̄",
-  "̇",
-  "҉"
-  ];
-
-  if (window.matchMedia('(max-width: 820px)').matches) glitchParts = mobileGlitchParts.slice();
-  if (window.matchMedia('(max-width: 820px)').matches) combiningParts = new Set(mobileGlitchParts);
-
- (() => {
-  let assignedRegex = null;
-
-  try {
-    assignedRegex = new RegExp("^\\p{Assigned}+$", "u");
-  } catch {
-    assignedRegex = null;
+    return Array.from(text);
   }
 
-  const isDefinedUnicodeString = (value) => {
-    if (typeof value !== "string" || value.length === 0) {
-      return false;
+  function emptyRules(targetUnits) {
+    return Array.from({ length: Math.max(0, targetUnits.length - 1) }, () => null);
+  }
+
+  function cloneRules(rules) {
+    return rules.map((rule) => rule ? { counts: [...rule.counts] } : null);
+  }
+
+  function isLineBreakUnit(unit) {
+    return /[\r\n]/u.test(unit);
+  }
+
+  function isWhitespaceUnit(unit) {
+    return /^\s$/u.test(unit);
+  }
+
+  function canUseGap(index, targetUnits = units) {
+    return Boolean(
+      targetUnits[index] !== undefined &&
+      targetUnits[index + 1] !== undefined &&
+      isEmbeddableUnit(targetUnits[index])
+    );
+  }
+
+  function countsToMarks(counts, ruleIndex = 0) {
+    const effectiveCounts = counts.map((count) => Number.isFinite(Number(count)) ? Number(count) : 0);
+    const hasAnchor = ANCHOR_SYMBOL_INDICES.some((symbolIndex) => effectiveCounts[symbolIndex] > 0);
+    const hasOtherSymbol = effectiveCounts.some((count, symbolIndex) => (
+      count > 0 && !ANCHOR_SYMBOL_INDICES.includes(symbolIndex)
+    ));
+
+    // ạ・ảの両方が0で別の記号だけがある場合は、内部的にどちらかを1個補う。
+    if (hasOtherSymbol && !hasAnchor) {
+      const fallbackIndex = ANCHOR_SYMBOL_INDICES[ruleIndex % ANCHOR_SYMBOL_INDICES.length];
+      effectiveCounts[fallbackIndex] = 1;
     }
 
-    for (const char of value) {
-      const codePoint = char.codePointAt(0);
+    return effectiveCounts
+      .map((count, symbolIndex) => count > 0 ? SYMBOLS[symbolIndex].value.repeat(count) : '')
+      .join('')
+      // 結合クラスの順序を整え、複数の記号が同じ文字へ重なるようにする。
+      .normalize('NFD');
+  }
 
-      if (
-        codePoint === undefined ||
-        codePoint > 0x10FFFF ||
-        (codePoint >= 0xD800 && codePoint <= 0xDFFF)
-      ) {
-        return false;
-      }
+  function isEmbeddableUnit(unit) {
+    // 文字・数字1文字と、その後ろに続く既存の結合記号だけを対象にする。
+    // 句読点、記号、絵文字、複数文字のまとまり、判定が不安定な単位には付けない。
+    return /^[\p{L}\p{N}][\p{M}]*$/u.test(unit || '');
+  }
 
-      if (assignedRegex && !assignedRegex.test(char)) {
-        return false;
-      }
-    }
+  function findGapAnchor(index, targetUnits) {
+    // 最初の添付と同じく、設定位置の左側の文字へだけ結合させる。
+    return canUseGap(index, targetUnits) ? index : -1;
+  }
 
-    return true;
-  };
+  function clampCount(value, minimum = 0) {
+    const number = Number.parseInt(value, 10);
+    if (!Number.isFinite(number)) return minimum;
+    return Math.min(MAX_SYMBOL_COUNT, Math.max(minimum, number));
+  }
 
-  const removedGlitchParts = glitchParts.filter(
-    (part) => !isDefinedUnicodeString(part)
-  );
-
-  const removedCombiningParts = [...combiningParts].filter(
-    (part) => !isDefinedUnicodeString(part)
-  );
-
-  // 既存の配列から、存在しない文字だけ削除
-  glitchParts = glitchParts.filter(isDefinedUnicodeString);
-
-  combiningParts = new Set(
-    [...combiningParts].filter(isDefinedUnicodeString)
-  );
-
-  console.log("削除されたglitchParts:", removedGlitchParts);
-  console.log("削除されたcombiningParts:", removedCombiningParts);
-})();
-
-  function randInt(min, max) {
+  function randomInt(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
   }
 
-  function pick(arr) {
-    return arr[Math.floor(Math.random() * arr.length)];
+  function autoCount(currentLevel) {
+    const max = Math.min(12, Math.max(1, Math.ceil(currentLevel * 0.78)));
+    const min = currentLevel >= 8 ? 2 : 1;
+    return randomInt(min, Math.max(min, max));
   }
 
-  function makeChunk(currentLevel) {
-    const min = Math.max(1, Math.floor(currentLevel / 3));
-    const max = Math.max(2, Math.ceil(currentLevel * 0.9));
-    const count = randInt(min, max);
-    let chunk = '';
+  function composeText(targetUnits, rules) {
+    const marksByUnit = Array.from({ length: targetUnits.length }, () => '');
 
-    for (let i = 0; i < count; i++) {
-      let part = pick(glitchParts);
+    targetUnits.forEach((unit, index) => {
+      if (!canUseGap(index, targetUnits)) return;
 
-      if (i === 0 && combiningParts.has(part) && Math.random() < 0.3) {
-        if (!window.matchMedia('(max-width: 820px)').matches) part = Math.random() < 0.5 ? '■' : '█';
-      }
+      const rule = rules[index];
+      if (!rule) return;
 
-      chunk += part;
+      const anchorIndex = findGapAnchor(index, targetUnits);
+      if (anchorIndex < 0) return;
+      marksByUnit[anchorIndex] += countsToMarks(rule.counts, index);
+    });
+
+    return targetUnits
+      .map((unit, index) => `${unit}${marksByUnit[index].normalize('NFD')}`)
+      .join('');
+  }
+
+  function createAutoResult() {
+    const currentLevel = Number(level.value);
+    const nextRules = emptyRules(units);
+    const probability = PROBABILITIES[currentLevel - 1];
+
+    units.forEach((unit, index) => {
+      if (!canUseGap(index)) return;
+      if (Math.random() >= probability) return;
+
+      const counts = Array(SYMBOLS.length).fill(0);
+      const baseIndex = randomInt(0, SYMBOLS.length - 1);
+      const extraIndex = randomInt(0, SYMBOLS.length - 1);
+
+      counts[baseIndex] = autoCount(currentLevel);
+      // 自動挿入時は、さらにランダムな記号を1種類選んで個数を+1する。
+      counts[extraIndex] += 1;
+      nextRules[index] = { counts };
+    });
+
+    return {
+      source: source.value,
+      result: composeText(units, nextRules),
+      rules: nextRules
+    };
+  }
+
+  function countCharacters(text) {
+    return splitText(text).length;
+  }
+
+  function setStatus(target, message, success = false) {
+    target.textContent = message;
+    target.classList.toggle('success', success);
+  }
+
+  function updateSourceCount() {
+    sourceCount.textContent = `${units.length}文字`;
+  }
+
+  function updateAutoView() {
+    levelValue.textContent = `${level.value} / 10`;
+    autoOutput.value = autoState.result;
+    autoOutputCount.textContent = `${countCharacters(autoState.result)}文字`;
+  }
+
+  function updateManualView() {
+    const result = composeText(units, manualRules);
+    const configured = manualRules.filter(Boolean).length;
+    const possible = units.slice(0, -1).reduce(
+      (count, unit, index) => count + (canUseGap(index) ? 1 : 0),
+      0
+    );
+
+    manualOutput.value = result;
+    manualCount.textContent = `${countCharacters(result)}文字`;
+    manualSummary.textContent = possible
+      ? `設定済み: ${configured} / ${possible}箇所`
+      : units.length < 2
+        ? '2文字以上入力すると、文字の間を指定できます。'
+        : '結合できる文字間がありません。';
+  }
+
+  function formatCounts(counts) {
+    const parts = counts
+      .map((count, index) => count > 0 ? `${SYMBOLS[index].value}×${count}` : '')
+      .filter(Boolean);
+
+    return parts.length ? parts.join(' ') : '未設定';
+  }
+
+  function unitLabel(unit) {
+    if (unit === '\n') return '改行';
+    if (unit === '\r') return '改行';
+    if (unit === '\r\n') return '改行';
+    if (unit === '\t') return 'タブ';
+    if (unit === ' ') return '空白';
+    return unit;
+  }
+
+  function updateRuleCard(card, index, stateElement) {
+    const rule = manualRules[index];
+    card.dataset.active = rule ? 'true' : 'false';
+    stateElement.textContent = rule
+      ? `設定済み: ${formatCounts(rule.counts)}`
+      : '未設定';
+  }
+
+  function updateGapPreview(previewElement, index) {
+    const localUnits = units.slice(index, index + 2);
+    const previewUnits = [PREVIEW_DUMMY_UNIT, ...localUnits];
+    const previewRules = [null, manualRules[index]];
+    previewElement.textContent = localUnits.length === 2
+      ? composeText(previewUnits, previewRules)
+      : PREVIEW_DUMMY_UNIT;
+  }
+
+  function createRandomCounts() {
+    const counts = Array(SYMBOLS.length).fill(0);
+    const currentLevel = Number(level.value);
+    const baseIndex = randomInt(0, SYMBOLS.length - 1);
+    const extraIndex = randomInt(0, SYMBOLS.length - 1);
+
+    counts[baseIndex] = autoCount(currentLevel);
+    counts[extraIndex] += 1;
+    return counts;
+  }
+
+  function renderRuleList() {
+    ruleList.replaceChildren();
+
+    if (units.length < 2) {
+      const empty = document.createElement('div');
+      empty.className = 'empty-rules';
+      empty.textContent = source.value ? '文字が1つだけのため、指定できる間がありません。' : 'まず元の文章を入力してください。';
+      ruleList.appendChild(empty);
+      return;
     }
 
-    return chunk;
-  }
+    units.slice(0, -1).forEach((unit, index) => {
+      const card = document.createElement('article');
+      const position = document.createElement('div');
+      const number = document.createElement('span');
+      const positionBody = document.createElement('div');
+      const title = document.createElement('span');
+      const boundary = document.createElement('span');
+      const before = document.createElement('span');
+      const gap = document.createElement('span');
+      const after = document.createElement('span');
+      const controls = document.createElement('div');
+      const preview = document.createElement('div');
+      const previewLabel = document.createElement('span');
+      const previewText = document.createElement('span');
+      const randomButton = document.createElement('button');
+      const clearButton = document.createElement('button');
+      const state = document.createElement('div');
+      const rule = manualRules[index];
+      const currentCounts = rule?.counts || Array(SYMBOLS.length).fill(0);
+      const countInputs = [];
+      const breaksHere = !canUseGap(index);
 
-  function probabilityFor(currentLevel) {
-    const map = [0.10, 0.18, 0.28, 0.39, 0.52, 0.63, 0.73, 0.82, 0.90, 0.96];
-    return map[currentLevel - 1];
-  }
+      card.className = 'rule-card';
+      if (breaksHere) card.classList.add('is-break');
+      card.dataset.active = rule ? 'true' : 'false';
 
-  function glitchText(text, currentLevel) {
-    const chars = Array.from(text);
-    if (!chars.length) return '';
+      position.className = 'rule-position';
+      number.className = 'position-number';
+      number.textContent = String(index + 1).padStart(2, '0');
+      positionBody.className = 'position-body';
+      title.className = 'position-title';
+      title.textContent = `${index + 1}文字目と${index + 2}文字目の間`;
+      boundary.className = 'boundary';
+      before.className = 'boundary-unit';
+      before.textContent = unitLabel(unit);
+      gap.className = 'boundary-gap';
+      gap.textContent = '＋';
+      after.className = 'boundary-unit';
+      after.textContent = unitLabel(units[index + 1]);
+      boundary.append(before, gap, after);
+      preview.className = 'gap-preview';
+      previewLabel.className = 'gap-preview-label';
+      previewLabel.textContent = 'この位置のプレビュー';
+      previewText.className = 'gap-preview-text';
+      preview.append(previewLabel, previewText);
+      positionBody.append(title, boundary, preview);
+      position.append(number, positionBody);
 
-    const probability = probabilityFor(currentLevel);
-    let result = '';
+      controls.className = 'rule-controls';
+      SYMBOLS.forEach(({ value, code }, symbolIndex) => {
+        const label = document.createElement('label');
+        const name = document.createElement('span');
+        const countInput = document.createElement('input');
 
-    for (let i = 0; i < chars.length; i++) {
-      const char = chars[i];
-      result += char;
+        label.className = 'symbol-count-control';
+        label.title = code;
+        name.className = 'symbol-count-name';
+        name.textContent = `a${value}`;
+        countInput.className = 'input-control';
+        countInput.type = 'number';
+        countInput.min = '0';
+        countInput.max = String(MAX_SYMBOL_COUNT);
+        countInput.step = '1';
+        countInput.inputMode = 'numeric';
+        countInput.value = String(currentCounts[symbolIndex] || 0);
+        countInput.setAttribute('aria-label', `${code}を入れる個数`);
+        label.append(name, countInput);
+        controls.appendChild(label);
+        countInputs.push(countInput);
+      });
 
-      const next = chars[i + 1];
-      if (next === undefined) continue;
-      if (char === '\n' || next === '\n') continue;
+      randomButton.className = 'button small clear-gap';
+      randomButton.type = 'button';
+      randomButton.textContent = 'この位置をランダム';
+      randomButton.setAttribute('aria-label', `${index + 1}文字目と${index + 2}文字目の間をランダム設定`);
+      controls.appendChild(randomButton);
 
-      if (Math.random() < probability) {
-        result += makeChunk(currentLevel);
+      clearButton.className = 'button small clear-gap';
+      clearButton.type = 'button';
+      clearButton.textContent = 'この位置をクリア';
+      clearButton.setAttribute('aria-label', `${index + 1}文字目と${index + 2}文字目の間をクリア`);
+      controls.appendChild(clearButton);
+
+      state.className = 'rule-state';
+
+      if (breaksHere) {
+        countInputs.forEach((input) => { input.disabled = true; });
+        randomButton.disabled = true;
+        clearButton.disabled = true;
+        state.textContent = isEmbeddableUnit(unit)
+          ? 'この位置は設定できません'
+          : '左側の文字へ結合できないため設定不可';
+      } else {
+        const applyRule = () => {
+          const counts = countInputs.map((input) => {
+            const count = clampCount(input.value, 0);
+            input.value = String(count);
+            return count;
+          });
+          manualRules[index] = counts.some((count) => count > 0) ? { counts } : null;
+          manualDirty = true;
+          updateRuleCard(card, index, state);
+          updateGapPreview(previewText, index);
+          updateManualView();
+          setStatus(manualStatus, `${index + 1}文字目と${index + 2}文字目の間を更新しました。`);
+        };
+
+        randomButton.addEventListener('click', () => {
+          const counts = createRandomCounts();
+          countInputs.forEach((input, symbolIndex) => {
+            input.value = String(counts[symbolIndex]);
+          });
+          applyRule();
+          setStatus(manualStatus, `${index + 1}文字目と${index + 2}文字目の間をランダム設定しました。`);
+        });
+
+        countInputs.forEach((input) => {
+          input.addEventListener('input', () => {
+            if (input.value !== '') applyRule();
+          });
+          input.addEventListener('change', applyRule);
+        });
+        clearButton.addEventListener('click', () => {
+          manualRules[index] = null;
+          countInputs.forEach((input) => { input.value = '0'; });
+          manualDirty = true;
+          updateRuleCard(card, index, state);
+          updateGapPreview(previewText, index);
+          updateManualView();
+          setStatus(manualStatus, `${index + 1}文字目と${index + 2}文字目の指定をクリアしました。`);
+        });
+        updateRuleCard(card, index, state);
       }
 
-      if (currentLevel >= 7 && Math.random() < (currentLevel - 6) * 0.06) {
-        result += makeChunk(Math.max(2, currentLevel - 2));
-      }
-    }
+      updateGapPreview(previewText, index);
 
-    return result;
-  }
-
-  function updateCounts() {
-    inputCount.textContent = `${Array.from(source.value).length}文字`;
-    outputCount.textContent = `${Array.from(output.value).length}文字`;
-    candidateCount.textContent = `${candidates.length}個`;
-  }
-
-  function updateChoiceState() {
-    Array.from(choices.children).forEach((button, index) => {
-      button.setAttribute('aria-pressed', index === selectedIndex ? 'true' : 'false');
+      card.append(position, controls, state);
+      ruleList.appendChild(card);
     });
   }
 
-  async function copyText(text, successMessage = 'コピーしました。') {
+  function generateAuto() {
+    autoState = createAutoResult();
+
+    if (!manualDirty || manualSource !== source.value || activeMode === 'auto') {
+      manualRules = cloneRules(autoState.rules);
+      manualSource = source.value;
+      manualDirty = false;
+    }
+
+    updateAutoView();
+    if (activeMode === 'manual') {
+      renderRuleList();
+      updateManualView();
+    }
+    setStatus(autoStatus, '自動作成しました。必要なら指定箇所作成で調整できます。');
+  }
+
+  function importAutoToManual(force = false) {
+    const sourceMatches = autoState.source === source.value;
+    if (force || !manualDirty || manualSource !== source.value) {
+      manualRules = sourceMatches ? cloneRules(autoState.rules) : emptyRules(units);
+      manualSource = source.value;
+      manualDirty = false;
+    }
+
+    renderRuleList();
+    updateManualView();
+    setStatus(manualStatus, sourceMatches ? '自動作成の指定を読み込みました。' : '現在の文章に合わせて指定箇所を準備しました。');
+  }
+
+  function setMode(nextMode) {
+    if (nextMode === activeMode) return;
+
+    if (nextMode === 'manual') importAutoToManual(false);
+    if (nextMode === 'auto' && autoState.source !== source.value) generateAuto();
+
+    activeMode = nextMode;
+    modeButtons.forEach((button) => {
+      const selected = button.dataset.mode === nextMode;
+      button.setAttribute('aria-selected', selected ? 'true' : 'false');
+    });
+    autoPanel.hidden = nextMode !== 'auto';
+    manualPanel.hidden = nextMode !== 'manual';
+  }
+
+  async function copyText(text, statusTarget, message) {
     if (!text) {
-      status.textContent = 'コピーする文字列がありません。';
+      setStatus(statusTarget, 'コピーする文字列がありません。');
       return;
     }
 
     try {
       await navigator.clipboard.writeText(text);
-      status.textContent = successMessage;
     } catch {
-      output.focus();
-      output.select();
+      const helper = document.createElement('textarea');
+      helper.value = text;
+      helper.style.position = 'fixed';
+      helper.style.opacity = '0';
+      document.body.appendChild(helper);
+      helper.focus();
+      helper.select();
       document.execCommand('copy');
-      status.textContent = successMessage;
+      helper.remove();
     }
+
+    setStatus(statusTarget, message, true);
   }
 
-  async function selectCandidate(index) {
-    selectedIndex = index;
-    output.value = candidates[selectedIndex] || '';
-    updateChoiceState();
-    updateCounts();
-    await copyText(output.value, `候補${selectedIndex + 1}を選択してコピーしました。`);
-  }
+  function renderSymbolGuide() {
+    symbolGuide.replaceChildren();
 
-  function renderCandidates() {
-    choices.replaceChildren();
+    SYMBOLS.forEach(({ value, code }) => {
+      const chip = document.createElement('span');
+      const sample = document.createElement('span');
+      const codeLabel = document.createElement('span');
 
-    candidates.forEach((candidate, index) => {
-      const button = document.createElement('button');
-      const number = document.createElement('span');
-      const text = document.createElement('span');
-
-      button.type = 'button';
-      button.className = 'choice';
-      button.setAttribute('aria-pressed', index === selectedIndex ? 'true' : 'false');
-      button.setAttribute('aria-label', `候補${index + 1}を選択`);
-      button.addEventListener('click', () => selectCandidate(index));
-
-      number.className = 'choice-number';
-      number.textContent = String(index + 1).padStart(2, '0');
-
-      text.className = 'choice-text';
-      text.textContent = candidate || '（空の候補）';
-
-      button.append(number, text);
-      choices.appendChild(button);
+      chip.className = 'symbol-chip';
+      sample.className = 'symbol-sample';
+      sample.textContent = `a${value}`;
+      codeLabel.textContent = code;
+      chip.title = code;
+      chip.append(sample, codeLabel);
+      symbolGuide.appendChild(chip);
     });
   }
 
-  function generate() {
-    const currentLevel = Number(level.value);
-    levelValue.textContent = currentLevel;
-    candidates = Array.from({ length: OPTION_COUNT }, () => glitchText(source.value, currentLevel));
-    selectedIndex = 0;
-    renderCandidates();
-    output.value = candidates[0] || '';
-    status.textContent = '';
-    updateCounts();
+  function handleSourceInput() {
+    units = splitText(source.value);
+    manualRules = emptyRules(units);
+    manualSource = source.value;
+    manualDirty = false;
+    updateSourceCount();
+
+    if (activeMode === 'auto') {
+      generateAuto();
+    } else {
+      renderRuleList();
+      updateManualView();
+      setStatus(manualStatus, '文章を変更したため、指定箇所をリセットしました。');
+    }
   }
 
-  source.addEventListener('input', generate);
-  level.addEventListener('input', generate);
-  regenerate.addEventListener('click', generate);
+  modeButtons.forEach((button) => {
+    button.addEventListener('click', () => setMode(button.dataset.mode));
+  });
+
+  source.addEventListener('input', handleSourceInput);
+  level.addEventListener('input', generateAuto);
+  generateAutoButton.addEventListener('click', generateAuto);
+  copyAutoButton.addEventListener('click', () => copyText(autoState.result, autoStatus, '自動作成の結果をコピーしました。'));
+  useAutoResultButton.addEventListener('click', () => {
+    importAutoToManual(true);
+    setMode('manual');
+    manualPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+
+  copyManualButton.addEventListener('click', () => copyText(composeText(units, manualRules), manualStatus, '指定箇所作成の結果をコピーしました。'));
+  clearRulesButton.addEventListener('click', () => {
+    manualRules = emptyRules(units);
+    manualDirty = true;
+    renderRuleList();
+    updateManualView();
+    setStatus(manualStatus, 'すべての指定をクリアしました。');
+  });
 
   clearSource.addEventListener('click', () => {
     source.value = '';
-    generate();
+    handleSourceInput();
     source.focus();
   });
 
-  clear.addEventListener('click', () => {
-    output.value = '';
-    status.textContent = '';
-    updateCounts();
-    output.focus();
-  });
+  renderSymbolGuide();
+  updateSourceCount();
+  generateAuto();
+  updateManualView();
 
-  copy.addEventListener('click', () => copyText(output.value));
-
-  generate();
+  if (!STARTER_TEXT) source.placeholder = 'ここに文章を入力してください';
 })();
 </script>
 </body>
