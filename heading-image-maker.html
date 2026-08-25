@@ -1,0 +1,622 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>見出し画像メーカー</title>
+<style>
+@layer reset, base, components, utilities;
+
+/* reset: ブラウザ既定差を抑える */
+@layer reset {
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  button, input, textarea { font: inherit; }
+  button { cursor: pointer; }
+}
+
+/* base: 画面全体の基本設定 */
+@layer base {
+  :root {
+    --bg: #f5f5f3;
+    --panel: #ffffff;
+    --text: #171717;
+    --muted: #707070;
+    --border: #d9d9d5;
+    --accent: #161616;
+    --accent-text: #ffffff;
+    --radius: 18px;
+    --shadow: 0 12px 35px rgba(0,0,0,.08);
+  }
+
+  body {
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+
+  button, input, textarea {
+    color: inherit;
+  }
+}
+
+/* components: レイアウトと各UI部品 */
+@layer components {
+  .app {
+    width: min(1100px, 100%);
+    margin: 0 auto;
+    padding: 18px;
+  }
+
+  .header {
+    padding: 18px 2px 14px;
+  }
+
+  .header h1 {
+    margin: 0;
+    font-size: clamp(24px, 5vw, 38px);
+    letter-spacing: -.03em;
+  }
+
+  .header p {
+    margin: 8px 0 0;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(0, .82fr) minmax(0, 1.18fr);
+    gap: 18px;
+    align-items: start;
+  }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 18px;
+  }
+
+  .section-title {
+    margin: 0 0 12px;
+    font-size: 15px;
+    font-weight: 800;
+  }
+
+  .field {
+    display: grid;
+    gap: 8px;
+    margin-bottom: 18px;
+  }
+
+  .field label {
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .field small {
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  #titleInput {
+    width: 100%;
+    min-height: 118px;
+    resize: vertical;
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: 13px;
+    background: transparent;
+    line-height: 1.65;
+    outline: none;
+  }
+
+  #titleInput:focus {
+    border-color: #777;
+  }
+
+  .backgrounds {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+
+  .bg-choice {
+    position: relative;
+    aspect-ratio: 1.55 / 1;
+    border: 2px solid transparent;
+    border-radius: 12px;
+    padding: 0;
+    overflow: hidden;
+    background: #ddd;
+  }
+
+  .bg-choice[data-selected="true"] {
+    border-color: #111;
+    box-shadow: 0 0 0 2px var(--panel) inset;
+  }
+
+  .bg-choice::after {
+    content: attr(aria-label);
+    position: absolute;
+    left: 7px;
+    bottom: 6px;
+    max-width: calc(100% - 14px);
+    padding: 3px 6px;
+    border-radius: 7px;
+    background: rgba(0,0,0,.52);
+    color: #fff;
+    font-size: 10px;
+    line-height: 1.2;
+  }
+
+  .bg-minimal { background: linear-gradient(135deg,#f5f1e8,#dad7cf); }
+  .bg-night { background: linear-gradient(135deg,#191d2d,#3d465f 52%,#11141e); }
+  .bg-sky { background: linear-gradient(135deg,#b9ddf4,#f4f9fb 55%,#d9e9f5); }
+  .bg-warm { background: linear-gradient(135deg,#f6d6bd,#ef9c76 52%,#7b4c47); }
+  .bg-forest { background: linear-gradient(135deg,#dfe8d8,#718574 52%,#293d35); }
+  .bg-purple { background: linear-gradient(135deg,#e2d9f4,#9586c7 55%,#4d456e); }
+  .bg-paper {
+    background:
+      linear-gradient(rgba(255,255,255,.25),rgba(255,255,255,.25)),
+      repeating-linear-gradient(0deg,#ddd8cf 0 1px,#f6f1e8 1px 7px);
+  }
+  .bg-grid {
+    background:
+      linear-gradient(90deg,rgba(255,255,255,.08) 1px,transparent 1px),
+      linear-gradient(rgba(255,255,255,.08) 1px,transparent 1px),
+      linear-gradient(135deg,#17202c,#2a3d50);
+    background-size: 16px 16px,16px 16px,100% 100%;
+  }
+  .bg-pop {
+    background:
+      radial-gradient(circle at 20% 30%,#fff4a8 0 13%,transparent 14%),
+      radial-gradient(circle at 80% 75%,#ffb8c4 0 14%,transparent 15%),
+      linear-gradient(135deg,#f8efe8,#a8cfe7);
+  }
+
+  .options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 18px;
+  }
+
+  .option {
+    display: grid;
+    gap: 7px;
+  }
+
+  .option label {
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 700;
+  }
+
+  select, input[type="color"] {
+    width: 100%;
+    height: 42px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: transparent;
+    padding: 0 10px;
+  }
+
+  input[type="color"] {
+    padding: 4px;
+  }
+
+  .preview-wrap {
+    position: sticky;
+    top: 14px;
+  }
+
+  .canvas-shell {
+    border-radius: 15px;
+    overflow: hidden;
+    background: #ddd;
+    border: 1px solid var(--border);
+  }
+
+  canvas {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1280 / 670;
+  }
+
+  .actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 14px;
+  }
+
+  .btn {
+    flex: 1;
+    min-height: 46px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: transparent;
+    font-weight: 800;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: var(--accent-text);
+    border-color: var(--accent);
+  }
+
+  .status {
+    min-height: 1.5em;
+    margin: 10px 2px 0;
+    color: var(--muted);
+    font-size: 12px;
+  }
+}
+
+/* utilities: レスポンシブ調整 */
+@layer utilities {
+  @media (max-width: 820px) {
+    .app { padding: 12px; }
+    .layout { grid-template-columns: 1fr; }
+    .preview-wrap { position: static; }
+    .backgrounds { grid-template-columns: repeat(3, 1fr); }
+  }
+
+  @media (max-width: 480px) {
+    .backgrounds { grid-template-columns: repeat(2, 1fr); }
+    .options { grid-template-columns: 1fr; }
+    .actions { flex-direction: column; }
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101113;
+      --panel: #191a1e;
+      --text: #f5f5f5;
+      --muted: #aaaeb7;
+      --border: #33353b;
+      --accent: #f3f3f3;
+      --accent-text: #111;
+      --shadow: none;
+    }
+
+    .bg-choice[data-selected="true"] {
+      border-color: #fff;
+    }
+  }
+}
+</style>
+</head>
+<body>
+<main class="app">
+  <header class="header">
+    <h1>見出し画像メーカー</h1>
+    <p>記事タイトルを入力して背景を選ぶだけで、1280×670pxの見出し画像を作成できます。</p>
+  </header>
+
+  <div class="layout">
+    <section class="panel">
+      <div class="field">
+        <label for="titleInput">記事タイトル</label>
+        <textarea id="titleInput" maxlength="120" placeholder="例：ChatGPTで作ったHTMLを少しずつ改善してみた">ChatGPTで作ったHTMLを少しずつ改善してみた</textarea>
+        <small>文字数に合わせて自動で大きさを調整します。</small>
+      </div>
+
+      <h2 class="section-title">背景を選択</h2>
+      <div class="backgrounds" id="backgrounds">
+        <button class="bg-choice bg-minimal" type="button" data-bg="minimal" data-selected="true" aria-label="ミニマル"></button>
+        <button class="bg-choice bg-night" type="button" data-bg="night" data-selected="false" aria-label="ダーク"></button>
+        <button class="bg-choice bg-sky" type="button" data-bg="sky" data-selected="false" aria-label="空"></button>
+        <button class="bg-choice bg-warm" type="button" data-bg="warm" data-selected="false" aria-label="暖色"></button>
+        <button class="bg-choice bg-forest" type="button" data-bg="forest" data-selected="false" aria-label="森林"></button>
+        <button class="bg-choice bg-purple" type="button" data-bg="purple" data-selected="false" aria-label="紫"></button>
+        <button class="bg-choice bg-paper" type="button" data-bg="paper" data-selected="false" aria-label="紙"></button>
+        <button class="bg-choice bg-grid" type="button" data-bg="grid" data-selected="false" aria-label="グリッド"></button>
+        <button class="bg-choice bg-pop" type="button" data-bg="pop" data-selected="false" aria-label="ポップ"></button>
+      </div>
+
+      <div class="options">
+        <div class="option">
+          <label for="textColor">文字色</label>
+          <input id="textColor" type="color" value="#181818">
+        </div>
+        <div class="option">
+          <label for="align">文字位置</label>
+          <select id="align">
+            <option value="left">左寄せ</option>
+            <option value="center">中央</option>
+          </select>
+        </div>
+        <div class="option">
+          <label for="weight">文字の太さ</label>
+          <select id="weight">
+            <option value="800">太字</option>
+            <option value="700">やや太字</option>
+            <option value="600">標準</option>
+          </select>
+        </div>
+        <div class="option">
+          <label for="overlay">背景の明るさ</label>
+          <select id="overlay">
+            <option value="0">そのまま</option>
+            <option value="light">明るく</option>
+            <option value="dark">暗く</option>
+          </select>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel preview-wrap">
+      <h2 class="section-title">プレビュー</h2>
+      <div class="canvas-shell">
+        <canvas id="canvas" width="1280" height="670"></canvas>
+      </div>
+
+      <div class="actions">
+        <button class="btn" id="copyBtn" type="button">画像をコピー</button>
+        <button class="btn btn-primary" id="downloadBtn" type="button">PNGで保存</button>
+      </div>
+      <div class="status" id="status" aria-live="polite"></div>
+    </section>
+  </div>
+</main>
+
+<script>
+(() => {
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+  const titleInput = document.getElementById('titleInput');
+  const textColor = document.getElementById('textColor');
+  const align = document.getElementById('align');
+  const weight = document.getElementById('weight');
+  const overlay = document.getElementById('overlay');
+  const backgrounds = document.getElementById('backgrounds');
+  const status = document.getElementById('status');
+  const W = canvas.width;
+  const H = canvas.height;
+  let selectedBg = 'minimal';
+
+  function setLinear(colors, angle = 135) {
+    const rad = angle * Math.PI / 180;
+    const x = Math.cos(rad), y = Math.sin(rad);
+    const cx = W / 2, cy = H / 2;
+    const len = Math.abs(W * x) + Math.abs(H * y);
+    const g = ctx.createLinearGradient(
+      cx - x * len / 2, cy - y * len / 2,
+      cx + x * len / 2, cy + y * len / 2
+    );
+    colors.forEach(([stop, color]) => g.addColorStop(stop, color));
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  function drawBackground(type) {
+    ctx.clearRect(0, 0, W, H);
+
+    if (type === 'minimal') {
+      setLinear([[0,'#f5f1e8'],[1,'#d8d5ce']]);
+      ctx.fillStyle = 'rgba(255,255,255,.38)';
+      ctx.beginPath();
+      ctx.arc(1080, 105, 245, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    if (type === 'night') {
+      setLinear([[0,'#171b2a'],[.58,'#3c465f'],[1,'#11141d']]);
+      ctx.fillStyle = 'rgba(255,255,255,.06)';
+      ctx.beginPath();
+      ctx.arc(1050, 110, 280, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    if (type === 'sky') {
+      setLinear([[0,'#b9ddf4'],[.55,'#f4f9fb'],[1,'#d9e9f5']]);
+      ctx.fillStyle = 'rgba(255,255,255,.55)';
+      for (let i = 0; i < 4; i++) {
+        ctx.beginPath();
+        ctx.ellipse(930 + i * 90, 155 + (i % 2) * 22, 150, 55, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    if (type === 'warm') {
+      setLinear([[0,'#f6d6bd'],[.52,'#ef9c76'],[1,'#7b4c47']]);
+      ctx.fillStyle = 'rgba(255,240,220,.28)';
+      ctx.fillRect(0, H * .72, W, H * .28);
+    }
+
+    if (type === 'forest') {
+      setLinear([[0,'#dfe8d8'],[.52,'#718574'],[1,'#293d35']]);
+      ctx.fillStyle = 'rgba(17,55,43,.14)';
+      for (let x = 770; x < 1300; x += 115) {
+        ctx.beginPath();
+        ctx.moveTo(x, 540);
+        ctx.lineTo(x + 55, 170);
+        ctx.lineTo(x + 110, 540);
+        ctx.closePath();
+        ctx.fill();
+      }
+    }
+
+    if (type === 'purple') {
+      setLinear([[0,'#e2d9f4'],[.55,'#9586c7'],[1,'#4d456e']]);
+      const rg = ctx.createRadialGradient(1030, 170, 10, 1030, 170, 270);
+      rg.addColorStop(0,'rgba(255,255,255,.34)');
+      rg.addColorStop(1,'rgba(255,255,255,0)');
+      ctx.fillStyle = rg;
+      ctx.fillRect(700, 0, 580, 520);
+    }
+
+    if (type === 'paper') {
+      ctx.fillStyle = '#f6f1e8';
+      ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle = 'rgba(110,95,75,.16)';
+      ctx.lineWidth = 2;
+      for (let y = 0; y < H; y += 14) {
+        ctx.beginPath();
+        ctx.moveTo(0,y);
+        ctx.lineTo(W,y);
+        ctx.stroke();
+      }
+      ctx.fillStyle = 'rgba(255,255,255,.3)';
+      ctx.fillRect(0,0,W,H);
+    }
+
+    if (type === 'grid') {
+      setLinear([[0,'#17202c'],[1,'#2a3d50']]);
+      ctx.strokeStyle = 'rgba(255,255,255,.08)';
+      ctx.lineWidth = 1;
+      for (let x = 0; x <= W; x += 34) {
+        ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke();
+      }
+      for (let y = 0; y <= H; y += 34) {
+        ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke();
+      }
+    }
+
+    if (type === 'pop') {
+      setLinear([[0,'#f8efe8'],[1,'#a8cfe7']]);
+      ctx.fillStyle = '#fff4a8';
+      ctx.beginPath(); ctx.arc(240,175,115,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#ffb8c4';
+      ctx.beginPath(); ctx.arc(1050,500,130,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,.45)';
+      ctx.beginPath(); ctx.arc(1080,130,65,0,Math.PI*2); ctx.fill();
+    }
+
+    if (overlay.value === 'light') {
+      ctx.fillStyle = 'rgba(255,255,255,.22)';
+      ctx.fillRect(0,0,W,H);
+    } else if (overlay.value === 'dark') {
+      ctx.fillStyle = 'rgba(0,0,0,.22)';
+      ctx.fillRect(0,0,W,H);
+    }
+  }
+
+  function splitText(text, maxWidth, fontSize, fontWeight) {
+    ctx.font = `${fontWeight} ${fontSize}px system-ui, sans-serif`;
+    const source = text.trim() || '記事タイトルを入力してください';
+    const lines = [];
+    let line = '';
+
+    for (const ch of source) {
+      if (ch === '\n') {
+        if (line) lines.push(line);
+        line = '';
+        continue;
+      }
+      const test = line + ch;
+      if (ctx.measureText(test).width > maxWidth && line) {
+        lines.push(line);
+        line = ch;
+      } else {
+        line = test;
+      }
+    }
+    if (line) lines.push(line);
+    return lines;
+  }
+
+  function fitTitle(text) {
+    const maxWidth = align.value === 'center' ? 1010 : 930;
+    const maxHeight = 430;
+    let size = 92;
+
+    while (size >= 44) {
+      const lines = splitText(text, maxWidth, size, weight.value);
+      const lineHeight = size * 1.28;
+      if (lines.length <= 4 && lines.length * lineHeight <= maxHeight) {
+        return { size, lines, lineHeight };
+      }
+      size -= 2;
+    }
+
+    const lines = splitText(text, maxWidth, 44, weight.value).slice(0,5);
+    return { size: 44, lines, lineHeight: 56 };
+  }
+
+  function drawTitle() {
+    const text = titleInput.value;
+    const { size, lines, lineHeight } = fitTitle(text);
+    const center = align.value === 'center';
+    const x = center ? W / 2 : 118;
+    const totalHeight = lines.length * lineHeight;
+    let y = (H - totalHeight) / 2 + size * .82;
+
+    ctx.font = `${weight.value} ${size}px system-ui, sans-serif`;
+    ctx.textAlign = center ? 'center' : 'left';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = textColor.value;
+
+    ctx.shadowColor = 'rgba(255,255,255,.18)';
+    ctx.shadowBlur = 1;
+    lines.forEach(line => {
+      ctx.fillText(line, x, y);
+      y += lineHeight;
+    });
+    ctx.shadowBlur = 0;
+
+    ctx.fillStyle = textColor.value;
+    ctx.globalAlpha = .55;
+    if (!center) ctx.fillRect(118, 110, 92, 7);
+    else ctx.fillRect(W/2 - 46, 110, 92, 7);
+    ctx.globalAlpha = 1;
+  }
+
+  function render() {
+    drawBackground(selectedBg);
+    drawTitle();
+  }
+
+  backgrounds.addEventListener('click', e => {
+    const btn = e.target.closest('.bg-choice');
+    if (!btn) return;
+    selectedBg = btn.dataset.bg;
+    backgrounds.querySelectorAll('.bg-choice').forEach(el => {
+      el.dataset.selected = String(el === btn);
+    });
+
+    const darkTypes = new Set(['night','grid']);
+    textColor.value = darkTypes.has(selectedBg) ? '#ffffff' : '#181818';
+    render();
+  });
+
+  [titleInput, textColor, align, weight, overlay].forEach(el => {
+    el.addEventListener('input', render);
+    el.addEventListener('change', render);
+  });
+
+  document.getElementById('downloadBtn').addEventListener('click', () => {
+    render();
+    const a = document.createElement('a');
+    const safe = (titleInput.value.trim() || 'heading-image')
+      .replace(/[\\/:*?"<>|]/g,'')
+      .slice(0,40);
+    a.href = canvas.toDataURL('image/png');
+    a.download = `${safe}.png`;
+    a.click();
+    status.textContent = 'PNG画像を保存しました。';
+  });
+
+  document.getElementById('copyBtn').addEventListener('click', async () => {
+    try {
+      render();
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+      if (!navigator.clipboard || !window.ClipboardItem) throw new Error('unsupported');
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+      status.textContent = '画像をクリップボードにコピーしました。';
+    } catch {
+      status.textContent = 'このブラウザでは画像コピーに対応していません。PNG保存をご利用ください。';
+    }
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
