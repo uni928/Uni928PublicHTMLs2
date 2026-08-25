@@ -600,7 +600,7 @@
     <textarea id="source" class="source-input" aria-label="元の文章">※ホラー注意です。そこまで怖くありませんが、ホラーが苦手な方はご注意ください。</textarea>
     <div class="toolbar">
       <button id="clearSource" class="button small" type="button">元の文章をクリア</button>
-      <span class="help">結合記号を重ね、▒・⛧・▪・†などの可視ノイズも混ぜて、指定箇所ごとに個数を個別設定できます。</span>
+      <span class="help">結合記号を重ね、▒・†・▓・▞・■の可視ノイズも混ぜて、指定箇所ごとに個数を個別設定できます。</span>
     </div>
   </section>
 
@@ -710,9 +710,7 @@
   ]);
 
   const REFERENCE_VISIBLE_PARTS = Object.freeze([
-    ["█", 4], ["▓", 3], ["▒", 3], ["░", 3], ["■", 3], ["▪", 3],
-    ["◼", 2], ["◾", 2], ["▚", 2], ["▞", 2], ["†", 2], ["‡", 1],
-    ["⸸", 1], ["☠", 1], ["☣", 1], ["⛧", 1]
+    ["▒", 3], ["†", 2], ["▓", 3], ["▞", 2], ["■", 3]
   ]);
 
   const SYMBOLS = Object.freeze([
@@ -734,6 +732,7 @@
   const COMBINING_VALUES = new Set(SYMBOLS
     .filter(({ kind }) => kind === 'combining')
     .map(({ value }) => value));
+  const VISIBLE_VALUES = new Set(REFERENCE_VISIBLE_PARTS.map(([value]) => value));
   const GLITCH_PARTS = Object.freeze(SYMBOLS.flatMap(({ value, weight }) => (
     Array.from({ length: weight }, () => value)
   )));
@@ -764,6 +763,7 @@
 
   const STARTER_TEXT = source.value;
   const PROBABILITIES = [0.08, 0.16, 0.26, 0.38, 0.5, 0.62, 0.72, 0.81, 0.89, 0.95];
+  const MAX_NON_VISIBLE_RETRIES = 5;
   const MAX_SYMBOL_COUNT = 99;
 
   let activeMode = 'auto';
@@ -850,16 +850,32 @@
     const max = Math.max(2, Math.ceil(currentLevel * 0.9));
     const count = randomInt(min, max);
     let sequence = '';
+    let addedCount = 0;
+    let attemptsForCurrentPart = 0;
+    let previousPartWasVisible = false;
 
-    for (let index = 0; index < count; index += 1) {
+    while (addedCount < count) {
       let part = pickGlitchPart();
 
-      // 添付と同じく、先頭が結合記号の場合は一部を可視ノイズへ置き換える。
-      if (index === 0 && COMBINING_VALUES.has(part) && Math.random() < 0.3) {
-        part = Math.random() < 0.5 ? '■' : '█';
+      // 可視ノイズは▒・†・▓・▞・■だけを使う。
+      if (addedCount === 0 && COMBINING_VALUES.has(part) && Math.random() < 0.3) {
+        part = REFERENCE_VISIBLE_PARTS[randomInt(0, REFERENCE_VISIBLE_PARTS.length - 1)][0];
+      }
+
+      attemptsForCurrentPart += 1;
+
+      const partIsVisible = VISIBLE_VALUES.has(part);
+      const isRightOfVisiblePart = previousPartWasVisible && !partIsVisible;
+
+      // 四角系以外は5回目まで引き直すが、四角形の右側に来た場合はそのまま付与する。
+      if (!partIsVisible && !isRightOfVisiblePart && attemptsForCurrentPart < MAX_NON_VISIBLE_RETRIES) {
+        continue;
       }
 
       sequence += part;
+      addedCount += 1;
+      attemptsForCurrentPart = 0;
+      previousPartWasVisible = partIsVisible;
     }
 
     return sequence;
