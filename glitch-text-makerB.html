@@ -230,6 +230,27 @@
     margin-top: 16px;
   }
 
+  /* components: 四角形を除外するためのチェックボックス */
+  .option-row {
+    margin-top: 14px;
+  }
+
+  .checkbox-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text);
+    font-size: 13px;
+    cursor: pointer;
+  }
+
+  .checkbox-label input {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    accent-color: var(--orange);
+  }
+
   .range {
     width: 100%;
     accent-color: var(--orange);
@@ -631,6 +652,12 @@
     </div>
     <div class="scale"><span>少なめ</span><span>標準</span><span>多め</span></div>
     <p class="note">初期値3は、原文の読みやすさを残しつつ、文字化け感を出しやすい設定です。</p>
+    <div class="option-row">
+      <label class="checkbox-label">
+        <input id="excludeSquares" type="checkbox">
+        <span>四角形を入れない</span>
+      </label>
+    </div>
 
     <div class="button-row">
       <button id="generateAuto" class="button primary" type="button">自動で作成</button>
@@ -736,12 +763,16 @@
   const GLITCH_PARTS = Object.freeze(SYMBOLS.flatMap(({ value, weight }) => (
     Array.from({ length: weight }, () => value)
   )));
+  const NON_VISIBLE_GLITCH_PARTS = Object.freeze(
+    GLITCH_PARTS.filter((part) => !VISIBLE_VALUES.has(part))
+  );
 
   const source = document.getElementById('source');
   const sourceCount = document.getElementById('sourceCount');
   const clearSource = document.getElementById('clearSource');
   const level = document.getElementById('level');
   const levelValue = document.getElementById('levelValue');
+  const excludeSquares = document.getElementById('excludeSquares');
   const autoPanel = document.getElementById('autoPanel');
   const manualPanel = document.getElementById('manualPanel');
   const symbolCount = document.getElementById('symbolCount');
@@ -765,6 +796,10 @@
   const PROBABILITIES = [0.08, 0.16, 0.26, 0.38, 0.5, 0.62, 0.72, 0.81, 0.89, 0.95];
   const MAX_NON_VISIBLE_RETRIES = 5;
   const MAX_SYMBOL_COUNT = 99;
+
+  if (new URLSearchParams(window.location.search).get('mode') === '2') {
+    excludeSquares.checked = true;
+  }
 
   let activeMode = 'auto';
   let units = splitText(source.value);
@@ -807,10 +842,18 @@
   function countsToMarks(counts, sequence = '') {
     const effectiveCounts = counts.map((count) => Number.isFinite(Number(count)) ? Number(count) : 0);
 
-    if (sequence) return sequence;
+    if (sequence) {
+      return excludeSquares.checked
+        ? Array.from(sequence).filter((part) => !VISIBLE_VALUES.has(part)).join('')
+        : sequence;
+    }
 
     return effectiveCounts
-      .map((count, symbolIndex) => count > 0 ? SYMBOLS[symbolIndex].value.repeat(count) : '')
+      .map((count, symbolIndex) => {
+        const symbol = SYMBOLS[symbolIndex];
+        if (excludeSquares.checked && symbol.kind === 'visible') return '';
+        return count > 0 ? symbol.value.repeat(count) : '';
+      })
       .join('');
   }
 
@@ -841,11 +884,12 @@
     return randomInt(min, Math.max(min, max));
   }
 
-  function pickGlitchPart() {
-    return GLITCH_PARTS[randomInt(0, GLITCH_PARTS.length - 1)];
+  function pickGlitchPart(excludeVisible = false) {
+    const parts = excludeVisible ? NON_VISIBLE_GLITCH_PARTS : GLITCH_PARTS;
+    return parts[randomInt(0, parts.length - 1)];
   }
 
-  function makeChunk(currentLevel) {
+  function makeChunk(currentLevel, excludeVisible = false) {
     const min = Math.max(1, Math.floor(currentLevel / 3));
     const max = Math.max(2, Math.ceil(currentLevel * 0.9));
     const count = randomInt(min, max);
@@ -855,10 +899,10 @@
     let previousPartWasVisible = false;
 
     while (addedCount < count) {
-      let part = pickGlitchPart();
+      let part = pickGlitchPart(excludeVisible);
 
       // 可視ノイズは▒・†・▓・▞・■だけを使う。
-      if (addedCount === 0 && COMBINING_VALUES.has(part) && Math.random() < 0.3) {
+      if (!excludeVisible && addedCount === 0 && COMBINING_VALUES.has(part) && Math.random() < 0.3) {
         part = REFERENCE_VISIBLE_PARTS[randomInt(0, REFERENCE_VISIBLE_PARTS.length - 1)][0];
       }
 
@@ -920,7 +964,7 @@
       if (!canUseGap(index)) return;
       if (Math.random() >= probability) return;
 
-      const sequence = makeChunk(currentLevel);
+      const sequence = makeChunk(currentLevel, excludeSquares.checked);
       nextRules[index] = {
         counts: countsFromSequence(sequence),
         sequence
@@ -1003,7 +1047,7 @@
   }
 
   function createRandomCounts() {
-    return countsFromSequence(makeChunk(Number(level.value)));
+    return countsFromSequence(makeChunk(Number(level.value), excludeSquares.checked));
   }
 
   function renderRuleList() {
@@ -1266,6 +1310,14 @@
 
   source.addEventListener('input', handleSourceInput);
   level.addEventListener('input', generateAuto);
+  excludeSquares.addEventListener('change', () => {
+    if (activeMode === 'auto') {
+      generateAuto();
+    } else {
+      updateManualView();
+      setStatus(manualStatus, excludeSquares.checked ? '四角形を除外して表示しています。' : '四角形を含めて表示しています。');
+    }
+  });
   generateAutoButton.addEventListener('click', generateAuto);
   copyAutoButton.addEventListener('click', () => copyText(autoState.result, autoStatus, '自動作成の結果をコピーしました。'));
   useAutoResultButton.addEventListener('click', () => {
