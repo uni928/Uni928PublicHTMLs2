@@ -300,6 +300,85 @@ let combiningParts = new Set([
   console.log("削除されたcombiningParts:", removedCombiningParts);
 })();
   
+// 文字化けメーカー側と同じ重み付け・可視ノイズ・再抽選規則を使う。
+const REFERENCE_COMBINING_PARTS = Object.freeze([
+  [0x0334, 3],
+  [0x0300, 3], [0x0301, 4], [0x0302, 3], [0x0303, 4], [0x0304, 3],
+  [0x0307, 4], [0x0308, 3], [0x030A, 3], [0x030B, 3], [0x030C, 3],
+  [0x030D, 3], [0x030E, 3], [0x030F, 3], [0x0310, 3], [0x0311, 3],
+  [0x0312, 3], [0x0315, 3], [0x0316, 3], [0x0317, 3], [0x0318, 3],
+  [0x0319, 3], [0x031A, 3], [0x031B, 3], [0x0320, 3], [0x0321, 3],
+  [0x0322, 3], [0x0324, 3], [0x0325, 3], [0x0326, 3], [0x0327, 3],
+  [0x0328, 3], [0x0329, 3], [0x032A, 3], [0x032B, 3], [0x032C, 3],
+  [0x032D, 3], [0x032E, 3], [0x032F, 3], [0x0330, 3], [0x0331, 3],
+  [0x0332, 4], [0x0333, 3], [0x0346, 3], [0x0347, 3], [0x0348, 3],
+  [0x034D, 3], [0x034E, 3], [0x0350, 3], [0x0351, 3], [0x0352, 3],
+  [0x0353, 3], [0x0354, 3], [0x0355, 3], [0x0356, 3], [0x0357, 3],
+  [0x0358, 3], [0x0359, 3], [0x035A, 3], [0x035B, 3], [0x035C, 3],
+  [0x035D, 3], [0x035E, 3], [0x035F, 3], [0x0360, 3], [0x0361, 3],
+  [0x0362, 3], [0x0488, 3], [0x0489, 4]
+]);
+
+const REFERENCE_VISIBLE_PARTS = Object.freeze([
+  ["▒", 3], ["†", 2], ["▓", 3], ["▞", 2], ["■", 3]
+]);
+
+const MAKER_SYMBOLS = Object.freeze([
+  ...REFERENCE_COMBINING_PARTS.map(([codePoint, weight]) => ({
+    value: String.fromCodePoint(codePoint),
+    kind: "combining",
+    weight
+  })),
+  ...REFERENCE_VISIBLE_PARTS.map(([value, weight]) => ({
+    value,
+    kind: "visible",
+    weight
+  }))
+]);
+
+const MAKER_COMBINING_VALUES = new Set(
+  MAKER_SYMBOLS.filter(({kind}) => kind === "combining").map(({value}) => value)
+);
+const MAKER_VISIBLE_VALUES = new Set(
+  REFERENCE_VISIBLE_PARTS.map(([value]) => value)
+);
+let makerGlitchParts = MAKER_SYMBOLS.flatMap(({value, weight}) => (
+  Array.from({length: weight}, () => value)
+));
+
+// メーカー側と同じく、未割当文字・サロゲート・範囲外の文字を候補から除く。
+(() => {
+  let assignedRegex = null;
+
+  try {
+    assignedRegex = new RegExp("^\\p{Assigned}+$", "u");
+  } catch {
+    assignedRegex = null;
+  }
+
+  const isDefinedUnicodeString = (value) => {
+    if (typeof value !== "string" || value.length === 0) return false;
+
+    for (const char of value) {
+      const codePoint = char.codePointAt(0);
+      if (
+        codePoint === undefined ||
+        codePoint > 0x10FFFF ||
+        (codePoint >= 0xD800 && codePoint <= 0xDFFF)
+      ) return false;
+      if (assignedRegex && !assignedRegex.test(char)) return false;
+    }
+
+    return true;
+  };
+
+  makerGlitchParts = makerGlitchParts.filter(isDefinedUnicodeString);
+})();
+
+// 既存の変数へメーカー側の候補だけを設定する。
+glitchParts = makerGlitchParts;
+combiningParts = new Set(MAKER_COMBINING_VALUES);
+
 const glitchLevels=[0,0,0,1,1,2,3,4,3,1];
 
 function randInt(min,max){return Math.floor(Math.random()*(max-min+1))+min}
@@ -307,15 +386,36 @@ function pick(arr){return arr[Math.floor(Math.random()*arr.length)]}
 
 function makeGlitchChunk(level){
 const min=Math.max(1,Math.floor(level/3));
-const max=Math.max(2,Math.ceil(level*.7));
+const max=Math.max(2,Math.ceil(level*.9));
 const count=randInt(min,max);
-let chunk="";
-for(let n=0;n<count;n++){
+let sequence="";
+let addedCount=0;
+let attemptsForCurrentPart=0;
+let previousPartWasVisible=false;
+
+while(addedCount<count){
 let part=pick(glitchParts);
-if(n===0&&combiningParts.has(part)&&Math.random()<.3)part=Math.random()<.5?"■":"█";
-chunk+=part;
+
+if(addedCount===0&&MAKER_COMBINING_VALUES.has(part)&&Math.random()<.3){
+part=REFERENCE_VISIBLE_PARTS[
+randInt(0,REFERENCE_VISIBLE_PARTS.length-1)
+][0];
 }
-return chunk;
+
+attemptsForCurrentPart+=1;
+
+const partIsVisible=MAKER_VISIBLE_VALUES.has(part);
+const isRightOfVisiblePart=previousPartWasVisible&&!partIsVisible;
+
+// 四角系以外は5回目まで引き直す。四角系の右隣はそのまま付与する。
+if(!partIsVisible&&!isRightOfVisiblePart&&attemptsForCurrentPart<5)continue;
+
+sequence+=part;
+addedCount+=1;
+attemptsForCurrentPart=0;
+previousPartWasVisible=partIsVisible;
+}
+return sequence;
 }
 
 function glitchProbability(level){
@@ -333,7 +433,6 @@ result+=chars[n];
 const next=chars[n+1];
 if(next===undefined||chars[n]==="\n"||next==="\n")continue;
 if(Math.random()<probability)result+=makeGlitchChunk(level);
-if(level>=7&&Math.random()<(level-6)*.035)result+=makeGlitchChunk(Math.max(2,level-2));
 }
 return result;
 }
