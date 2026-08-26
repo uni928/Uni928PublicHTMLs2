@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>HTML Compressor</title>
+<style>
+@layer base,layout,components,responsive;
+
+/* base: foundational styles */
+@layer base{
+*{box-sizing:border-box}
+body{
+ margin:0;
+ min-height:100vh;
+ font-family:system-ui,sans-serif;
+ background:#f3f4f6;
+ color:#111827;
+ display:flex;
+ align-items:center;
+ justify-content:center;
+ padding:24px
+}
+h1{margin:0 0 10px;font-size:26px}
+}
+
+/* layout: page structure */
+@layer layout{
+.a{
+ width:min(760px,100%);
+ background:#fff;
+ border-radius:18px;
+ box-shadow:0 20px 60px #0002;
+ padding:28px
+}
+.m{
+ display:grid;
+ grid-template-columns:repeat(3,1fr);
+ gap:10px;
+ margin:0 0 18px
+}
+}
+
+/* components: UI elements */
+@layer components{
+.l{margin:0 0 20px;color:#4b5563;line-height:1.7}
+.m label{
+ border:2px solid #e5e7eb;
+ border-radius:14px;
+ padding:14px;
+ cursor:pointer;
+ background:#f9fafb
+}
+.m input{display:inline-block}
+.m b{display:block;margin:0 0 4px}
+.m span{display:block;color:#6b7280;font-size:13px;line-height:1.5}
+
+#d{
+ border:3px dashed #9ca3af;
+ border-radius:16px;
+ background:#f9fafb;
+ padding:42px 20px;
+ text-align:center;
+ cursor:pointer;
+ transition:.2s
+}
+#d.o{border-color:#2563eb;background:#eff6ff}
+
+.t{font-size:20px;font-weight:700;margin-bottom:8px}
+.s{color:#6b7280;line-height:1.6}
+#f{display:none}
+
+#r{
+ margin-top:18px;
+ padding:14px 16px;
+ border-radius:12px;
+ background:#f3f4f6;
+ color:#374151;
+ line-height:1.6;
+ white-space:pre-wrap
+}
+
+.n{
+ margin-top:18px;
+ padding:14px 16px;
+ border-left:4px solid #f59e0b;
+ background:#fffbeb;
+ color:#78350f;
+ border-radius:10px;
+ line-height:1.7;
+ font-size:14px
+}
+}
+
+/* responsive: mobile layout */
+@layer responsive{
+@media(max-width:640px){
+ .m{grid-template-columns:1fr}
+}
+}
+</style>
+</head>
+
+<body>
+<main class="a">
+
+<h1>HTML Compressor</h1>
+
+<p class="l">
+Drop a single HTML file here to automatically select the smallest
+available compression format and generate a self-extracting HTML file
+without modifying the original HTML.
+</p>
+
+<div class="m">
+
+<label>
+<input type="radio" name="mode" value="safe" checked>
+<b>Safe</b>
+<span>
+HTML, CSS, and JavaScript are left untouched;
+only the compression format is optimized.
+</span>
+</label>
+
+<label>
+<input type="radio" name="mode" value="try">
+<b>Experimental</b>
+<span>
+Before compression, conservatively tidy CSS, JavaScript, and comments
+while preserving meaningful whitespace in the HTML body.
+</span>
+</label>
+
+<label>
+<input type="radio" name="mode" value="clean">
+<b>Clean Only</b>
+<span>
+Performs the same conservative cleanup as Experimental,
+but saves a regular HTML file without self-extracting compression.
+</span>
+</label>
+
+</div>
+
+<div id="d">
+<div class="t">Drop an .html file here</div>
+<div class="s">or click to choose a file</div>
+<input id="f" type="file" accept=".html,.htm,text/html">
+</div>
+
+<div id="r">Ready.</div>
+
+<div class="n">
+Safe never changes the original HTML.
+Experimental and Clean Only generally preserve text in the HTML body and whitespace between tags so that displayed content remains unchanged, while tidying CSS, JavaScript, and comments.
+Because cleanup is performed mechanically, unusual code may behave differently. Always check the appearance and functionality after cleanup.
+JavaScript // line comments are protected so they are not joined with following code on the same line.
+</div>
+
+</main>
+
+<script>
+const d=document.getElementById('d');
+const f=document.getElementById('f');
+const r=document.getElementById('r');
+const VOID_HTML_TAGS=new Set(['area','base','br','col','embed','hr','img','input','link','meta','param','source','track','wbr']);
+
+d.onclick=()=>f.click();
+
+f.onchange=()=>{
+ if(f.files[0])run(f.files[0]);
+ f.value=''
+};
+
+for(const e of ['dragenter','dragover']){
+ d.addEventListener(e,x=>{
+  x.preventDefault();
+  d.classList.add('o')
+ })
+}
+
+for(const e of ['dragleave','drop']){
+ d.addEventListener(e,x=>{
+  x.preventDefault();
+  d.classList.remove('o')
+ })
+}
+
+d.ondrop=e=>{
+ const x=e.dataTransfer.files[0];
+ if(x)run(x)
+};
+
+async function run(file){
+ if(!/\.html?$/i.test(file.name)){
+  msg('Please select an HTML file.');
+  return
+ }
+
+ try{
+  const mode=document.querySelector('input[name="mode"]:checked').value;
+  const modeLabel=mode==='safe'?'Safe':mode==='try'?'Experimental':'Clean Only';
+
+  if(mode!=='clean'&&(!window.CompressionStream||!window.DecompressionStream)){
+   throw Error('This browser does not support the compression and decompression APIs.')
+  }
+
+  msg('Processing with '+modeLabel+'...');
+  const src=await file.text();
+  const body=mode==='safe'?src:compactHtml(src);
+  const srcBytes=new TextEncoder().encode(src);
+  const bodyBytes=new TextEncoder().encode(body);
+
+  if(mode==='clean'){
+   const name=file.name.replace(/\.html?$/i,'')+'.clean.html';
+   download(name,body);
+   const reduction=100-bodyBytes.length/srcBytes.length*100;
+   msg('Complete.\n'+
+    'Mode: Clean Only\n'+
+    'Original size: '+fmt(srcBytes.length)+'\n'+
+    'Cleaned HTML: '+fmt(bodyBytes.length)+'\n'+
+    'Reduction from original: '+reduction.toFixed(2)+'%\n'+
+    'Self-extracting compression: None\n'+
+    'Output: '+name);
+   return
+  }
+
+  msg('Comparing available compression formats...');
+  const best=await findBestCompression(bodyBytes);
+  const b64=bytesToBase64(best.bytes);
+  const out=makePackedHtml(b64,best.format);
+  let restoreCheck='Not performed';
+
+  if(mode==='safe'){
+   msg('Verifying Safe-mode restoration...');
+   const restoredText=await verifyPackedHtml(b64,best.format);
+   if(restoredText!==src){
+    throw Error('Restoration verification failed. The restored HTML does not match the original.')
+   }
+   restoreCheck='Success (an exact match with the original HTML)';
+  }
+
+  const outBytes=new TextEncoder().encode(out).length;
+  const name=file.name.replace(/\.html?$/i,'')+'.'+mode+'.packed.html';
+  download(name,out);
+  const reduction=100-outBytes/srcBytes.length*100;
+
+  msg('Complete.\n'+
+   'Mode: '+modeLabel+'\n'+
+   'Selected format: '+best.format+'\n'+
+   'Original size: '+fmt(srcBytes.length)+'\n'+
+   'Data before compression: '+fmt(bodyBytes.length)+'\n'+
+   'Compressed data: '+fmt(best.bytes.length)+'\n'+
+   'Final HTML: '+fmt(outBytes)+'\n'+
+   (mode==='safe'?'Restoration check: '+restoreCheck+'\n':'')+
+   'Reduction from original: '+reduction.toFixed(2)+'%\n'+
+   'Output: '+name);
+
+ }catch(e){
+  msg('Error: '+e.message)
+ }
+}
+
+/*
+ Try every available compression format and use the smallest result.
+*/
+async function findBestCompression(bytes){
+
+ const formats=[
+  'brotli',
+  'deflate-raw',
+  'gzip'
+ ];
+
+ const results=[];
+
+ for(const format of formats){
+  try{
+   /*
+    Confirm that decompression is available as well as compression.
+   */
+   new DecompressionStream(format);
+
+   const compressed=
+    await compress(bytes,format);
+
+   /*
+    Decompress the result as an additional check and
+    verify that it matches the original data byte for byte.
+   */
+   const restored=
+    await decompress(compressed,format);
+
+   if(!sameBytes(bytes,restored)){
+    continue
+   }
+
+   results.push({
+    format,
+    bytes:compressed
+   });
+
+  }catch(e){
+   /*
+    Ignore unsupported formats.
+   */
+  }
+ }
+
+ if(!results.length){
+  throw Error(
+   'No supported compression formats are available.'
+  )
+ }
+
+ results.sort(
+  (a,b)=>a.bytes.length-b.bytes.length
+ );
+
+ return results[0]
+}
+
+async function compress(bytes,format){
+ const stream=
+  new Blob([bytes])
+  .stream()
+  .pipeThrough(
+   new CompressionStream(format)
+  );
+
+ return new Uint8Array(
+  await new Response(stream).arrayBuffer()
+ )
+}
+
+async function decompress(bytes,format){
+ const stream=
+  new Blob([bytes])
+  .stream()
+  .pipeThrough(
+   new DecompressionStream(format)
+  );
+
+ return new Uint8Array(
+  await new Response(stream).arrayBuffer()
+ )
+}
+
+function sameBytes(a,b){
+ if(a.length!==b.length)return false;
+
+ for(let i=0;i<a.length;i++){
+  if(a[i]!==b[i])return false
+ }
+
+ return true
+}
+
+  function normalizeText(value) {
+    return String(value || "").replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n");
+  }
+
+  function trimLines(value, removeEmptyLines) {
+    const lines = normalizeText(value).split("\n").map((line) => line.trim());
+    return (removeEmptyLines ? lines.filter(Boolean) : lines).join("\n");
+  }
+
+  function compactCss(value, removeComments, compactWhitespace) {
+    let compacted = trimLines(value, compactWhitespace);
+    if (removeComments) compacted = compacted.replace(/\/\*[\s\S]*?\*\//g, "");
+    if (compactWhitespace) {
+      compacted = compacted.replace(/[ \t]+/g, " ").replace(/\s*([{}:;,])\s*/g, "$1").trim();
+    }
+    return compacted;
+  }
+
+  function compactCssOneRule(value) {
+    const css = compactCss(value, true, true);
+    if (!true || !css) return css;
+    const containerAtRules = /^(?:@media|@supports|@layer|@container|@document|@scope|@keyframes|-webkit-keyframes|-moz-keyframes)\b/i;
+
+    const findMatchingBrace = (source, openIndex) => {
+      let depth = 0, quote = "", escaped = false;
+      for (let index = openIndex; index < source.length; index += 1) {
+        const character = source[index];
+        if (quote) {
+          if (escaped) escaped = false;
+          else if (character === "\\") escaped = true;
+          else if (character === quote) quote = "";
+          continue;
+        }
+        if (character === "'" || character === '"') { quote = character; escaped = false; continue; }
+        if (character === "{") depth += 1;
+        else if (character === "}") { depth -= 1; if (depth === 0) return index; }
+      }
+      return -1;
+    };
+
+    const formatBlock = (source) => {
+      const lines = [];
+      let index = 0;
+      while (index < source.length) {
+        while (index < source.length && /\s/.test(source[index])) index += 1;
+        if (index >= source.length) break;
+        let quote = "", escaped = false, delimiterIndex = -1, delimiter = "";
+        for (let cursor = index; cursor < source.length; cursor += 1) {
+          const character = source[cursor];
+          if (quote) {
+            if (escaped) escaped = false;
+            else if (character === "\\") escaped = true;
+            else if (character === quote) quote = "";
+            continue;
+          }
+          if (character === "'" || character === '"') { quote = character; escaped = false; continue; }
+          if (character === "{" || character === ";") { delimiterIndex = cursor; delimiter = character; break; }
+        }
+        if (delimiterIndex < 0) { const tail = source.slice(index).trim(); if (tail) lines.push(tail); break; }
+        if (delimiter === ";") { const statement = source.slice(index, delimiterIndex + 1).trim(); if (statement) lines.push(statement); index = delimiterIndex + 1; continue; }
+        const header = source.slice(index, delimiterIndex).trim();
+        const closeIndex = findMatchingBrace(source, delimiterIndex);
+        if (closeIndex < 0) { const tail = source.slice(index).trim(); if (tail) lines.push(tail); break; }
+        const body = source.slice(delimiterIndex + 1, closeIndex).trim();
+        if (containerAtRules.test(header)) {
+          lines.push(header + "{");
+          const nested = formatBlock(body);
+          if (nested) lines.push(nested);
+          lines.push("}");
+        } else {
+          lines.push(header + "{" + body + "}");
+        }
+        index = closeIndex + 1;
+      }
+      return lines.join("\n");
+    };
+    return formatBlock(css);
+  }
+
+  function canStartJavaScriptRegex(value) {
+    const trimmed = String(value || "").trim();
+    if (!trimmed) return true;
+    const lastCharacter = trimmed[trimmed.length - 1];
+    if ("([{,:;=!?&|+-*%^~<>".includes(lastCharacter)) return true;
+    return /(?:^|[\s.(?:])(?:return|throw|case|delete|void|typeof|instanceof|in|of|yield|await|else|do)$/.test(trimmed);
+  }
+
+  function isValidJavaScript(value) {
+    try {
+      Function(String(value || ""));
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  function nestBraceCode(value, splitSemicolons = false) {
+    const normalized = normalizeText(value).trim();
+    if (!normalized) return "";
+    const lines = [];
+    let buffer = "", depth = 0, quote = "", escaped = false, regex = false, regexClass = false, regexEscaped = false, lineComment = false, blockComment = false;
+    const pushLine = (text, lineDepth = depth) => { const trimmed = text.trim(); if (trimmed) lines.push("  ".repeat(Math.max(0, lineDepth)) + trimmed); };
+    const flush = () => { pushLine(buffer, depth); buffer = ""; };
+
+    for (let index = 0; index < normalized.length; index += 1) {
+      const character = normalized[index];
+      const next = normalized[index + 1] || "";
+      if (lineComment) {
+        buffer += character;
+        if (character === "\n") { lineComment = false; flush(); }
+        continue;
+      }
+      if (blockComment) {
+        buffer += character;
+        if (character === "*" && next === "/") { buffer += "/"; index += 1; blockComment = false; }
+        continue;
+      }
+      if (regex) {
+        buffer += character;
+        if (regexEscaped) regexEscaped = false;
+        else if (character === "\\") regexEscaped = true;
+        else if (character === "[" && !regexClass) regexClass = true;
+        else if (character === "]" && regexClass) regexClass = false;
+        else if (character === "/" && !regexClass) regex = false;
+        continue;
+      }
+      if (quote) {
+        buffer += character;
+        if (escaped) escaped = false;
+        else if (character === "\\") escaped = true;
+        else if (character === quote) quote = "";
+        if (character === "\n" && quote !== "`") flush();
+        continue;
+      }
+      if (character === "/" && next === "/") { buffer += "//"; index += 1; lineComment = true; continue; }
+      if (character === "/" && next === "*") { buffer += "/*"; index += 1; blockComment = true; continue; }
+      if (character === "/" && canStartJavaScriptRegex(buffer)) { buffer += character; regex = true; regexClass = false; regexEscaped = false; continue; }
+      if (["'", '"', "`"].includes(character)) { quote = character; escaped = false; buffer += character; continue; }
+      if (/^}[,;,)\]]*$/.test(buffer.trim()) && !/[\s;,)\]]/.test(character)) flush();
+      if (character === "{") { pushLine(buffer + "{", depth); buffer = ""; depth += 1; continue; }
+      if (character === "}") { flush(); depth = Math.max(0, depth - 1); buffer = "}"; continue; }
+      if (splitSemicolons && character === ";") { pushLine(buffer + ";", depth); buffer = ""; continue; }
+      if (character === "\n") { flush(); continue; }
+      buffer += character;
+    }
+    flush();
+    return lines.join("\n");
+  }
+
+  function compactFunctionCode(value) {
+    const original = normalizeText(value).trim();
+    const nested = nestBraceCode(value);
+    const sourceLines = nested.split("\n").map((line) => line.trim()).filter(Boolean);
+    if (!sourceLines.length) return "";
+    const output = [];
+    let current = "", inNamedFunction = false, functionDepth = 0, quote = "", escaped = false, blockComment = false;
+    const append = (line) => { current += (current ? " " : "") + line; };
+    const flush = () => { const trimmed = current.trim(); if (trimmed) output.push(trimmed); current = ""; };
+    const startsNamedFunction = (line) => /^(?:async\s+)?function\s+[A-Za-z_$][\w$]*\s*\(/.test(line);
+    const hasLineComment = (line) => {
+      let localQuote = "", localEscaped = false, localBlock = false, localRegex = false, localRegexClass = false, localRegexEscaped = false;
+      for (let index = 0; index < line.length; index += 1) {
+        const ch = line[index], next = line[index + 1] || "";
+        if (localBlock) { if (ch === "*" && next === "/") { localBlock = false; index += 1; } continue; }
+        if (localRegex) {
+          if (localRegexEscaped) localRegexEscaped = false;
+          else if (ch === "\\") localRegexEscaped = true;
+          else if (ch === "[" && !localRegexClass) localRegexClass = true;
+          else if (ch === "]" && localRegexClass) localRegexClass = false;
+          else if (ch === "/" && !localRegexClass) localRegex = false;
+          continue;
+        }
+        if (localQuote) { if (localEscaped) localEscaped = false; else if (ch === "\\") localEscaped = true; else if (ch === localQuote) localQuote = ""; continue; }
+        if (ch === "/" && next === "*") { localBlock = true; index += 1; continue; }
+        if (ch === "/" && next === "/") return true;
+        if (ch === "/" && canStartJavaScriptRegex(line.slice(0, index))) { localRegex = true; localRegexClass = false; localRegexEscaped = false; continue; }
+        if (["'", '"', "`"].includes(ch)) localQuote = ch;
+      }
+      return false;
+    };
+    const braceDelta = (line) => {
+      let delta = 0, lineComment = false, localRegex = false, localRegexClass = false, localRegexEscaped = false;
+      for (let index = 0; index < line.length; index += 1) {
+        const character = line[index], next = line[index + 1] || "";
+        if (lineComment) break;
+        if (blockComment) { if (character === "*" && next === "/") { blockComment = false; index += 1; } continue; }
+        if (localRegex) {
+          if (localRegexEscaped) localRegexEscaped = false;
+          else if (character === "\\") localRegexEscaped = true;
+          else if (character === "[" && !localRegexClass) localRegexClass = true;
+          else if (character === "]" && localRegexClass) localRegexClass = false;
+          else if (character === "/" && !localRegexClass) localRegex = false;
+          continue;
+        }
+        if (quote) { if (escaped) escaped = false; else if (character === "\\") escaped = true; else if (character === quote) quote = ""; continue; }
+        if (character === "/" && next === "/") { lineComment = true; break; }
+        if (character === "/" && next === "*") { blockComment = true; index += 1; continue; }
+        if (character === "/" && canStartJavaScriptRegex(line.slice(0, index))) { localRegex = true; localRegexClass = false; localRegexEscaped = false; continue; }
+        if (["'", '"', "`"].includes(character)) { quote = character; escaped = false; continue; }
+        if (character === "{") delta += 1; else if (character === "}") delta -= 1;
+      }
+      return delta;
+    };
+
+    for (const line of sourceLines) {
+      const namedFunctionStart = startsNamedFunction(line);
+      if (namedFunctionStart && !inNamedFunction) { flush(); inNamedFunction = true; functionDepth = 0; }
+      append(line);
+      const delta = braceDelta(line);
+      if (inNamedFunction) {
+        functionDepth += delta;
+        if (hasLineComment(line)) flush();
+        if (functionDepth <= 0 && /}/.test(line)) { flush(); inNamedFunction = false; functionDepth = 0; }
+      } else if (hasLineComment(line)) {
+        flush();
+      }
+    }
+    flush();
+    const formatted = output.join("\n");
+    return isValidJavaScript(formatted) ? formatted : original;
+  }
+
+  function nestMarkup(value) {
+    let normalized = normalizeText(value).trim();
+    if (!normalized) return "";
+    const specialBlocks = [];
+    normalized = normalized.replace(/<(script|style)\b([^>]*)>([\s\S]*?)<\/\1\s*>/gi, (all, tagName, attrs, body) => {
+      const name = tagName.toLowerCase();
+      const formattedBody = name === "script" ? compactFunctionCode(body) : compactCssOneRule(body);
+      const marker = "\u0005" + specialBlocks.length + "\u0006";
+      specialBlocks.push("<" + tagName + attrs + ">\n" + formattedBody + "\n</" + tagName + ">");
+      return marker;
+    });
+    const tokens = [];
+    let text = "";
+    const pushText = () => { if (text) tokens.push({ type: "text", value: text }); text = ""; };
+    for (let index = 0; index < normalized.length;) {
+      if (normalized[index] !== "<") { text += normalized[index]; index += 1; continue; }
+      const next = normalized[index + 1] || "";
+      if (!/[A-Za-z/!?]/.test(next)) { text += "<"; index += 1; continue; }
+      if (normalized.startsWith("<!--", index)) {
+        const commentEnd = normalized.indexOf("-->", index + 4);
+        if (commentEnd < 0) { text += normalized.slice(index); break; }
+        pushText(); tokens.push({ type: "tag", value: normalized.slice(index, commentEnd + 3) }); index = commentEnd + 3; continue;
+      }
+      let quote = "", end = index + 1;
+      for (; end < normalized.length; end += 1) {
+        const character = normalized[end];
+        if (quote) { if (character === quote && normalized[end - 1] !== "\\") quote = ""; }
+        else if (["'", '"'].includes(character)) quote = character;
+        else if (character === ">") break;
+      }
+      if (end >= normalized.length) { text += normalized.slice(index); break; }
+      pushText(); tokens.push({ type: "tag", value: normalized.slice(index, end + 1) }); index = end + 1;
+    }
+    pushText();
+    const lines = [];
+    let depth = 0;
+    const push = (value, lineDepth = depth) => { const trimmed = value.trim(); if (trimmed) lines.push("  ".repeat(Math.max(0, lineDepth)) + trimmed); };
+    for (const token of tokens) {
+      if (token.type === "text") { push(token.value.replace(/\s+/g, " "), depth); continue; }
+      const tag = token.value.trim();
+      const closing = /^<\//.test(tag), commentOrDeclaration = /^<!--|^<!|^<\?/.test(tag), selfClosing = /\/\s*>$/.test(tag);
+      const nameMatch = /^<\/?([A-Za-z][\w:-]*)/.exec(tag);
+      const tagName = nameMatch ? nameMatch[1].toLowerCase() : "";
+      if (closing) depth = Math.max(0, depth - 1);
+      push(tag, depth);
+      if (!closing && !commentOrDeclaration && !selfClosing && !VOID_HTML_TAGS.has(tagName)) depth += 1;
+    }
+    return lines.join("\n").replace(/\u0005(\d+)\u0006/g, (_, index) => specialBlocks[Number(index)] || "");
+  }
+
+  function protectBlocks(value) {
+    const protectedBlocks = [];
+    const protectedText = value.replace(/<(pre|textarea|script|style)\b[^>]*>[\s\S]*?<\/\1>/gi, (block) => {
+      const marker = "\u0001" + protectedBlocks.length + "\u0002";
+      protectedBlocks.push(block);
+      return marker;
+    });
+    return { protectedBlocks, protectedText };
+  }
+
+  function restoreBlocks(value, protectedBlocks) {
+    return value.replace(/\u0001(\d+)\u0002/g, (_, index) => protectedBlocks[Number(index)] || "");
+  }
+
+  function compactMarkup(value, removeComments) {
+    /*
+      Do not change whitespace in the HTML body because it may affect display.
+      Fully protect pre / textarea and clean only the contents of script / style individually.
+      This function is used by both Experimental and Clean Only through compactHtml().
+    */
+    const protectedBlocks = [];
+    let compacted = normalizeText(value).replace(/<(pre|textarea)\b[^>]*>[\s\S]*?<\/\1>/gi, (block) => {
+      const marker = "\u0001" + protectedBlocks.length + "\u0002";
+      protectedBlocks.push(block);
+      return marker;
+    });
+
+    compacted = compacted.replace(/<(script|style)\b([^>]*)>([\s\S]*?)<\/\1\s*>/gi, (all, tagName, attrs, body) => {
+      const name = tagName.toLowerCase();
+      const formattedBody = name === "script" ? compactFunctionCode(body) : compactCssOneRule(body);
+      return "<" + tagName + attrs + ">\n" + formattedBody + "\n</" + tagName + ">";
+    });
+
+    if (removeComments) compacted = compacted.replace(/<!--[\s\S]*?-->/g, "");
+    return restoreBlocks(compacted, protectedBlocks);
+  }
+
+  function compactHtml(value) {
+    /*
+      Do not use nestMarkup() for output because trimming, inserting line breaks,
+      and compressing \s+ in text may add or remove meaningful whitespace between inline elements.
+    */
+    return compactMarkup(value, true);
+  }
+
+
+
+async function verifyPackedHtml(b64,format){
+ return new Promise((resolve,reject)=>{
+  const token=
+   'verify-'+Date.now()+'-'+Math.random().toString(36).slice(2);
+
+  const frame=document.createElement('iframe');
+
+  frame.setAttribute('sandbox','allow-scripts');
+  frame.hidden=true;
+
+  const timeout=setTimeout(()=>{
+   cleanup();
+   reject(Error('Restoration verification timed out.'))
+  },10000);
+
+  function cleanup(){
+   clearTimeout(timeout);
+   window.removeEventListener('message',onMessage);
+   frame.remove()
+  }
+
+  function onMessage(e){
+   const data=e.data;
+
+   if(!data||data.token!==token)return;
+
+   cleanup();
+
+   if(data.ok){
+    resolve(data.html)
+   }else{
+    reject(Error('Restoration verification error: '+data.error))
+   }
+  }
+
+  window.addEventListener('message',onMessage);
+
+  frame.srcdoc=makeVerifyHtml(b64,format,token);
+  document.body.appendChild(frame)
+ })
+}
+
+function makeVerifyHtml(b64,format,token){
+ const q=s=>JSON.stringify(s);
+
+ return '<!doctype html><meta charset=utf-8>'+ 
+ '<script>'+ 
+ '(async()=>{try{'+ 
+ 'let b='+q(b64)+',f='+q(format)+','+ 
+ 'x=Uint8Array.from(atob(b),c=>c.charCodeAt(0)),'+ 
+ 's=new Blob([x]).stream().pipeThrough(new DecompressionStream(f)),'+ 
+ 'h=new TextDecoder().decode(await new Response(s).arrayBuffer());'+ 
+ 'parent.postMessage({token:'+q(token)+',ok:true,html:h},"*")'+ 
+ '}catch(e){parent.postMessage({token:'+q(token)+',ok:false,error:e.message},"*")}})()'+ 
+ '<\/script>'
+}
+
+function bytesToBase64(bytes){
+ let s='';
+ const n=32768;
+
+ for(let i=0;i<bytes.length;i+=n){
+  s+=String.fromCharCode.apply(
+   null,
+   bytes.subarray(i,i+n)
+  )
+ }
+
+ return btoa(s)
+}
+
+function download(name,text){
+ const url=URL.createObjectURL(
+  new Blob(
+   [text],
+   {type:'text/html'}
+  )
+ );
+
+ const a=document.createElement('a');
+
+ a.href=url;
+ a.download=name;
+
+ document.body.appendChild(a);
+ a.click();
+ a.remove();
+
+ URL.revokeObjectURL(url)
+}
+
+function fmt(b){
+ return b<1024
+  ?b+' B'
+  :b<1048576
+   ?(b/1024).toFixed(1)+' KB'
+   :(b/1048576).toFixed(1)+' MB'
+}
+
+function msg(x){
+ r.textContent=x
+}
+
+function makePackedHtml(b64,format){
+
+ /*
+  This is the loader included in the generated file;
+  it is independent of the original HTML.
+  Keep it small to reduce overhead.
+ */
+
+ return '<!doctype html><meta charset=utf-8>'+
+ '<script>'+
+ 'let b="'+b64+'",f="'+format+'";'+
+ '(async()=>{try{'+
+ 'let x=Uint8Array.from(atob(b),c=>c.charCodeAt(0)),'+
+ 's=new Blob([x]).stream().pipeThrough(new DecompressionStream(f));'+
+ 'document.open();'+
+ 'document.write(new TextDecoder().decode(await new Response(s).arrayBuffer()));'+
+ 'document.close()'+
+ '}catch(e){document.body.textContent="Decompression error: "+e.message}})()'+
+ '<\/script>'
+}
+</script>
+
+</body>
+</html>
