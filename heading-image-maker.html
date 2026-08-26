@@ -395,81 +395,125 @@
     ctx.fillRect(0, 0, W, H);
   }
 
+  function drawSoftCircle(x, y, r, color, alpha = 1) {
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, color.replace('ALPHA', String(alpha)));
+    g.addColorStop(1, color.replace('ALPHA', '0'));
+    ctx.fillStyle = g;
+    ctx.fillRect(x - r, y - r, r * 2, r * 2);
+  }
+
+  function drawGrain(amount = 90, alpha = .045) {
+    let seed = 928;
+    const rand = () => {
+      seed = (seed * 1664525 + 1013904223) >>> 0;
+      return seed / 4294967296;
+    };
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    for (let i = 0; i < amount; i++) {
+      const x = rand() * W;
+      const y = rand() * H;
+      const r = .6 + rand() * 1.8;
+      ctx.fillStyle = rand() > .5 ? '#ffffff' : '#000000';
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
   function drawBackground(type) {
     ctx.clearRect(0, 0, W, H);
 
     if (type === 'minimal') {
-      setLinear([[0,'#f5f1e8'],[1,'#d8d5ce']]);
+      setLinear([[0,'#f7f4ed'],[.55,'#ebe5d9'],[1,'#d4d0c8']], 125);
+      drawSoftCircle(1065, 115, 360, 'rgba(255,255,255,ALPHA)', .62);
+      ctx.fillStyle = 'rgba(43,38,31,.07)';
+      ctx.beginPath(); ctx.arc(1115, 555, 290, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = 'rgba(255,255,255,.38)';
-      ctx.beginPath();
-      ctx.arc(1080, 105, 245, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.beginPath(); ctx.arc(1115, 555, 205, 0, Math.PI * 2); ctx.fill();
     }
 
     if (type === 'night') {
-      setLinear([[0,'#171b2a'],[.58,'#3c465f'],[1,'#11141d']]);
-      ctx.fillStyle = 'rgba(255,255,255,.06)';
-      ctx.beginPath();
-      ctx.arc(1050, 110, 280, 0, Math.PI * 2);
-      ctx.fill();
+      setLinear([[0,'#0e1422'],[.5,'#26344d'],[1,'#0d111b']], 128);
+      drawSoftCircle(1010, 90, 420, 'rgba(119,148,205,ALPHA)', .40);
+      drawSoftCircle(1110, 570, 300, 'rgba(120,91,153,ALPHA)', .28);
+      ctx.strokeStyle = 'rgba(255,255,255,.08)';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(1080, 160, 190, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(1080, 160, 245, 0, Math.PI * 2); ctx.stroke();
     }
 
     if (type === 'sky') {
-      setLinear([[0,'#b9ddf4'],[.55,'#f4f9fb'],[1,'#d9e9f5']]);
-      ctx.fillStyle = 'rgba(255,255,255,.55)';
-      for (let i = 0; i < 4; i++) {
-        ctx.beginPath();
-        ctx.ellipse(930 + i * 90, 155 + (i % 2) * 22, 150, 55, 0, 0, Math.PI * 2);
-        ctx.fill();
-      }
+      setLinear([[0,'#b7dff7'],[.52,'#eff8fd'],[1,'#c9deec']], 145);
+      drawSoftCircle(1090, 90, 310, 'rgba(255,255,255,ALPHA)', .75);
+      ctx.fillStyle = 'rgba(255,255,255,.62)';
+      [[850,170,175,55],[1010,135,210,66],[1160,205,190,58]].forEach(([x,y,rx,ry]) => {
+        ctx.beginPath(); ctx.ellipse(x,y,rx,ry,0,0,Math.PI*2); ctx.fill();
+      });
+      ctx.fillStyle = 'rgba(88,135,168,.09)';
+      ctx.beginPath(); ctx.ellipse(1080, 590, 370, 120, 0, 0, Math.PI * 2); ctx.fill();
     }
 
     if (type === 'warm') {
-      setLinear([[0,'#f6d6bd'],[.52,'#ef9c76'],[1,'#7b4c47']]);
-      ctx.fillStyle = 'rgba(255,240,220,.28)';
-      ctx.fillRect(0, H * .72, W, H * .28);
+      setLinear([[0,'#f5d4b8'],[.48,'#e99a78'],[1,'#75484a']], 130);
+      drawSoftCircle(1010, 90, 380, 'rgba(255,235,207,ALPHA)', .48);
+      ctx.fillStyle = 'rgba(255,244,225,.13)';
+      ctx.save();
+      ctx.translate(1060, 390);
+      ctx.rotate(-.18);
+      ctx.fillRect(-160,-330,125,720);
+      ctx.fillRect(30,-330,62,720);
+      ctx.restore();
     }
 
     if (type === 'forest') {
-      setLinear([[0,'#dfe8d8'],[.52,'#718574'],[1,'#293d35']]);
-      ctx.fillStyle = 'rgba(17,55,43,.14)';
-      for (let x = 770; x < 1300; x += 115) {
+      setLinear([[0,'#dce7d7'],[.48,'#7b927d'],[1,'#263b33']], 132);
+      drawSoftCircle(1030, 110, 350, 'rgba(240,251,224,ALPHA)', .36);
+      ctx.fillStyle = 'rgba(22,55,42,.18)';
+      for (let x = 760; x < 1350; x += 105) {
+        const h = 260 + ((x / 105) % 3) * 35;
         ctx.beginPath();
-        ctx.moveTo(x, 540);
-        ctx.lineTo(x + 55, 170);
-        ctx.lineTo(x + 110, 540);
+        ctx.moveTo(x, 620);
+        ctx.lineTo(x + 58, 620 - h);
+        ctx.lineTo(x + 116, 620);
         ctx.closePath();
         ctx.fill();
       }
+      ctx.fillStyle = 'rgba(255,255,255,.08)';
+      ctx.fillRect(0, 520, W, 150);
     }
 
     if (type === 'purple') {
-      setLinear([[0,'#e2d9f4'],[.55,'#9586c7'],[1,'#4d456e']]);
-      const rg = ctx.createRadialGradient(1030, 170, 10, 1030, 170, 270);
-      rg.addColorStop(0,'rgba(255,255,255,.34)');
-      rg.addColorStop(1,'rgba(255,255,255,0)');
-      ctx.fillStyle = rg;
-      ctx.fillRect(700, 0, 580, 520);
+      setLinear([[0,'#e7def5'],[.5,'#9b8bca'],[1,'#4b4368']], 128);
+      drawSoftCircle(1035, 145, 360, 'rgba(255,255,255,ALPHA)', .42);
+      ctx.strokeStyle = 'rgba(255,255,255,.12)';
+      ctx.lineWidth = 3;
+      for (let i = 0; i < 4; i++) {
+        ctx.beginPath();
+        ctx.arc(1050, 200, 90 + i * 55, -.8, 1.8);
+        ctx.stroke();
+      }
     }
 
     if (type === 'paper') {
-      ctx.fillStyle = '#f6f1e8';
+      ctx.fillStyle = '#f5efe4';
       ctx.fillRect(0,0,W,H);
-      ctx.strokeStyle = 'rgba(110,95,75,.16)';
-      ctx.lineWidth = 2;
-      for (let y = 0; y < H; y += 14) {
-        ctx.beginPath();
-        ctx.moveTo(0,y);
-        ctx.lineTo(W,y);
-        ctx.stroke();
+      drawSoftCircle(1080, 110, 340, 'rgba(255,255,255,ALPHA)', .52);
+      ctx.strokeStyle = 'rgba(100,82,62,.10)';
+      ctx.lineWidth = 1;
+      for (let y = 0; y < H; y += 13) {
+        ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke();
       }
-      ctx.fillStyle = 'rgba(255,255,255,.3)';
-      ctx.fillRect(0,0,W,H);
+      ctx.fillStyle = 'rgba(118,91,62,.07)';
+      ctx.save(); ctx.translate(1070,390); ctx.rotate(-.1); ctx.fillRect(-90,-240,180,480); ctx.restore();
     }
 
     if (type === 'grid') {
-      setLinear([[0,'#17202c'],[1,'#2a3d50']]);
-      ctx.strokeStyle = 'rgba(255,255,255,.08)';
+      setLinear([[0,'#111a27'],[1,'#2d4559']], 135);
+      drawSoftCircle(1050, 120, 390, 'rgba(77,142,179,ALPHA)', .28);
+      ctx.strokeStyle = 'rgba(255,255,255,.075)';
       ctx.lineWidth = 1;
       for (let x = 0; x <= W; x += 34) {
         ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke();
@@ -477,23 +521,43 @@
       for (let y = 0; y <= H; y += 34) {
         ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke();
       }
+      ctx.strokeStyle = 'rgba(255,255,255,.16)';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.rect(925, 130, 225, 225); ctx.stroke();
     }
 
     if (type === 'pop') {
-      setLinear([[0,'#f8efe8'],[1,'#a8cfe7']]);
-      ctx.fillStyle = '#fff4a8';
-      ctx.beginPath(); ctx.arc(240,175,115,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle = '#ffb8c4';
-      ctx.beginPath(); ctx.arc(1050,500,130,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle = 'rgba(255,255,255,.45)';
-      ctx.beginPath(); ctx.arc(1080,130,65,0,Math.PI*2); ctx.fill();
+      setLinear([[0,'#f8eee5'],[1,'#a6cde5']], 138);
+      ctx.fillStyle = '#ffe98f'; ctx.beginPath(); ctx.arc(1040,145,125,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#ffb6c2'; ctx.beginPath(); ctx.arc(1130,540,145,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#c4efdd'; ctx.beginPath(); ctx.arc(835,475,82,0,Math.PI*2); ctx.fill();
+      ctx.strokeStyle = 'rgba(50,55,65,.16)'; ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.moveTo(915,70); ctx.lineTo(1210,360); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(865,90); ctx.lineTo(1160,380); ctx.stroke();
     }
 
+    // タイトル側のコントラストを自然に整える
+    const darkTypes = new Set(['night','grid']);
+    const fade = ctx.createLinearGradient(0, 0, W * .72, 0);
+    if (darkTypes.has(type)) {
+      fade.addColorStop(0, 'rgba(3,7,14,.38)');
+      fade.addColorStop(.68, 'rgba(3,7,14,.08)');
+      fade.addColorStop(1, 'rgba(3,7,14,0)');
+    } else {
+      fade.addColorStop(0, 'rgba(255,255,255,.28)');
+      fade.addColorStop(.68, 'rgba(255,255,255,.06)');
+      fade.addColorStop(1, 'rgba(255,255,255,0)');
+    }
+    ctx.fillStyle = fade;
+    ctx.fillRect(0,0,W,H);
+
+    drawGrain(type === 'paper' ? 55 : 95, type === 'night' || type === 'grid' ? .035 : .025);
+
     if (overlay.value === 'light') {
-      ctx.fillStyle = 'rgba(255,255,255,.22)';
+      ctx.fillStyle = 'rgba(255,255,255,.18)';
       ctx.fillRect(0,0,W,H);
     } else if (overlay.value === 'dark') {
-      ctx.fillStyle = 'rgba(0,0,0,.22)';
+      ctx.fillStyle = 'rgba(0,0,0,.18)';
       ctx.fillRect(0,0,W,H);
     }
   }
@@ -523,49 +587,73 @@
   }
 
   function fitTitle(text) {
-    const maxWidth = align.value === 'center' ? 1010 : 930;
-    const maxHeight = 430;
-    let size = 92;
+    const center = align.value === 'center';
+    const maxWidth = center ? 1010 : 900;
+    const maxHeight = 410;
+    let size = text.trim().length <= 18 ? 104 : 94;
 
-    while (size >= 44) {
+    while (size >= 46) {
       const lines = splitText(text, maxWidth, size, weight.value);
-      const lineHeight = size * 1.28;
+      const lineHeight = size * 1.18;
       if (lines.length <= 4 && lines.length * lineHeight <= maxHeight) {
         return { size, lines, lineHeight };
       }
       size -= 2;
     }
 
-    const lines = splitText(text, maxWidth, 44, weight.value).slice(0,5);
-    return { size: 44, lines, lineHeight: 56 };
+    const lines = splitText(text, maxWidth, 46, weight.value).slice(0,5);
+    return { size: 46, lines, lineHeight: 56 };
   }
 
   function drawTitle() {
     const text = titleInput.value;
     const { size, lines, lineHeight } = fitTitle(text);
     const center = align.value === 'center';
-    const x = center ? W / 2 : 118;
+    const x = center ? W / 2 : 110;
     const totalHeight = lines.length * lineHeight;
-    let y = (H - totalHeight) / 2 + size * .82;
+    const top = (H - totalHeight) / 2;
+    let y = top + size * .86;
+
+    // 小さなアクセント。タイトル本体より目立たせない
+    ctx.save();
+    ctx.fillStyle = textColor.value;
+    ctx.globalAlpha = .78;
+    if (center) {
+      ctx.fillRect(W / 2 - 34, Math.max(78, top - 46), 68, 6);
+    } else {
+      ctx.fillRect(x, Math.max(78, top - 46), 78, 6);
+      ctx.globalAlpha = .24;
+      ctx.fillRect(x + 90, Math.max(78, top - 46), 28, 6);
+    }
+    ctx.restore();
 
     ctx.font = `${weight.value} ${size}px system-ui, sans-serif`;
     ctx.textAlign = center ? 'center' : 'left';
     ctx.textBaseline = 'alphabetic';
     ctx.fillStyle = textColor.value;
 
-    ctx.shadowColor = 'rgba(255,255,255,.18)';
-    ctx.shadowBlur = 1;
-    lines.forEach(line => {
-      ctx.fillText(line, x, y);
+    const darkText = textColor.value.toLowerCase() !== '#ffffff';
+    ctx.shadowColor = darkText ? 'rgba(255,255,255,.22)' : 'rgba(0,0,0,.28)';
+    ctx.shadowBlur = darkText ? 2 : 10;
+    ctx.shadowOffsetY = darkText ? 0 : 3;
+
+    lines.forEach((line, index) => {
+      // 最終行が極端に短い場合はわずかに字間を広げて安定感を出す
+      if (lines.length > 1 && index === lines.length - 1 && line.length <= 5 && !center) {
+        let cursor = x;
+        const spacing = 4;
+        for (const ch of line) {
+          ctx.fillText(ch, cursor, y);
+          cursor += ctx.measureText(ch).width + spacing;
+        }
+      } else {
+        ctx.fillText(line, x, y);
+      }
       y += lineHeight;
     });
-    ctx.shadowBlur = 0;
 
-    ctx.fillStyle = textColor.value;
-    ctx.globalAlpha = .55;
-    if (!center) ctx.fillRect(118, 110, 92, 7);
-    else ctx.fillRect(W/2 - 46, 110, 92, 7);
-    ctx.globalAlpha = 1;
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetY = 0;
   }
 
   function render() {
