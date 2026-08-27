@@ -637,92 +637,79 @@
   }
 
 
-  async function saveSheetAsImage() {
-    const sheet = $("sheet");
-    const width = sheet.scrollWidth;
-    const height = sheet.scrollHeight;
-    const scale = 2;
+async function saveSheetAsImage() {
+  const sheet = document.getElementById("sheet");
+  const width = sheet.scrollWidth;
+  const height = sheet.scrollHeight;
 
-    const clone = sheet.cloneNode(true);
+  const clone = sheet.cloneNode(true);
 
-    const sourceNodes = [sheet, ...sheet.querySelectorAll("*")];
-    const cloneNodes = [clone, ...clone.querySelectorAll("*")];
+  const sourceNodes = [sheet, ...sheet.querySelectorAll("*")];
+  const cloneNodes = [clone, ...clone.querySelectorAll("*")];
 
-    sourceNodes.forEach((source, index) => {
-      const target = cloneNodes[index];
-      if (!target) return;
-      const style = getComputedStyle(source);
-      let cssText = "";
-      for (const prop of style) {
-        cssText += `${prop}:${style.getPropertyValue(prop)};`;
-      }
-      target.setAttribute("style", cssText);
-    });
+  sourceNodes.forEach((source, index) => {
+    const target = cloneNodes[index];
+    if (!target) return;
 
-    clone.style.width = `${width}px`;
-    clone.style.height = `${height}px`;
-    clone.style.margin = "0";
-    clone.style.boxShadow = "none";
+    const style = getComputedStyle(source);
+    let cssText = "";
 
-    const wrapper = document.createElement("div");
-    wrapper.setAttribute("xmlns", "http://www.w3.org/1999/xhtml");
-    wrapper.style.width = `${width}px`;
-    wrapper.style.height = `${height}px`;
-    wrapper.appendChild(clone);
-
-    const serialized = new XMLSerializer().serializeToString(wrapper);
-    const svg = `
-      <svg xmlns="http://www.w3.org/2000/svg" width="${width * scale}" height="${height * scale}" viewBox="0 0 ${width} ${height}">
-        <foreignObject width="100%" height="100%">${serialized}</foreignObject>
-      </svg>
-    `;
-
-    const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-
-    try {
-      const img = new Image();
-      await new Promise((resolve, reject) => {
-        img.onload = resolve;
-        img.onerror = reject;
-        img.src = url;
-      });
-
-      const canvas = document.createElement("canvas");
-      canvas.width = width * scale;
-      canvas.height = height * scale;
-      const ctx = canvas.getContext("2d");
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-      const pngBlob = await new Promise(resolve => canvas.toBlob(resolve, "image/png", 1));
-      if (!pngBlob) throw new Error("PNG生成に失敗しました");
-
-      const downloadUrl = URL.createObjectURL(pngBlob);
-      const a = document.createElement("a");
-      const now = new Date();
-      const stamp = [
-        now.getFullYear(),
-        String(now.getMonth() + 1).padStart(2, "0"),
-        String(now.getDate()).padStart(2, "0"),
-        "_",
-        String(now.getHours()).padStart(2, "0"),
-        String(now.getMinutes()).padStart(2, "0")
-      ].join("");
-      a.href = downloadUrl;
-      a.download = `free-match-sheet_${stamp}.png`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
-    } catch (error) {
-      console.error(error);
-      alert("画像保存に失敗しました。別のブラウザでお試しください。");
-    } finally {
-      URL.revokeObjectURL(url);
+    for (const prop of style) {
+      cssText += `${prop}:${style.getPropertyValue(prop)};`;
     }
-  }
+
+    target.setAttribute("style", cssText);
+  });
+
+  clone.style.width = `${width}px`;
+  clone.style.height = `${height}px`;
+  clone.style.margin = "0";
+  clone.style.boxShadow = "none";
+
+  const wrapper = document.createElement("div");
+  wrapper.setAttribute("xmlns", "http://www.w3.org/1999/xhtml");
+  wrapper.style.width = `${width}px`;
+  wrapper.style.height = `${height}px`;
+  wrapper.appendChild(clone);
+
+  const serialized = new XMLSerializer().serializeToString(wrapper);
+
+  const svg = `
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="${width}"
+     height="${height}"
+     viewBox="0 0 ${width} ${height}">
+  <foreignObject width="100%" height="100%">
+    ${serialized}
+  </foreignObject>
+</svg>`;
+
+  const blob = new Blob(
+    [svg],
+    { type: "image/svg+xml;charset=utf-8" }
+  );
+
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+
+  const now = new Date();
+  const stamp =
+    now.getFullYear() +
+    String(now.getMonth() + 1).padStart(2, "0") +
+    String(now.getDate()).padStart(2, "0") +
+    "_" +
+    String(now.getHours()).padStart(2, "0") +
+    String(now.getMinutes()).padStart(2, "0");
+
+  a.href = url;
+  a.download = `free-match-sheet_${stamp}.svg`;
+
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 
   function resetAll() {
     els.title.value = "フリー対戦対戦相手募集！";
