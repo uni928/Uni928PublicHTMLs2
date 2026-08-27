@@ -1,6 +1,5 @@
 <!doctype html>
-<html lang="ja">
-<head>
+<html lang="ja"><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>フリー対戦 募集用紙メーカー</title>
@@ -105,9 +104,11 @@
     }
     .preview-wrap {
       padding: 16px 8px 34px;
+      overflow-x: auto;
     }
     .paper {
-      transform-origin: top center;
+      transform: none;
+      transform-origin: top left;
     }
   }
 }
@@ -288,17 +289,26 @@
   }
 
 .game-chip {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 10mm;
-  padding: 1.8mm 4mm;
+  display: inline-block;
+  position: relative;
+  height: 10mm;
+  padding: 0 4mm;
   border: 1.5px solid #202428;
   border-radius: 2.2mm;
+  vertical-align: top;
+  white-space: nowrap;
+  font-size: 0;
+}
+
+.game-chip-text {
+  display: block;
+  position: relative;
+  top: 50%;
+  transform: translateY(-56%);
   font-size: 13pt;
   font-weight: 800;
   line-height: 1;
-  vertical-align: middle;
+  white-space: nowrap;
 }
 
   .empty-note {
@@ -371,15 +381,63 @@
 
   .hidden { display: none; }
 
+  /* preview: 狭い画面でもA4実寸を維持し、必要なら横スクロールする */
   @media (max-width: 980px) {
     .paper {
-      width: min(210mm, calc(100vw - 16px));
-      min-height: auto;
+      width: var(--paper-width);
+      min-height: var(--paper-height);
     }
     .sheet {
-      min-height: auto;
+      min-height: var(--paper-height);
     }
   }
+
+  /* persistence: リアルタイム記憶・再編集用データ操作UI */
+  .memory-panel {
+    margin-top: 18px;
+    padding: 13px;
+    border: 1px solid var(--line);
+    border-radius: 13px;
+    background: var(--soft);
+  }
+
+  .memory-toggle {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-height: 40px;
+    font-size: 13px;
+    font-weight: 750;
+    cursor: pointer;
+  }
+
+  .memory-toggle input {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    padding: 0;
+    accent-color: var(--accent);
+  }
+
+  .memory-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .memory-actions .wide {
+    grid-column: 1 / -1;
+  }
+
+  .memory-status {
+    min-height: 1.4em;
+    margin-top: 8px;
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.4;
+  }
+
 }
 
 /* print: 印刷時はA4用紙だけを表示 */
@@ -395,19 +453,6 @@
       height: auto;
       background: #fff;
     }
-.game-chip {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 10mm;
-
-  /* 印刷時の日本語フォントの下寄りを補正 */
-  padding: 0 4mm 1mm;
-
-  font-size: 13pt;
-  line-height: 1;
-  transform: none;
-}
     .editor {
       display: none;
     }
@@ -461,15 +506,119 @@
 
     <div class="field">
       <label for="gamesInput">希望カードゲーム</label>
-      <textarea id="gamesInput" placeholder="1行に1つ入力&#10;例：カードゲームA&#10;カードゲームB">遊戯王
-ポケカ</textarea>
+      <textarea id="gamesInput" placeholder="1行に1つ入力
+例：カードゲームA
+カードゲームB"></textarea>
       <div class="hint">改行ごとに別の項目として表示します。</div>
     </div>
 
     <div class="field">
       <div class="deck-editor-title">所持デッキ</div>
-      <div id="deckEditorList" class="deck-editor-list"></div>
+      <div id="deckEditorList" class="deck-editor-list">
+      <div class="deck-editor" data-id="1">
+        <div class="deck-editor-top">
+          <strong>デッキ 1</strong>
+          <button class="mini-btn move-up" type="button" title="上へ">↑</button>
+          <button class="mini-btn move-down" type="button" title="下へ">↓</button>
+          <button class="mini-btn remove-deck" type="button" title="削除">×</button>
+        </div>
+        <div class="field">
+          <label>タイトル</label>
+          <input class="deck-title-input" value="遊戯王：ヌーベルズ" placeholder="例：デッキ名">
+        </div>
+        <div class="field">
+          <label>補足</label>
+          <textarea class="deck-note-input" placeholder="例：調整中 / カジュアル寄り">カジュアル寄りです。</textarea>
+        </div>
+        <div class="field">
+          <label>画像</label>
+          <input class="deck-image-input file-input" type="file" accept="image/*">
+          
+        </div>
+      </div>
+    
+      <div class="deck-editor" data-id="2">
+        <div class="deck-editor-top">
+          <strong>デッキ 2</strong>
+          <button class="mini-btn move-up" type="button" title="上へ">↑</button>
+          <button class="mini-btn move-down" type="button" title="下へ">↓</button>
+          <button class="mini-btn remove-deck" type="button" title="削除">×</button>
+        </div>
+        <div class="field">
+          <label>タイトル</label>
+          <input class="deck-title-input" value="遊戯王：ドラゴンメイド" placeholder="例：デッキ名">
+        </div>
+        <div class="field">
+          <label>補足</label>
+          <textarea class="deck-note-input" placeholder="例：調整中 / カジュアル寄り">ゆっくり遊べる対戦希望です。</textarea>
+        </div>
+        <div class="field">
+          <label>画像</label>
+          <input class="deck-image-input file-input" type="file" accept="image/*">
+          
+        </div>
+      </div>
+    
+      <div class="deck-editor" data-id="3">
+        <div class="deck-editor-top">
+          <strong>デッキ 3</strong>
+          <button class="mini-btn move-up" type="button" title="上へ">↑</button>
+          <button class="mini-btn move-down" type="button" title="下へ">↓</button>
+          <button class="mini-btn remove-deck" type="button" title="削除">×</button>
+        </div>
+        <div class="field">
+          <label>タイトル</label>
+          <input class="deck-title-input" value="ポケカ：サーナイトex" placeholder="例：デッキ名">
+        </div>
+        <div class="field">
+          <label>補足</label>
+          <textarea class="deck-note-input" placeholder="例：調整中 / カジュアル寄り">フリー対戦歓迎です。</textarea>
+        </div>
+        <div class="field">
+          <label>画像</label>
+          <input class="deck-image-input file-input" type="file" accept="image/*">
+          
+        </div>
+      </div>
+    
+      <div class="deck-editor" data-id="4">
+        <div class="deck-editor-top">
+          <strong>デッキ 4</strong>
+          <button class="mini-btn move-up" type="button" title="上へ">↑</button>
+          <button class="mini-btn move-down" type="button" title="下へ">↓</button>
+          <button class="mini-btn remove-deck" type="button" title="削除">×</button>
+        </div>
+        <div class="field">
+          <label>タイトル</label>
+          <input class="deck-title-input" value="ポケカ：リザードンex" placeholder="例：デッキ名">
+        </div>
+        <div class="field">
+          <label>補足</label>
+          <textarea class="deck-note-input" placeholder="例：調整中 / カジュアル寄り">調整中のデッキです。</textarea>
+        </div>
+        <div class="field">
+          <label>画像</label>
+          <input class="deck-image-input file-input" type="file" accept="image/*">
+          
+        </div>
+      </div>
+    </div>
       <button id="addDeckBtn" class="btn btn-secondary" type="button" style="width:100%;margin-top:10px;">＋ デッキを追加</button>
+    </div>
+
+    <div class="memory-panel">
+      <label class="memory-toggle" for="realtimeMemory">
+        <input id="realtimeMemory" type="checkbox" checked="">
+        <span>リアルタイム記憶</span>
+      </label>
+      <div class="hint">ONの間は編集中の内容とデッキ画像をIndexedDBへ自動保存し、次回起動時に続きから再開します。</div>
+      <div class="memory-actions">
+        <button id="exportBtn" class="btn btn-secondary" type="button">データを書き出す</button>
+        <button id="importBtn" class="btn btn-secondary" type="button">データを読み込む</button>
+        <button id="saveEditableBtn" class="btn btn-secondary wide" type="button">再編集可能なサイトとして保存</button>
+      </div>
+      <input id="importFileInput" type="file" accept="application/json,.json" hidden="">
+      <div id="memoryStatus" class="memory-status" aria-live="polite">前回の編集内容を復元しました</div>
     </div>
 
     <div class="actions">
@@ -483,19 +632,51 @@
     <div class="paper">
       <article class="sheet" id="sheet">
         <header class="sheet-header">
-          <h1 class="sheet-title" id="sheetTitle"></h1>
+          <h1 class="sheet-title" id="sheetTitle">フリー対戦対戦相手募集！</h1>
           <div class="sheet-subtitle hidden" id="sheetSubtitle"></div>
-          <div class="sheet-user hidden" id="sheetUser"></div>
+          <div class="sheet-user" id="sheetUser">@uni928</div>
         </header>
 
-        <section class="section hidden" id="gamesSection">
+        <section class="section" id="gamesSection">
           <div class="section-label">希望カードゲーム</div>
-          <div class="games" id="gamesPreview"></div>
+          <div class="games" id="gamesPreview"><div class="game-chip"><span class="game-chip-text">遊戯王</span></div><div class="game-chip"><span class="game-chip-text">ポケカ</span></div></div>
         </section>
 
-        <section class="section hidden" id="decksSection">
+        <section class="section" id="decksSection">
           <div class="section-label">所持デッキ</div>
-          <div class="deck-grid" id="decksPreview"></div>
+          <div class="deck-grid" id="decksPreview">
+        <div class="deck-card no-image">
+          
+          <div class="deck-body">
+            <div class="deck-title">遊戯王：ヌーベルズ</div>
+            <div class="deck-note">カジュアル寄りです。</div>
+          </div>
+        </div>
+      
+        <div class="deck-card no-image">
+          
+          <div class="deck-body">
+            <div class="deck-title">遊戯王：ドラゴンメイド</div>
+            <div class="deck-note">ゆっくり遊べる対戦希望です。</div>
+          </div>
+        </div>
+      
+        <div class="deck-card no-image">
+          
+          <div class="deck-body">
+            <div class="deck-title">ポケカ：サーナイトex</div>
+            <div class="deck-note">フリー対戦歓迎です。</div>
+          </div>
+        </div>
+      
+        <div class="deck-card no-image">
+          
+          <div class="deck-body">
+            <div class="deck-title">ポケカ：リザードンex</div>
+            <div class="deck-note">調整中のデッキです。</div>
+          </div>
+        </div>
+      </div>
         </section>
 
         <footer class="sheet-footer">フリー対戦歓迎です。お気軽にお声がけください。</footer>
@@ -504,36 +685,11 @@
   </main>
 </div>
 
-<script>
+<script id="embeddedEditableState" type="application/octet-stream">eyJhcHAiOiJmcmVlLW1hdGNoLW9wcG9uZW50LXNoZWV0LW1ha2VyIiwidmVyc2lvbiI6MSwiZXhwb3J0ZWRBdCI6IjIwMjYtMDgtMjdUMDE6MjY6MjIuMDQ2WiIsInJlYWx0aW1lRW5hYmxlZCI6dHJ1ZSwic3RhdGUiOnsidmVyc2lvbiI6MSwidGl0bGUiOiLjg5Xjg6rjg7zlr77miKblr77miKbnm7jmiYvli5/pm4bvvIEiLCJzdWJ0aXRsZSI6IiIsInVzZXIiOiJAdW5pOTI4IiwiZ2FtZXMiOiLpgYrmiK/njotcbuODneOCseOCqyIsImRlY2tzIjpbeyJpZCI6MSwidGl0bGUiOiLpgYrmiK/njovvvJrjg4zjg7zjg5njg6vjgroiLCJub3RlIjoi44Kr44K444Ol44Ki44Or5a+E44KK44Gn44GZ44CCIiwiaW1hZ2UiOiIifSx7ImlkIjoyLCJ0aXRsZSI6IumBiuaIr+eOi++8muODieODqeOCtOODs+ODoeOCpOODiSIsIm5vdGUiOiLjgobjgaPjgY/jgorpgYrjgbnjgovlr77miKbluIzmnJvjgafjgZnjgIIiLCJpbWFnZSI6IiJ9LHsiaWQiOjMsInRpdGxlIjoi44Od44Kx44Kr77ya44K144O844OK44Kk44OIZXgiLCJub3RlIjoi44OV44Oq44O85a++5oim5q2T6L+O44Gn44GZ44CCIiwiaW1hZ2UiOiIifSx7ImlkIjo0LCJ0aXRsZSI6IuODneOCseOCq++8muODquOCtuODvOODieODs2V4Iiwibm90ZSI6Iuiqv+aVtOS4reOBruODh+ODg+OCreOBp+OBmeOAgiIsImltYWdlIjoiIn1dLCJkZWNrU2VyaWFsIjo0fX0=</script><script>
 (() => {
   const DEFAULT_USER = "@XXXXXX";
-  let decks = [
-    {
-      id: 1,
-      title: "遊戯王：ヌーベルズ",
-      note: "カジュアル寄りです。",
-      image: ""
-    },
-    {
-      id: 2,
-      title: "遊戯王：ドラゴンメイド",
-      note: "ゆっくり遊べる対戦希望です。",
-      image: ""
-    },
-    {
-      id: 3,
-      title: "ポケカ：サーナイトex",
-      note: "フリー対戦歓迎です。",
-      image: ""
-    },
-    {
-      id: 4,
-      title: "ポケカ：リザードンex",
-      note: "調整中のデッキです。",
-      image: ""
-    }
-  ];
-  let deckSerial = 4;
+  let decks = [];
+  let deckSerial = 0;
 
   const $ = (id) => document.getElementById(id);
   const els = {
@@ -546,6 +702,12 @@
     resetBtn: $("resetBtn"),
     saveImageBtn: $("saveImageBtn"),
     printBtn: $("printBtn"),
+    realtimeMemory: $("realtimeMemory"),
+    exportBtn: $("exportBtn"),
+    importBtn: $("importBtn"),
+    saveEditableBtn: $("saveEditableBtn"),
+    importFileInput: $("importFileInput"),
+    memoryStatus: $("memoryStatus"),
     sheetTitle: $("sheetTitle"),
     sheetSubtitle: $("sheetSubtitle"),
     sheetUser: $("sheetUser"),
@@ -554,6 +716,261 @@
     decksSection: $("decksSection"),
     decksPreview: $("decksPreview")
   };
+
+
+
+  const DB_NAME = "freeMatchOpponentSheetMaker";
+  const DB_VERSION = 1;
+  const STORE_NAME = "settings";
+  let memoryReady = false;
+  let saveTimer = 0;
+
+  function setMemoryStatus(message) {
+    els.memoryStatus.textContent = message || "";
+  }
+
+  function openDatabase() {
+    return new Promise((resolve, reject) => {
+      if (!window.indexedDB) {
+        reject(new Error("IndexedDBに対応していません"));
+        return;
+      }
+      const request = indexedDB.open(DB_NAME, DB_VERSION);
+      request.onupgradeneeded = () => {
+        const db = request.result;
+        if (!db.objectStoreNames.contains(STORE_NAME)) {
+          db.createObjectStore(STORE_NAME);
+        }
+      };
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error || new Error("IndexedDBを開けませんでした"));
+    });
+  }
+
+  async function dbGet(key) {
+    const db = await openDatabase();
+    try {
+      return await new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, "readonly");
+        const request = tx.objectStore(STORE_NAME).get(key);
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+    } finally {
+      db.close();
+    }
+  }
+
+  async function dbSet(key, value) {
+    const db = await openDatabase();
+    try {
+      await new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, "readwrite");
+        tx.objectStore(STORE_NAME).put(value, key);
+        tx.oncomplete = resolve;
+        tx.onerror = () => reject(tx.error);
+        tx.onabort = () => reject(tx.error || new Error("IndexedDBへの保存に失敗しました"));
+      });
+    } finally {
+      db.close();
+    }
+  }
+
+  function getCurrentState() {
+    return {
+      version: 1,
+      title: els.title.value,
+      subtitle: els.subtitle.value,
+      user: els.user.value,
+      games: els.games.value,
+      decks: decks.map(deck => ({
+        id: Number(deck.id),
+        title: String(deck.title || ""),
+        note: String(deck.note || ""),
+        image: String(deck.image || "")
+      })),
+      deckSerial
+    };
+  }
+
+  function normalizeImportedState(raw) {
+    const state = raw && raw.state ? raw.state : raw;
+    if (!state || typeof state !== "object") {
+      throw new Error("編集データの形式が正しくありません");
+    }
+    const normalizedDecks = Array.isArray(state.decks) ? state.decks.slice(0, 100).map((deck, index) => ({
+      id: Number.isFinite(Number(deck && deck.id)) ? Number(deck.id) : index + 1,
+      title: typeof (deck && deck.title) === "string" ? deck.title : "",
+      note: typeof (deck && deck.note) === "string" ? deck.note : "",
+      image: typeof (deck && deck.image) === "string" ? deck.image : ""
+    })) : [];
+    const maxId = normalizedDecks.reduce((max, deck) => Math.max(max, deck.id), 0);
+    return {
+      version: 1,
+      title: typeof state.title === "string" ? state.title : "フリー対戦対戦相手募集！",
+      subtitle: typeof state.subtitle === "string" ? state.subtitle : "",
+      user: typeof state.user === "string" ? state.user : DEFAULT_USER,
+      games: typeof state.games === "string" ? state.games : "",
+      decks: normalizedDecks,
+      deckSerial: Math.max(Number(state.deckSerial) || 0, maxId)
+    };
+  }
+
+  function applyState(raw) {
+    const state = normalizeImportedState(raw);
+    els.title.value = state.title;
+    els.subtitle.value = state.subtitle;
+    els.user.value = state.user;
+    els.games.value = state.games;
+    decks = state.decks;
+    deckSerial = state.deckSerial;
+    renderDeckEditors();
+    render();
+  }
+
+  function scheduleRealtimeSave() {
+    if (!memoryReady || !els.realtimeMemory.checked) return;
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(async () => {
+      try {
+        await dbSet("editorState", getCurrentState());
+        setMemoryStatus("編集中の内容を保存しました");
+      } catch (error) {
+        console.error(error);
+        setMemoryStatus("自動保存に失敗しました");
+      }
+    }, 250);
+  }
+
+  function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  function makeTimestamp() {
+    const now = new Date();
+    return now.getFullYear() +
+      String(now.getMonth() + 1).padStart(2, "0") +
+      String(now.getDate()).padStart(2, "0") + "_" +
+      String(now.getHours()).padStart(2, "0") +
+      String(now.getMinutes()).padStart(2, "0");
+  }
+
+  function encodeBase64Utf8(text) {
+    const bytes = new TextEncoder().encode(text);
+    let binary = "";
+    const chunkSize = 0x8000;
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+      binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+    }
+    return btoa(binary);
+  }
+
+  function decodeBase64Utf8(base64) {
+    const binary = atob(base64.trim());
+    const bytes = Uint8Array.from(binary, char => char.charCodeAt(0));
+    return new TextDecoder().decode(bytes);
+  }
+
+  function getEmbeddedEditableData() {
+    const node = document.getElementById("embeddedEditableState");
+    if (!node || !node.textContent.trim()) return null;
+    try {
+      return JSON.parse(decodeBase64Utf8(node.textContent));
+    } catch (error) {
+      console.error("埋め込み編集データを読み込めませんでした", error);
+      return null;
+    }
+  }
+
+  function exportData() {
+    const payload = {
+      app: "free-match-opponent-sheet-maker",
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      state: getCurrentState()
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" });
+    downloadBlob(blob, `free-match-sheet_edit_${makeTimestamp()}.json`);
+    setMemoryStatus("編集データを書き出しました");
+  }
+
+  async function importDataFile(file) {
+    const text = await file.text();
+    const payload = JSON.parse(text);
+    applyState(payload);
+    if (els.realtimeMemory.checked) {
+      await dbSet("editorState", getCurrentState());
+    }
+    setMemoryStatus("編集データを読み込みました");
+  }
+
+  function saveEditableSite() {
+    const payload = {
+      app: "free-match-opponent-sheet-maker",
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      realtimeEnabled: els.realtimeMemory.checked,
+      state: getCurrentState()
+    };
+    const clone = document.documentElement.cloneNode(true);
+    const oldEmbedded = clone.querySelector("#embeddedEditableState");
+    if (oldEmbedded) oldEmbedded.remove();
+    const embedded = document.createElement("script");
+    embedded.id = "embeddedEditableState";
+    embedded.type = "application/octet-stream";
+    embedded.textContent = encodeBase64Utf8(JSON.stringify(payload));
+    const mainScript = Array.from(clone.querySelectorAll("body > script")).find(node => node.id !== "embeddedEditableState");
+    if (mainScript) {
+      clone.querySelector("body").insertBefore(embedded, mainScript);
+    } else {
+      clone.querySelector("body").appendChild(embedded);
+    }
+    const html = "<!doctype html>\n" + clone.outerHTML;
+    downloadBlob(new Blob([html], { type: "text/html;charset=utf-8" }), `free-match-sheet_editable_${makeTimestamp()}.html`);
+    setMemoryStatus("現在の内容を再編集可能なHTMLとして保存しました");
+  }
+
+  async function initializePersistence() {
+    let realtimeEnabled = true;
+    try {
+      const storedEnabled = await dbGet("realtimeEnabled");
+      if (typeof storedEnabled === "boolean") realtimeEnabled = storedEnabled;
+    } catch (error) {
+      console.warn("リアルタイム記憶の設定を読み込めませんでした", error);
+    }
+
+    const embedded = getEmbeddedEditableData();
+    if (embedded) {
+      realtimeEnabled = typeof embedded.realtimeEnabled === "boolean" ? embedded.realtimeEnabled : realtimeEnabled;
+      els.realtimeMemory.checked = realtimeEnabled;
+      applyState(embedded);
+      setMemoryStatus("保存HTMLに埋め込まれた編集内容を読み込みました");
+    } else {
+      els.realtimeMemory.checked = realtimeEnabled;
+      if (realtimeEnabled) {
+        try {
+          const saved = await dbGet("editorState");
+          if (saved) {
+            applyState(saved);
+            setMemoryStatus("前回の編集内容を復元しました");
+          }
+        } catch (error) {
+          console.warn("前回の編集内容を読み込めませんでした", error);
+          setMemoryStatus("保存内容を読み込めませんでした");
+        }
+      }
+    }
+
+    memoryReady = true;
+    if (els.realtimeMemory.checked && embedded) scheduleRealtimeSave();
+  }
 
   const escapeHtml = (value) => String(value)
     .replaceAll("&", "&amp;")
@@ -660,7 +1077,7 @@
     els.sheetUser.classList.toggle("hidden", !showUser);
 
     els.gamesSection.classList.toggle("hidden", games.length === 0);
-    els.gamesPreview.innerHTML = games.map(game => `<div class="game-chip">${escapeHtml(game)}</div>`).join("");
+    els.gamesPreview.innerHTML = games.map(game => `<div class="game-chip"><span class="game-chip-text">${escapeHtml(game)}</span></div>`).join("");
 
     const visibleDecks = decks.filter(deck => deck.title.trim() || deck.note.trim() || deck.image);
     els.decksSection.classList.toggle("hidden", visibleDecks.length === 0);
@@ -677,62 +1094,39 @@
         </div>
       `;
     }).join("");
+    scheduleRealtimeSave();
   }
 
 
 async function saveSheetAsImage() {
   try {
-    if (!window.html2canvas) {
-      await new Promise((resolve, reject) => {
-        const script = document.createElement("script");
-        script.src = "https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js";
-        script.onload = resolve;
-        script.onerror = reject;
-        document.head.appendChild(script);
-      });
-    }
-
     const sheet = document.getElementById("sheet");
 
-    const canvas = await html2canvas(sheet, {
-      scale: 2,
-      backgroundColor: "#ffffff",
-      useCORS: true,
-      allowTaint: true,
-      logging: false
-    });
-
-    const blob = await new Promise(resolve => {
-      canvas.toBlob(resolve, "image/png");
-    });
-
-    if (!blob) {
-      throw new Error("PNG生成に失敗しました");
+    if (document.fonts && document.fonts.ready) {
+      await document.fonts.ready;
     }
 
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
+    const module = await import("https://cdn.jsdelivr.net/npm/html-to-image@1.11.13/+esm");
 
-    const now = new Date();
-    const stamp =
-      now.getFullYear() +
-      String(now.getMonth() + 1).padStart(2, "0") +
-      String(now.getDate()).padStart(2, "0") +
-      "_" +
-      String(now.getHours()).padStart(2, "0") +
-      String(now.getMinutes()).padStart(2, "0");
+    const pixelRatio = 300 / 96;
+    const dataUrl = await module.toPng(sheet, {
+      cacheBust: true,
+      backgroundColor: "#ffffff",
+      pixelRatio,
+      width: sheet.scrollWidth,
+      height: sheet.scrollHeight,
+      canvasWidth: Math.round(sheet.scrollWidth * pixelRatio),
+      canvasHeight: Math.round(sheet.scrollHeight * pixelRatio),
+      style: {
+        margin: "0",
+        transform: "none",
+        boxShadow: "none"
+      }
+    });
 
-    a.href = url;
-    a.download = `free-match-sheet_${stamp}.png`;
-
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-
-    setTimeout(() => {
-      URL.revokeObjectURL(url);
-    }, 1000);
-
+    const response = await fetch(dataUrl);
+    const blob = await response.blob();
+    downloadBlob(blob, `free-match-sheet_${makeTimestamp()}.png`);
   } catch (error) {
     console.error(error);
     alert("画像の保存に失敗しました。");
@@ -743,34 +1137,9 @@ async function saveSheetAsImage() {
     els.title.value = "フリー対戦対戦相手募集！";
     els.subtitle.value = "";
     els.user.value = DEFAULT_USER;
-    els.games.value = "遊戯王\nポケカ";
-    decks = [
-      {
-        id: 1,
-        title: "遊戯王：ヌーベルズ",
-        note: "カジュアル寄りです。",
-        image: ""
-      },
-      {
-        id: 2,
-        title: "遊戯王：ドラゴンメイド",
-        note: "ゆっくり遊べる対戦希望です。",
-        image: ""
-      },
-      {
-        id: 3,
-        title: "ポケカ：サーナイトex",
-        note: "フリー対戦歓迎です。",
-        image: ""
-      },
-      {
-        id: 4,
-        title: "ポケカ：リザードンex",
-        note: "調整中のデッキです。",
-        image: ""
-      }
-    ];
-    deckSerial = 4;
+    els.games.value = "";
+    decks = [];
+    deckSerial = 0;
     renderDeckEditors();
     render();
   }
@@ -783,10 +1152,41 @@ async function saveSheetAsImage() {
   els.resetBtn.addEventListener("click", resetAll);
   els.saveImageBtn.addEventListener("click", saveSheetAsImage);
   els.printBtn.addEventListener("click", () => window.print());
+  els.exportBtn.addEventListener("click", exportData);
+  els.importBtn.addEventListener("click", () => els.importFileInput.click());
+  els.importFileInput.addEventListener("change", async () => {
+    const file = els.importFileInput.files && els.importFileInput.files[0];
+    if (!file) return;
+    try {
+      await importDataFile(file);
+    } catch (error) {
+      console.error(error);
+      alert("編集データの読み込みに失敗しました。");
+    } finally {
+      els.importFileInput.value = "";
+    }
+  });
+  els.saveEditableBtn.addEventListener("click", saveEditableSite);
+  els.realtimeMemory.addEventListener("change", async () => {
+    try {
+      await dbSet("realtimeEnabled", els.realtimeMemory.checked);
+      if (els.realtimeMemory.checked) {
+        await dbSet("editorState", getCurrentState());
+        setMemoryStatus("リアルタイム記憶をONにし、現在の内容を保存しました");
+      } else {
+        clearTimeout(saveTimer);
+        setMemoryStatus("リアルタイム記憶をOFFにしました");
+      }
+    } catch (error) {
+      console.error(error);
+      setMemoryStatus("記憶設定の保存に失敗しました");
+    }
+  });
 
   renderDeckEditors();
   render();
+  initializePersistence();
 })();
 </script>
-</body>
-</html>
+
+</body></html>
