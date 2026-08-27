@@ -1,0 +1,803 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>フリー対戦 募集用紙メーカー</title>
+<style>
+@layer reset, base, layout, components, print;
+
+/* reset: ブラウザ差を抑える */
+@layer reset {
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  button, input, textarea { font: inherit; }
+  img { display: block; max-width: 100%; }
+}
+
+/* base: 全体の色・文字・基本要素 */
+@layer base {
+  :root {
+    --bg: #eef1f4;
+    --panel: #ffffff;
+    --ink: #17191c;
+    --muted: #6d737b;
+    --line: #d7dce1;
+    --soft: #f6f7f8;
+    --accent: #2c333a;
+    --paper-width: 210mm;
+    --paper-height: 297mm;
+  }
+
+  body {
+    min-height: 100vh;
+    color: var(--ink);
+    background: var(--bg);
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+
+  button {
+    border: 0;
+    cursor: pointer;
+  }
+
+  input, textarea {
+    width: 100%;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: #fff;
+    color: var(--ink);
+    padding: 10px 12px;
+    outline: none;
+  }
+
+  input:focus, textarea:focus {
+    border-color: #929aa3;
+    box-shadow: 0 0 0 3px rgba(40, 48, 56, .08);
+  }
+
+  textarea {
+    min-height: 72px;
+    resize: vertical;
+  }
+}
+
+/* layout: 編集画面とプレビューの配置 */
+@layer layout {
+  .app {
+    display: grid;
+    grid-template-columns: minmax(300px, 390px) minmax(0, 1fr);
+    min-height: 100vh;
+  }
+
+  .editor {
+    position: sticky;
+    top: 0;
+    align-self: start;
+    height: 100vh;
+    overflow: auto;
+    padding: 22px;
+    background: var(--panel);
+    border-right: 1px solid var(--line);
+  }
+
+  .preview-wrap {
+    min-width: 0;
+    padding: 30px;
+    overflow: auto;
+  }
+
+  .paper {
+    width: var(--paper-width);
+    min-height: var(--paper-height);
+    margin: 0 auto;
+    background: #fff;
+    box-shadow: 0 12px 42px rgba(0,0,0,.12);
+  }
+
+  @media (max-width: 980px) {
+    .app { display: block; }
+    .editor {
+      position: static;
+      height: auto;
+      border-right: 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .preview-wrap {
+      padding: 16px 8px 34px;
+    }
+    .paper {
+      transform-origin: top center;
+    }
+  }
+}
+
+/* components: 編集UIと用紙デザイン */
+@layer components {
+  .editor-head {
+    margin-bottom: 20px;
+  }
+
+  .editor-head h1 {
+    margin: 0 0 6px;
+    font-size: 21px;
+    letter-spacing: .02em;
+  }
+
+  .editor-head p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .field {
+    margin-top: 15px;
+  }
+
+  .field label,
+  .deck-editor-title {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .hint {
+    margin-top: 5px;
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.5;
+  }
+
+  .actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 18px;
+  }
+
+  .btn {
+    min-height: 42px;
+    border-radius: 10px;
+    padding: 9px 12px;
+    font-weight: 700;
+  }
+
+  .btn-primary {
+    color: #fff;
+    background: var(--accent);
+  }
+
+  .btn-secondary {
+    color: var(--ink);
+    background: var(--soft);
+    border: 1px solid var(--line);
+  }
+
+  .deck-editor-list {
+    display: grid;
+    gap: 10px;
+    margin-top: 10px;
+  }
+
+  .deck-editor {
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 13px;
+    background: var(--soft);
+  }
+
+  .deck-editor-top {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 10px;
+  }
+
+  .deck-editor-top strong {
+    flex: 1;
+    font-size: 13px;
+  }
+
+  .mini-btn {
+    min-width: 31px;
+    height: 31px;
+    border-radius: 8px;
+    background: #fff;
+    border: 1px solid var(--line);
+    color: var(--ink);
+    font-weight: 700;
+  }
+
+  .deck-editor .field {
+    margin-top: 9px;
+  }
+
+  .file-input {
+    padding: 7px;
+    font-size: 12px;
+  }
+
+  .sheet {
+    min-height: var(--paper-height);
+    padding: 15mm 14mm 13mm;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .sheet-header {
+    padding-bottom: 8mm;
+    border-bottom: 2.2px solid #16191c;
+    text-align: center;
+  }
+
+  .sheet-title {
+    margin: 0;
+    font-size: 29pt;
+    line-height: 1.16;
+    letter-spacing: .035em;
+    font-weight: 850;
+    overflow-wrap: anywhere;
+  }
+
+  .sheet-subtitle {
+    margin: 3.2mm auto 0;
+    max-width: 160mm;
+    color: #4d5359;
+    font-size: 12.5pt;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  .sheet-user {
+    display: inline-block;
+    margin-top: 4mm;
+    padding: 1.7mm 4mm;
+    border: 1.2px solid #8f969d;
+    border-radius: 99px;
+    font-size: 11pt;
+    font-weight: 700;
+  }
+
+  .section {
+    margin-top: 8mm;
+  }
+
+  .section-label {
+    display: flex;
+    align-items: center;
+    gap: 3mm;
+    margin-bottom: 3.5mm;
+    font-size: 12pt;
+    font-weight: 850;
+  }
+
+  .section-label::after {
+    content: "";
+    height: 1px;
+    flex: 1;
+    background: #cbd0d5;
+  }
+
+  .games {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2.3mm;
+  }
+
+  .game-chip {
+    padding: 2.5mm 4mm;
+    border: 1.5px solid #202428;
+    border-radius: 2.2mm;
+    font-size: 13pt;
+    font-weight: 800;
+    line-height: 1.25;
+  }
+
+  .empty-note {
+    color: #9ba1a7;
+    font-size: 11pt;
+  }
+
+  .deck-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4mm;
+  }
+
+  .deck-card {
+    display: grid;
+    grid-template-columns: 32mm minmax(0, 1fr);
+    min-height: 42mm;
+    border: 1.2px solid #b8bec4;
+    border-radius: 3mm;
+    overflow: hidden;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .deck-card.no-image {
+    grid-template-columns: 1fr;
+    min-height: 25mm;
+  }
+
+  .deck-image {
+    width: 32mm;
+    height: 100%;
+    min-height: 42mm;
+    object-fit: cover;
+    background: #f0f2f3;
+  }
+
+  .deck-body {
+    min-width: 0;
+    padding: 4mm;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .deck-title {
+    font-size: 13pt;
+    line-height: 1.3;
+    font-weight: 850;
+    overflow-wrap: anywhere;
+  }
+
+  .deck-note {
+    margin-top: 2mm;
+    color: #565c62;
+    font-size: 9.5pt;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  .sheet-footer {
+    margin-top: auto;
+    padding-top: 7mm;
+    text-align: center;
+    color: #4e545a;
+    font-size: 9.5pt;
+    letter-spacing: .02em;
+  }
+
+  .hidden { display: none; }
+
+  @media (max-width: 980px) {
+    .paper {
+      width: min(210mm, calc(100vw - 16px));
+      min-height: auto;
+    }
+    .sheet {
+      min-height: auto;
+    }
+  }
+}
+
+/* print: 印刷時はA4用紙だけを表示 */
+@layer print {
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+
+  @media print {
+    html, body {
+      width: 210mm;
+      height: auto;
+      background: #fff;
+    }
+
+    .editor {
+      display: none;
+    }
+
+    .app {
+      display: block;
+    }
+
+    .preview-wrap {
+      padding: 0;
+      overflow: visible;
+    }
+
+    .paper {
+      width: 210mm;
+      min-height: 297mm;
+      margin: 0;
+      box-shadow: none;
+    }
+
+    .sheet {
+      min-height: 297mm;
+    }
+  }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="editor">
+    <div class="editor-head">
+      <h1>フリー対戦 募集用紙メーカー</h1>
+      <p>入力内容が右の印刷プレビューへ即時反映されます。空欄の項目は用紙に表示されません。</p>
+    </div>
+
+    <div class="field">
+      <label for="titleInput">タイトル</label>
+      <input id="titleInput" value="フリー対戦対戦相手募集！">
+    </div>
+
+    <div class="field">
+      <label for="subtitleInput">サブタイトル</label>
+      <textarea id="subtitleInput" placeholder="例：お気軽にお声がけください！"></textarea>
+    </div>
+
+    <div class="field">
+      <label for="userInput">ユーザー名</label>
+      <input id="userInput" value="@XXXXXX">
+      <div class="hint">「@XXXXXX」のままの場合は印刷用紙に表示しません。</div>
+    </div>
+
+    <div class="field">
+      <label for="gamesInput">希望カードゲーム</label>
+      <textarea id="gamesInput" placeholder="1行に1つ入力&#10;例：カードゲームA&#10;カードゲームB">遊戯王
+ポケカ</textarea>
+      <div class="hint">改行ごとに別の項目として表示します。</div>
+    </div>
+
+    <div class="field">
+      <div class="deck-editor-title">所持デッキ</div>
+      <div id="deckEditorList" class="deck-editor-list"></div>
+      <button id="addDeckBtn" class="btn btn-secondary" type="button" style="width:100%;margin-top:10px;">＋ デッキを追加</button>
+    </div>
+
+    <div class="actions">
+      <button id="resetBtn" class="btn btn-secondary" type="button">初期化</button>
+      <button id="saveImageBtn" class="btn btn-secondary" type="button">画像保存</button>
+      <button id="printBtn" class="btn btn-primary" type="button" style="grid-column:1 / -1;">印刷する</button>
+    </div>
+  </aside>
+
+  <main class="preview-wrap">
+    <div class="paper">
+      <article class="sheet" id="sheet">
+        <header class="sheet-header">
+          <h1 class="sheet-title" id="sheetTitle"></h1>
+          <div class="sheet-subtitle hidden" id="sheetSubtitle"></div>
+          <div class="sheet-user hidden" id="sheetUser"></div>
+        </header>
+
+        <section class="section hidden" id="gamesSection">
+          <div class="section-label">希望カードゲーム</div>
+          <div class="games" id="gamesPreview"></div>
+        </section>
+
+        <section class="section hidden" id="decksSection">
+          <div class="section-label">所持デッキ</div>
+          <div class="deck-grid" id="decksPreview"></div>
+        </section>
+
+        <footer class="sheet-footer">フリー対戦歓迎です。お気軽にお声がけください。</footer>
+      </article>
+    </div>
+  </main>
+</div>
+
+<script>
+(() => {
+  const DEFAULT_USER = "@XXXXXX";
+  let decks = [
+    {
+      id: 1,
+      title: "遊戯王：ヌーベルズ",
+      note: "カジュアル寄りです。",
+      image: ""
+    },
+    {
+      id: 2,
+      title: "遊戯王：ドラゴンメイド",
+      note: "ゆっくり遊べる対戦希望です。",
+      image: ""
+    },
+    {
+      id: 3,
+      title: "ポケカ：サーナイトex",
+      note: "フリー対戦歓迎です。",
+      image: ""
+    },
+    {
+      id: 4,
+      title: "ポケカ：リザードンex",
+      note: "調整中のデッキです。",
+      image: ""
+    }
+  ];
+  let deckSerial = 4;
+
+  const $ = (id) => document.getElementById(id);
+  const els = {
+    title: $("titleInput"),
+    subtitle: $("subtitleInput"),
+    user: $("userInput"),
+    games: $("gamesInput"),
+    deckEditorList: $("deckEditorList"),
+    addDeckBtn: $("addDeckBtn"),
+    resetBtn: $("resetBtn"),
+    saveImageBtn: $("saveImageBtn"),
+    printBtn: $("printBtn"),
+    sheetTitle: $("sheetTitle"),
+    sheetSubtitle: $("sheetSubtitle"),
+    sheetUser: $("sheetUser"),
+    gamesSection: $("gamesSection"),
+    gamesPreview: $("gamesPreview"),
+    decksSection: $("decksSection"),
+    decksPreview: $("decksPreview")
+  };
+
+  const escapeHtml = (value) => String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+
+  function addDeck(data = {}) {
+    decks.push({
+      id: ++deckSerial,
+      title: data.title || "",
+      note: data.note || "",
+      image: data.image || ""
+    });
+    renderDeckEditors();
+    render();
+  }
+
+  function removeDeck(id) {
+    decks = decks.filter(deck => deck.id !== id);
+    renderDeckEditors();
+    render();
+  }
+
+  function moveDeck(id, direction) {
+    const index = decks.findIndex(deck => deck.id === id);
+    const next = index + direction;
+    if (index < 0 || next < 0 || next >= decks.length) return;
+    [decks[index], decks[next]] = [decks[next], decks[index]];
+    renderDeckEditors();
+    render();
+  }
+
+  function renderDeckEditors() {
+    els.deckEditorList.innerHTML = decks.map((deck, index) => `
+      <div class="deck-editor" data-id="${deck.id}">
+        <div class="deck-editor-top">
+          <strong>デッキ ${index + 1}</strong>
+          <button class="mini-btn move-up" type="button" title="上へ">↑</button>
+          <button class="mini-btn move-down" type="button" title="下へ">↓</button>
+          <button class="mini-btn remove-deck" type="button" title="削除">×</button>
+        </div>
+        <div class="field">
+          <label>タイトル</label>
+          <input class="deck-title-input" value="${escapeHtml(deck.title)}" placeholder="例：デッキ名">
+        </div>
+        <div class="field">
+          <label>補足</label>
+          <textarea class="deck-note-input" placeholder="例：調整中 / カジュアル寄り">${escapeHtml(deck.note)}</textarea>
+        </div>
+        <div class="field">
+          <label>画像</label>
+          <input class="deck-image-input file-input" type="file" accept="image/*">
+          ${deck.image ? '<div class="hint">画像設定済み。別画像を選ぶと置き換わります。</div>' : ''}
+        </div>
+      </div>
+    `).join("");
+
+    els.deckEditorList.querySelectorAll(".deck-editor").forEach(card => {
+      const id = Number(card.dataset.id);
+      const deck = decks.find(item => item.id === id);
+      card.querySelector(".deck-title-input").addEventListener("input", e => {
+        deck.title = e.target.value;
+        render();
+      });
+      card.querySelector(".deck-note-input").addEventListener("input", e => {
+        deck.note = e.target.value;
+        render();
+      });
+      card.querySelector(".deck-image-input").addEventListener("change", e => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          deck.image = reader.result;
+          renderDeckEditors();
+          render();
+        };
+        reader.readAsDataURL(file);
+      });
+      card.querySelector(".remove-deck").addEventListener("click", () => removeDeck(id));
+      card.querySelector(".move-up").addEventListener("click", () => moveDeck(id, -1));
+      card.querySelector(".move-down").addEventListener("click", () => moveDeck(id, 1));
+    });
+  }
+
+  function render() {
+    const title = els.title.value.trim() || "フリー対戦対戦相手募集！";
+    const subtitle = els.subtitle.value.trim();
+    const user = els.user.value.trim();
+    const games = els.games.value
+      .split(/\r?\n/)
+      .map(v => v.trim())
+      .filter(Boolean);
+
+    els.sheetTitle.textContent = title;
+
+    els.sheetSubtitle.textContent = subtitle;
+    els.sheetSubtitle.classList.toggle("hidden", !subtitle);
+
+    const showUser = Boolean(user) && user !== DEFAULT_USER;
+    els.sheetUser.textContent = user;
+    els.sheetUser.classList.toggle("hidden", !showUser);
+
+    els.gamesSection.classList.toggle("hidden", games.length === 0);
+    els.gamesPreview.innerHTML = games.map(game => `<div class="game-chip">${escapeHtml(game)}</div>`).join("");
+
+    const visibleDecks = decks.filter(deck => deck.title.trim() || deck.note.trim() || deck.image);
+    els.decksSection.classList.toggle("hidden", visibleDecks.length === 0);
+    els.decksPreview.innerHTML = visibleDecks.map(deck => {
+      const hasImage = Boolean(deck.image);
+      const titleText = deck.title.trim() || "デッキ";
+      return `
+        <div class="deck-card ${hasImage ? "" : "no-image"}">
+          ${hasImage ? `<img class="deck-image" src="${deck.image}" alt="">` : ""}
+          <div class="deck-body">
+            <div class="deck-title">${escapeHtml(titleText)}</div>
+            ${deck.note.trim() ? `<div class="deck-note">${escapeHtml(deck.note.trim())}</div>` : ""}
+          </div>
+        </div>
+      `;
+    }).join("");
+  }
+
+
+  async function saveSheetAsImage() {
+    const sheet = $("sheet");
+    const width = sheet.scrollWidth;
+    const height = sheet.scrollHeight;
+    const scale = 2;
+
+    const clone = sheet.cloneNode(true);
+
+    const sourceNodes = [sheet, ...sheet.querySelectorAll("*")];
+    const cloneNodes = [clone, ...clone.querySelectorAll("*")];
+
+    sourceNodes.forEach((source, index) => {
+      const target = cloneNodes[index];
+      if (!target) return;
+      const style = getComputedStyle(source);
+      let cssText = "";
+      for (const prop of style) {
+        cssText += `${prop}:${style.getPropertyValue(prop)};`;
+      }
+      target.setAttribute("style", cssText);
+    });
+
+    clone.style.width = `${width}px`;
+    clone.style.height = `${height}px`;
+    clone.style.margin = "0";
+    clone.style.boxShadow = "none";
+
+    const wrapper = document.createElement("div");
+    wrapper.setAttribute("xmlns", "http://www.w3.org/1999/xhtml");
+    wrapper.style.width = `${width}px`;
+    wrapper.style.height = `${height}px`;
+    wrapper.appendChild(clone);
+
+    const serialized = new XMLSerializer().serializeToString(wrapper);
+    const svg = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="${width * scale}" height="${height * scale}" viewBox="0 0 ${width} ${height}">
+        <foreignObject width="100%" height="100%">${serialized}</foreignObject>
+      </svg>
+    `;
+
+    const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+
+    try {
+      const img = new Image();
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+        img.src = url;
+      });
+
+      const canvas = document.createElement("canvas");
+      canvas.width = width * scale;
+      canvas.height = height * scale;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+      const pngBlob = await new Promise(resolve => canvas.toBlob(resolve, "image/png", 1));
+      if (!pngBlob) throw new Error("PNG生成に失敗しました");
+
+      const downloadUrl = URL.createObjectURL(pngBlob);
+      const a = document.createElement("a");
+      const now = new Date();
+      const stamp = [
+        now.getFullYear(),
+        String(now.getMonth() + 1).padStart(2, "0"),
+        String(now.getDate()).padStart(2, "0"),
+        "_",
+        String(now.getHours()).padStart(2, "0"),
+        String(now.getMinutes()).padStart(2, "0")
+      ].join("");
+      a.href = downloadUrl;
+      a.download = `free-match-sheet_${stamp}.png`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
+    } catch (error) {
+      console.error(error);
+      alert("画像保存に失敗しました。別のブラウザでお試しください。");
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }
+
+  function resetAll() {
+    els.title.value = "フリー対戦対戦相手募集！";
+    els.subtitle.value = "";
+    els.user.value = DEFAULT_USER;
+    els.games.value = "遊戯王\nポケカ";
+    decks = [
+      {
+        id: 1,
+        title: "遊戯王：ヌーベルズ",
+        note: "カジュアル寄りです。",
+        image: ""
+      },
+      {
+        id: 2,
+        title: "遊戯王：ドラゴンメイド",
+        note: "ゆっくり遊べる対戦希望です。",
+        image: ""
+      },
+      {
+        id: 3,
+        title: "ポケカ：サーナイトex",
+        note: "フリー対戦歓迎です。",
+        image: ""
+      },
+      {
+        id: 4,
+        title: "ポケカ：リザードンex",
+        note: "調整中のデッキです。",
+        image: ""
+      }
+    ];
+    deckSerial = 4;
+    renderDeckEditors();
+    render();
+  }
+
+  [els.title, els.subtitle, els.user, els.games].forEach(el => {
+    el.addEventListener("input", render);
+  });
+
+  els.addDeckBtn.addEventListener("click", () => addDeck());
+  els.resetBtn.addEventListener("click", resetAll);
+  els.saveImageBtn.addEventListener("click", saveSheetAsImage);
+  els.printBtn.addEventListener("click", () => window.print());
+
+  renderDeckEditors();
+  render();
+})();
+</script>
+</body>
+</html>
