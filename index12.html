@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HTMLショートカット｜Webページへの入口をHTMLで保存</title>
+<style>
+@layer reset, base, layout, components, utilities;
+
+@layer reset {
+  /* reset: ブラウザ差を抑える */
+  *,*::before,*::after{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body,h1,h2,h3,p,pre{margin:0}
+  button,a{font:inherit}
+}
+
+@layer base {
+  /* base: 全体の文字・背景・基本色 */
+  :root{
+    color-scheme:light dark;
+    --bg:#f5f7fb;
+    --panel:#ffffff;
+    --text:#1f2937;
+    --muted:#667085;
+    --line:#d9e0ea;
+    --accent:#3157d5;
+    --accent-soft:#edf2ff;
+    --ok:#137a4d;
+    --code:#0f172a;
+  }
+  body{
+    min-height:100vh;
+    background:var(--bg);
+    color:var(--text);
+    font-family:"Yu Gothic UI","Meiryo",system-ui,sans-serif;
+    line-height:1.8;
+  }
+  a{color:var(--accent)}
+  code{font-family:Consolas,"Courier New",monospace}
+}
+
+@layer layout {
+  /* layout: ページ幅と余白 */
+  .wrap{width:min(920px,calc(100% - 32px));margin:0 auto;padding:28px 0 64px}
+  .hero{padding:28px 0 22px}
+  .stack{display:grid;gap:18px}
+  .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+  @media(max-width:720px){
+    .wrap{width:min(100% - 20px,920px);padding-top:16px}
+    .hero{padding-top:18px}
+    .grid{grid-template-columns:1fr}
+  }
+}
+
+@layer components {
+  /* components: 見出し、カード、ボタン、コード表示 */
+  .eyebrow{display:inline-block;font-size:.85rem;font-weight:700;letter-spacing:.08em;color:var(--accent);margin-bottom:8px}
+  h1{font-size:clamp(2rem,6vw,3.5rem);line-height:1.15;letter-spacing:-.03em}
+  h2{font-size:1.35rem;line-height:1.4;margin-bottom:10px}
+  h3{font-size:1rem;margin-bottom:4px}
+  .lead{margin-top:14px;color:var(--muted);font-size:1.05rem;max-width:760px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:22px;box-shadow:0 10px 28px rgba(15,23,42,.05)}
+  .mini{background:var(--accent-soft);border-radius:14px;padding:16px}
+  .mini p{color:var(--muted);font-size:.95rem}
+  .steps{display:grid;gap:10px;counter-reset:step}
+  .step{display:grid;grid-template-columns:36px 1fr;gap:12px;align-items:start}
+  .step::before{counter-increment:step;content:counter(step);display:grid;place-items:center;width:36px;height:36px;border-radius:50%;background:var(--accent);color:#fff;font-weight:700}
+  .step p{color:var(--muted)}
+  .url-box{display:block;margin-top:10px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:rgba(127,127,127,.06);overflow-wrap:anywhere}
+  pre{margin-top:12px;padding:16px;border-radius:14px;background:var(--code);color:#e5e7eb;overflow:auto;white-space:pre-wrap;word-break:break-word;line-height:1.6}
+  .actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+  .button{appearance:none;border:1px solid transparent;border-radius:12px;padding:11px 16px;background:var(--accent);color:#fff;font-weight:700;cursor:pointer;text-decoration:none}
+  .button.secondary{background:transparent;color:var(--accent);border-color:var(--accent)}
+  .note{font-size:.92rem;color:var(--muted)}
+  .status{margin-top:10px;min-height:1.5em;color:var(--ok);font-weight:700}
+  .footer{padding-top:8px;text-align:center;color:var(--muted);font-size:.88rem}
+}
+
+@layer utilities {
+  /* utilities: 補助的な余白・強調 */
+  .mt8{margin-top:8px}
+  .mt14{margin-top:14px}
+  .strong{font-weight:700;color:var(--text)}
+}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header class="hero">
+    <span class="eyebrow">HTML SHORTCUT</span>
+    <h1>Webページへの入口を、<br>小さなHTMLとして保存する</h1>
+    <p class="lead">ブラウザのブックマークとは別に、クリックすると特定のWebページへ移動するだけの短いHTMLファイルを保存しておく仕組みです。ファイルとして置いておけるため、フォルダ管理やバックアップにも向いています。</p>
+  </header>
+
+  <div class="stack">
+    <section class="card">
+      <h2>「HTMLショートカット」という考え方</h2>
+      <p>例えば、公開中のサイトに <span class="strong">「開くとこのサイトにアクセスできるファイルをダウンロード」</span> ボタンを置きます。</p>
+      <p class="mt8">そのボタンを押すと、現在のページURLを記録した小さなHTMLファイルがダウンロードされます。後からそのHTMLを開くだけで、元のWebページへすぐ移動できます。</p>
+    </section>
+
+    <section class="card">
+      <h2>動作イメージ</h2>
+      <div class="steps">
+        <div class="step"><div><h3>公開サイトを開く</h3><p>この仕組みを設置したWebページを開きます。</p></div></div>
+        <div class="step"><div><h3>HTMLショートカットを保存</h3><p>ボタンを押すと、遷移先URLだけを持つ小さなHTMLファイルを保存します。</p></div></div>
+        <div class="step"><div><h3>後からファイルを開く</h3><p>保存したHTMLをダブルクリックすると、ブラウザで元のWebページへ移動します。</p></div></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>保存されるHTMLは非常に短い</h2>
+      <p>中身は、ほぼ「このURLへ移動する」という処理だけです。</p>
+      <pre><code>&lt;!doctype html&gt;&lt;meta charset="utf-8"&gt;&lt;script&gt;location.replace("このページ自身のURL")&lt;\/script&gt;</code></pre>
+      <p class="note mt14">元サイトの内容そのものを保存するのではなく、元サイトへ戻るための入口だけを保存する仕組みです。</p>
+    </section>
+
+    <section class="grid">
+      <article class="mini">
+        <h3>ファイルとして管理できる</h3>
+        <p>フォルダに分類したり、USBメモリやクラウドストレージへ置いたりできます。</p>
+      </article>
+      <article class="mini">
+        <h3>元ページが更新されても反映される</h3>
+        <p>HTML自体に内容をコピーしていないため、開いた時点の最新版へ移動します。</p>
+      </article>
+      <article class="mini">
+        <h3>容量が非常に小さい</h3>
+        <p>基本的にはURLと遷移処理だけなので、通常のWebページ保存よりかなり軽量です。</p>
+      </article>
+      <article class="mini">
+        <h3>ブックマーク以外の保存方法になる</h3>
+        <p>ブラウザ依存のブックマークとは別に、普通のファイルとして持ち運べます。</p>
+      </article>
+    </section>
+
+    <section class="card">
+      <h2>このページから試す</h2>
+      <p>下のボタンを押すと、<strong>現在このページを公開しているURL</strong>へ移動するための小さなHTMLファイルを保存します。</p>
+      <div class="actions">
+        <button class="button" id="downloadShortcut" type="button">開くとこのサイトにアクセスできるファイルをダウンロード</button>
+      </div>
+      <div class="status" id="status" aria-live="polite"></div>
+      <p class="note">実際の実装では、固定URLではなく <code>location.href</code> を使うことで「ボタンを押したページ自身のURL」を自動で埋め込めます。</p>
+    </section>
+
+    <section class="card">
+      <h2>実装例</h2>
+      <p>各ページに同じボタンを置き、押されたページ自身のURLをHTMLへ埋め込む場合は、次のような形にできます。</p>
+      <pre><code>&lt;button id="saveShortcut"&gt;開くとこのサイトにアクセスできるファイルをダウンロード&lt;/button&gt;
+
+&lt;script&gt;
+document.getElementById("saveShortcut").addEventListener("click", () =&gt; {
+  const url = location.href;
+  const html = '&lt;!doctype html&gt;&lt;meta charset="utf-8"&gt;&lt;script&gt;location.replace(' + JSON.stringify(url) + ')&lt;\/script&gt;';
+  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "web-shortcut.html";
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+&lt;\/script&gt;</code></pre>
+    </section>
+
+    <p class="footer">HTMLショートカットは、Webページそのものではなく「Webページへの入口」を保存する方法です。</p>
+  </div>
+</main>
+
+<script>
+(() => {
+  const button = document.getElementById("downloadShortcut");
+  const status = document.getElementById("status");
+
+  button.addEventListener("click", () => {
+    const targetUrl = location.href;
+    const shortcutHtml = '<!doctype html><meta charset="utf-8"><script>location.replace(' + JSON.stringify(targetUrl) + ')<\/script>';
+    const blob = new Blob([shortcutHtml], { type: "text/html;charset=utf-8" });
+    const objectUrl = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = objectUrl;
+    a.download = "site-link.html";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
+    status.textContent = "このサイトにアクセスできるHTMLファイルを保存しました。";
+  });
+})();
+</script>
+</body>
+</html>
