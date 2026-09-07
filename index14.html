@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>保存データのインポート方法</title>
+<style>
+@layer reset, base, components, utilities;
+
+/* reset: ブラウザ差を抑えます */
+@layer reset {
+  * { box-sizing: border-box; }
+  body, h1, h2, p, ol { margin: 0; }
+}
+
+/* base: ページ全体の基本表示です */
+@layer base {
+  :root {
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    color: #1f2937;
+    background: #f6f7f9;
+  }
+  body {
+    min-height: 100vh;
+    line-height: 1.7;
+  }
+  main {
+    width: min(760px, calc(100% - 32px));
+    margin: 0 auto;
+    padding: 40px 0 64px;
+  }
+  h1 {
+    font-size: clamp(1.7rem, 4vw, 2.4rem);
+    line-height: 1.35;
+  }
+  h2 {
+    margin-top: 28px;
+    font-size: 1.2rem;
+  }
+  p {
+    margin-top: 12px;
+  }
+  code {
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  }
+}
+
+/* components: 説明カードと手順表示です */
+@layer components {
+  .card {
+    background: #fff;
+    border: 1px solid #d9dee7;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, .06);
+  }
+  .card + .card {
+    margin-top: 20px;
+  }
+  .lead {
+    margin-top: 14px;
+    color: #4b5563;
+  }
+  .steps {
+    margin-top: 18px;
+    padding-left: 1.4em;
+  }
+  .steps li + li {
+    margin-top: 12px;
+  }
+  .mock {
+    margin-top: 16px;
+    border: 1px solid #dce2ea;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #fafbfc;
+  }
+  .mock-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid #dce2ea;
+    background: #f0f3f6;
+    font-weight: 700;
+  }
+  .mock-body {
+    padding: 18px;
+  }
+  .mock-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-top: 10px;
+    padding: 12px 14px;
+    border: 1px solid #d7dde6;
+    border-radius: 10px;
+    background: #fff;
+  }
+  .badge {
+    display: inline-block;
+    min-width: 2em;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #eef1f5;
+    text-align: center;
+    font-size: .9rem;
+    font-weight: 700;
+  }
+  .note {
+    margin-top: 14px;
+    padding: 14px 16px;
+    border-left: 4px solid #9aa4b2;
+    background: #f7f8fa;
+    color: #4b5563;
+  }
+}
+
+/* utilities: 補助表示です */
+@layer utilities {
+  .muted {
+    color: #6b7280;
+    font-size: .94rem;
+  }
+}
+</style>
+</head>
+<body>
+<main>
+  <section class="card">
+    <h1>保存データのインポート方法</h1>
+    <p class="lead">
+      このファイルは、仮想のアプリケーションからエクスポートされた保存データです。
+      保存データ本体はこのHTMLファイル内に含まれています。
+    </p>
+    <p>
+      下記は、仮想のアプリケーションへこの保存データを戻す場合の手順例です。
+    </p>
+  </section>
+
+  <section class="card">
+    <h2>インポート手順</h2>
+    <ol class="steps">
+      <li>保存元のアプリケーションを開きます。</li>
+      <li>画面右上の「設定」を開きます。</li>
+      <li>「データ管理」を選択します。</li>
+      <li>「保存データをインポート」を押します。</li>
+      <li>この <code>.html</code> ファイルを選択します。</li>
+      <li>確認画面で「インポート」を押します。</li>
+      <li>HTML内に保存されているJSONデータが読み込まれ、保存時の状態が復元されます。</li>
+    </ol>
+  </section>
+
+  <section class="card">
+    <h2>仮想アプリ内での画面例</h2>
+    <div class="mock">
+      <div class="mock-header">設定 ＞ データ管理</div>
+      <div class="mock-body">
+        <div class="mock-row">
+          <span class="badge">1</span>
+          <span>保存データをインポート</span>
+        </div>
+        <div class="mock-row">
+          <span class="badge">2</span>
+          <span>HTML形式の保存データを選択</span>
+        </div>
+        <div class="mock-row">
+          <span class="badge">3</span>
+          <span>内容を確認してインポート</span>
+        </div>
+      </div>
+    </div>
+
+    <p class="note">
+      このページに表示しているアプリケーション名や画面構成は説明用の仮想例です。
+      実際のアプリでは、設定画面やインポートボタンの位置は異なります。
+    </p>
+  </section>
+
+  <section class="card">
+    <h2>この保存形式について</h2>
+    <p>
+      通常のJSONファイルの代わりにHTML形式で保存することで、
+      ファイルを開いたときに「このデータをどうインポートすればよいか」を案内できます。
+    </p>
+    <p class="muted">
+      保存データ本体は説明ページ側ではなく、エクスポートしたHTMLファイル内に保持する想定です。
+    </p>
+  </section>
+</main>
+</body>
+</html>
