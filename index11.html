@@ -68,16 +68,16 @@ a{color:var(--accent);overflow-wrap:anywhere;}
 <main class="app">
 <header class="hero">
 <h1>読み込み可能なHTMLエクスポート</h1>
-<p>JSONファイルとして保存する代わりに、作業内容を保持したHTMLファイルを出力し、そのHTMLを後から読み込んで編集を再開する仕組みのサンプルです。</p>
+<p>JSONファイルとして保存する代わりに、作業内容を圧縮してURL内へ保持し、そのURLへ移動するための小さなHTMLだけを出力する「容量削減保存」のサンプルです。</p>
 </header>
 
 <section class="panel main-panel">
 <div class="lead-box">
-<strong>使い方：</strong>下の入力欄に文章を書き、「エクスポート」でHTMLとして保存します。保存したHTMLを開くだけで入力内容が自動復元され、そのまま編集を再開できます。「インポート」から同じHTMLを読み込むこともできます。<br>
-Ctrl+S / Command+S でもエクスポートできます。
+<strong>使い方：</strong>下の入力欄に文章を書き、「エクスポート」で容量削減HTMLとして保存します。保存HTMLにはこのページ本体を含めず、圧縮した作業データを含む参考サイトURLへの移動処理だけを保存します。開くと参考サイトへ移動し、入力内容が復元された編集画面から作業を再開できます。<br>
+Ctrl+S / Command+S でも同じエクスポートを実行します。
 <div class="reference">
 参考サイト：<a href="https://uni928.github.io/Uni928PublicHTMLs/index80.html" target="_blank" rel="noopener noreferrer">https://uni928.github.io/Uni928PublicHTMLs/index80.html</a><br>
-この参考サイトでは「編集作業継続用サイトを保存」で、編集内容を保持して後から作業を続けられるHTMLを作る仕組みが使われています。本サンプルは、その考え方を簡略化して紹介するものです。
+この参考サイトの「容量削減保存」→「編集作業継続用サイトを保存」と同じ考え方で、保存HTML本体には編集画面を含めず、このURLへ圧縮済みデータ付きで移動します。
 </div>
 </div>
 
@@ -91,25 +91,24 @@ Ctrl+S / Command+S でもエクスポートできます。
 <label for="contentInput">入力内容</label>
 <small id="charCount">0文字</small>
 </div>
-<textarea id="contentInput" class="text-input" placeholder="ここに文章を入力してください。\n\nエクスポートしたHTMLを開くと、そのまま作業を再開できます。"></textarea>
+<textarea id="contentInput" class="text-input" placeholder="ここに文章を入力してください。\n\nエクスポートしたHTMLを開くと、参考サイトへ移動して作業を再開できます。"></textarea>
 <div id="status" class="status" aria-live="polite"></div>
 
-<div class="note">エクスポートされるHTML内には、入力内容をJSON化して圧縮した作業再開用データを埋め込みます。対応している複数の圧縮形式を比較し、最も短くなるものを採用します。保存HTMLを直接開いた場合も、インポートした場合も同じデータから入力欄を復元します。外部サーバーへの送信は行いません。</div>
+<div class="note">入力内容は参考サイトの編集再開用JSON形式に変換し、対応している複数の圧縮形式を比較して最も短いものを採用します。エクスポートHTMLには元の編集画面やJSON本文を直接含めず、圧縮データ付きURLへのリダイレクト処理だけを保存します。</div>
 </section>
 </main>
 
-<script id="readableExportData" type="application/json">{"v":2,"empty":true}</script>
 <script>
 (() => {
 "use strict";
 
-const EXPORT_MARKER_ID = "readableExportData";
-const EXPORT_FORMAT = "readable-html-export-v2";
+const LONG_URL_BASE = "https://uni928.github.io/Uni928PublicHTMLs/index80.html";
 const COMPRESSION_FORMATS = [
   {format:"brotli",key:"br"},
   {format:"deflate-raw",key:"dr"},
   {format:"gzip",key:"gz"}
 ];
+const DEFAULT_FONTS = ["noto-sans-jp","meiryo","yu-gothic-ui","biz-udp-gothic","hiragino-sans","system-ui"];
 const contentInput = document.getElementById("contentInput");
 const exportButton = document.getElementById("exportButton");
 const importButton = document.getElementById("importButton");
@@ -161,12 +160,25 @@ function sameBytes(a,b){
   return true;
 }
 
+function makeEditorSaveData(){
+  return {
+    v:1,
+    t:"",
+    s:contentInput.value,
+    n:"",
+    p:"",
+    m:"editor",
+    z:"small",
+    f:DEFAULT_FONTS,
+    i:[]
+  };
+}
+
 async function makeBestPayload(){
   if(!("CompressionStream" in window) || !("DecompressionStream" in window)){
     throw new Error("このブラウザは圧縮エクスポートに対応していません。");
   }
-  const data = {format:EXPORT_FORMAT,exportedAt:new Date().toISOString(),content:contentInput.value};
-  const bytes = new TextEncoder().encode(JSON.stringify(data));
+  const bytes = new TextEncoder().encode(JSON.stringify(makeEditorSaveData()));
   const candidates = [];
   for(const definition of COMPRESSION_FORMATS){
     try{
@@ -174,13 +186,9 @@ async function makeBestPayload(){
       const compressed = await compressWithFormat(bytes,definition.format);
       const restored = await decompressWithFormat(compressed,definition.format);
       if(!sameBytes(bytes,restored)) continue;
-      candidates.push({
-        format:definition.format,
-        key:definition.key,
-        encoded:bytesToBase64Url(compressed)
-      });
+      candidates.push({format:definition.format,key:definition.key,encoded:bytesToBase64Url(compressed)});
     }catch(error){
-      // このブラウザで使えない圧縮形式は候補から外す。
+      // このブラウザで使えない圧縮形式は候補から除外する。
     }
   }
   if(!candidates.length) throw new Error("利用可能な圧縮形式がありません。");
@@ -188,47 +196,12 @@ async function makeBestPayload(){
   return candidates[0];
 }
 
-async function decodePayload(raw){
-  const meta = JSON.parse(raw || "{}");
-  if(meta && meta.empty) return null;
-  if(!meta || meta.v !== 2 || typeof meta.k !== "string" || typeof meta.d !== "string"){
-    throw new Error("対応していないエクスポート形式です。");
-  }
-  const definition = COMPRESSION_FORMATS.find(item=>item.key===meta.k);
-  if(!definition) throw new Error("圧縮形式を判別できません。");
-  const restored = await decompressWithFormat(base64UrlToBytes(meta.d),definition.format);
-  const data = JSON.parse(new TextDecoder().decode(restored));
-  if(!data || data.format !== EXPORT_FORMAT || typeof data.content !== "string"){
-    throw new Error("エクスポートデータが正しくありません。");
-  }
-  return {data,compression:definition.format,encodedLength:meta.d.length};
+function buildSavedUrl(payload){
+  return LONG_URL_BASE + "#" + payload.key + "=" + payload.encoded;
 }
 
-async function readEmbeddedData(doc=document){
-  const dataNode = doc.getElementById(EXPORT_MARKER_ID);
-  if(!dataNode) throw new Error("作業再開用データが見つかりません。");
-  return decodePayload(dataNode.textContent || "{}");
-}
-
-async function makeExportHtml(){
-  const payload = await makeBestPayload();
-  const clone = document.documentElement.cloneNode(true);
-  const dataNode = clone.querySelector("#" + EXPORT_MARKER_ID);
-  if(!dataNode) throw new Error("保存用データ領域を取得できませんでした。");
-  dataNode.textContent = JSON.stringify({v:2,k:payload.key,d:payload.encoded});
-  const clonedInput = clone.querySelector("#contentInput");
-  if(clonedInput){
-    clonedInput.value = "";
-    clonedInput.textContent = "";
-  }
-  const clonedStatus = clone.querySelector("#status");
-  if(clonedStatus){
-    clonedStatus.textContent = "";
-    clonedStatus.classList.remove("success");
-  }
-  const clonedFileInput = clone.querySelector("#fileInput");
-  if(clonedFileInput) clonedFileInput.value = "";
-  return {html:"<!DOCTYPE html>\n" + clone.outerHTML,payload};
+function makeLightweightRedirectHtml(targetUrl){
+  return '<!doctype html><meta charset="utf-8"><script>location.replace(' + JSON.stringify(targetUrl) + ')<\/script>';
 }
 
 async function exportHtml(){
@@ -240,9 +213,11 @@ async function exportHtml(){
   const originalText = exportButton.textContent;
   try{
     exportButton.disabled = true;
-    exportButton.textContent = "圧縮中…";
-    const result = await makeExportHtml();
-    const blob = new Blob([result.html],{type:"text/html;charset=utf-8"});
+    exportButton.textContent = "容量削減中…";
+    const payload = await makeBestPayload();
+    const targetUrl = buildSavedUrl(payload);
+    const html = makeLightweightRedirectHtml(targetUrl);
+    const blob = new Blob([html],{type:"text/html;charset=utf-8"});
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
@@ -251,7 +226,8 @@ async function exportHtml(){
     anchor.click();
     anchor.remove();
     setTimeout(()=>URL.revokeObjectURL(url),1000);
-    showStatus("作業再開可能なHTMLをエクスポートしました。圧縮形式：" + result.payload.format + "、圧縮後Base64：" + result.payload.encoded.length.toLocaleString("ja-JP") + "文字",true);
+    const htmlBytes = new TextEncoder().encode(html).length;
+    showStatus("容量削減HTMLをエクスポートしました。圧縮形式：" + payload.format + "、圧縮後Base64：" + payload.encoded.length.toLocaleString("ja-JP") + "文字、保存HTML：約" + htmlBytes.toLocaleString("ja-JP") + " bytes",true);
   }catch(error){
     showStatus(error && error.message ? error.message : "エクスポートに失敗しました。");
   }finally{
@@ -260,34 +236,42 @@ async function exportHtml(){
   }
 }
 
+function extractRedirectUrl(html){
+  const match = String(html).match(/location\.replace\((['"])(https:\/\/uni928\.github\.io\/Uni928PublicHTMLs\/index80\.html#[^'"]+)\1\)/);
+  if(match) return match[2];
+  const jsonMatch = String(html).match(/location\.replace\(("(?:[^"\\]|\\.)*")\)/);
+  if(jsonMatch){
+    try{return JSON.parse(jsonMatch[1]);}catch(error){}
+  }
+  throw new Error("容量削減保存URLを取得できませんでした。");
+}
+
+async function decodeSavedUrl(url){
+  const parsed = new URL(url);
+  const match = parsed.hash.match(/^#([^=]+)=([A-Za-z0-9_-]+)$/);
+  if(!match) throw new Error("保存データの形式が正しくありません。");
+  const definition = COMPRESSION_FORMATS.find(item=>item.key===match[1]);
+  if(!definition) throw new Error("対応していない圧縮形式です。");
+  const restored = await decompressWithFormat(base64UrlToBytes(match[2]),definition.format);
+  const data = JSON.parse(new TextDecoder().decode(restored));
+  if(!data || data.v !== 1 || typeof data.s !== "string") throw new Error("編集再開用データが正しくありません。");
+  return {content:data.s,compression:definition.format};
+}
+
 async function importHtml(file){
   if(!file) return;
   try{
     const html = await file.text();
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(html,"text/html");
-    const restored = await readEmbeddedData(doc);
-    if(!restored) throw new Error("このHTMLには作業再開用データがありません。");
-    contentInput.value = restored.data.content;
+    const targetUrl = extractRedirectUrl(html);
+    const restored = await decodeSavedUrl(targetUrl);
+    contentInput.value = restored.content;
     updateCount();
-    showStatus("HTMLから作業内容を読み込みました。圧縮形式：" + restored.compression,true);
+    showStatus("容量削減HTMLから作業内容を読み込みました。圧縮形式：" + restored.compression,true);
     contentInput.focus();
   }catch(error){
     showStatus(error && error.message ? error.message : "HTMLを読み込めませんでした。");
   }finally{
     fileInput.value = "";
-  }
-}
-
-async function restoreOnOpen(){
-  try{
-    const restored = await readEmbeddedData(document);
-    if(!restored) return;
-    contentInput.value = restored.data.content;
-    updateCount();
-    showStatus("エクスポートHTMLから作業内容を復元しました。このまま編集を再開できます。圧縮形式：" + restored.compression,true);
-  }catch(error){
-    showStatus(error && error.message ? "作業内容を復元できませんでした：" + error.message : "作業内容を復元できませんでした。");
   }
 }
 
@@ -303,7 +287,6 @@ document.addEventListener("keydown",event=>{
 });
 
 updateCount();
-restoreOnOpen();
 })();
 </script>
 </body>
