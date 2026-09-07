@@ -197,12 +197,13 @@ async function makeBestPayload(){
 
 function getCurrentExportBaseUrl(){
   const url = new URL(location.href);
+  url.search = "";
   url.hash = "";
   return url.href;
 }
 
 function buildSavedUrl(payload){
-  return getCurrentExportBaseUrl() + "#" + payload.key + "=" + payload.encoded;
+  return getCurrentExportBaseUrl() + "?" + Date.now() + "#" + payload.key + "=" + payload.encoded;
 }
 
 function makeLightweightRedirectHtml(targetUrl){
