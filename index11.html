@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="description" content="JSONファイルの代わりに、読み込み可能なHTMLとして作業内容をエクスポートする仕組みの紹介サイトです。">
+<title>読み込み可能なHTMLエクスポートの仕組み</title>
+<style>
+@layer base,layout,components,responsive;
+
+@layer base{
+/* 基本色・文字・共通要素を定義。 */
+:root{color-scheme:light;--bg:#f4f7fb;--panel:#fff;--text:#1e293b;--muted:#64748b;--line:#dbe4f0;--accent:#2563eb;--accent-dark:#1d4ed8;--accent-soft:#eaf2ff;--good:#087f5b;--shadow:0 18px 48px rgba(30,41,59,.10);}
+*{box-sizing:border-box;}
+html{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text);}
+body{margin:0;min-height:100vh;background:linear-gradient(180deg,rgba(255,255,255,.82),transparent 330px),var(--bg);}
+button,textarea,input{font:inherit;}
+button{cursor:pointer;}
+a{color:var(--accent);overflow-wrap:anywhere;}
+}
+
+@layer layout{
+/* 1カラムで説明→操作→入力欄の順に配置。 */
+.app{width:min(900px,calc(100% - 28px));margin:0 auto;padding:30px 0 56px;}
+.hero{text-align:center;margin-bottom:18px;}
+.hero h1{margin:0;font-size:clamp(1.75rem,4vw,2.6rem);letter-spacing:-.04em;}
+.hero p{max-width:760px;margin:12px auto 0;color:var(--muted);line-height:1.85;}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow);}
+.main-panel{padding:20px;}
+}
+
+@layer components{
+/* 説明カード、操作ボタン、入力欄、ステータス表示を追加。 */
+.lead-box{margin-bottom:18px;padding:16px 18px;border:1px solid var(--line);border-radius:16px;background:#f8fafc;line-height:1.8;}
+.lead-box strong{color:var(--accent-dark);}
+.reference{margin-top:12px;padding-top:12px;border-top:1px solid var(--line);font-size:.92rem;color:var(--muted);}
+.reference code{padding:.18em .4em;border-radius:6px;background:#eef2f7;color:var(--text);}
+.actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:0 0 18px;}
+.action-button{min-height:50px;border:0;border-radius:14px;padding:0 18px;font-weight:800;}
+.primary{background:var(--accent);color:#fff;}
+.primary:hover{background:var(--accent-dark);}
+.secondary{background:var(--accent-soft);color:var(--accent-dark);}
+.secondary:hover{background:#dceaff;}
+.field-head{display:flex;justify-content:space-between;gap:12px;align-items:end;margin-bottom:8px;}
+.field-head label{font-weight:800;}
+.field-head small{color:var(--muted);}
+.text-input{width:100%;min-height:430px;padding:16px;border:1px solid var(--line);border-radius:14px;background:#fff;color:var(--text);outline:none;resize:vertical;line-height:1.75;}
+.text-input:focus{border-color:var(--accent);box-shadow:0 0 0 4px rgba(37,99,235,.12);}
+.status{min-height:26px;margin-top:12px;color:var(--muted);font-size:.94rem;}
+.status.success{color:var(--good);font-weight:700;}
+.note{margin-top:16px;padding:14px 16px;border-radius:14px;background:#f8fafc;color:var(--muted);font-size:.9rem;line-height:1.7;}
+#fileInput{display:none;}
+}
+
+@layer responsive{
+/* モバイルでは操作ボタンを縦並びに変更。 */
+@media(max-width:620px){
+.app{width:min(100% - 16px,900px);padding-top:14px;}
+.main-panel{padding:16px;border-radius:18px;}
+.actions{grid-template-columns:1fr;}
+.text-input{min-height:56vh;}
+.field-head{align-items:flex-start;flex-direction:column;gap:4px;}
+}
+}
+</style>
+</head>
+<body>
+<main class="app">
+<header class="hero">
+<h1>読み込み可能なHTMLエクスポート</h1>
+<p>JSONファイルとして保存する代わりに、作業内容を保持したHTMLファイルを出力し、そのHTMLを後から読み込んで編集を再開する仕組みのサンプルです。</p>
+</header>
+
+<section class="panel main-panel">
+<div class="lead-box">
+<strong>使い方：</strong>下の入力欄に文章を書き、「エクスポート」でHTMLとして保存します。後で「インポート」から、そのHTMLを選ぶと内容を復元できます。<br>
+Ctrl+S / Command+S でもエクスポートできます。
+<div class="reference">
+参考サイト：<a href="https://uni928.github.io/Uni928PublicHTMLs/index80.html" target="_blank" rel="noopener noreferrer">https://uni928.github.io/Uni928PublicHTMLs/index80.html</a><br>
+この参考サイトでは「編集作業継続用サイトを保存」で、編集内容を保持して後から作業を続けられるHTMLを作る仕組みが使われています。本サンプルは、その考え方を簡略化して紹介するものです。
+</div>
+</div>
+
+<div class="actions">
+<button id="exportButton" class="action-button primary" type="button">エクスポート</button>
+<button id="importButton" class="action-button secondary" type="button">インポート</button>
+<input id="fileInput" type="file" accept=".html,text/html">
+</div>
+
+<div class="field-head">
+<label for="contentInput">入力内容</label>
+<small id="charCount">0文字</small>
+</div>
+<textarea id="contentInput" class="text-input" placeholder="ここに文章を入力してください。\n\nエクスポートしたHTMLは、後からこのページの「インポート」で読み込めます。"></textarea>
+<div id="status" class="status" aria-live="polite"></div>
+
+<div class="note">エクスポートされるHTML内には、このサンプル専用のデータ領域が埋め込まれます。インポート時はそのデータだけを読み取り、入力欄へ戻します。外部サーバーへの送信は行いません。</div>
+</section>
+</main>
+
+<script>
+(() => {
+"use strict";
+
+const EXPORT_MARKER_ID = "readableExportData";
+const EXPORT_FORMAT = "readable-html-export-v1";
+const contentInput = document.getElementById("contentInput");
+const exportButton = document.getElementById("exportButton");
+const importButton = document.getElementById("importButton");
+const fileInput = document.getElementById("fileInput");
+const status = document.getElementById("status");
+const charCount = document.getElementById("charCount");
+
+function updateCount(){
+  charCount.textContent = contentInput.value.length.toLocaleString("ja-JP") + "文字";
+}
+
+function showStatus(message, success = false){
+  status.textContent = message;
+  status.classList.toggle("success", success);
+}
+
+function escapeForScriptData(value){
+  return String(value).replace(/</g,"\\u003c").replace(/>/g,"\\u003e").replace(/&/g,"\\u0026");
+}
+
+function makeExportHtml(){
+  const payload = {
+    format: EXPORT_FORMAT,
+    exportedAt: new Date().toISOString(),
+    content: contentInput.value
+  };
+  const encoded = escapeForScriptData(JSON.stringify(payload));
+  return `<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>編集作業継続用エクスポート</title>
+<style>
+@layer base;
+@layer base{
+/* エクスポートファイル単体で内容確認できる最小表示。 */
+body{margin:0;padding:28px;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f4f7fb;color:#1e293b;}
+main{max-width:760px;margin:auto;padding:24px;border:1px solid #dbe4f0;border-radius:18px;background:#fff;box-shadow:0 16px 40px rgba(30,41,59,.08);}
+h1{margin-top:0;font-size:1.45rem;}
+p{line-height:1.8;color:#64748b;}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;padding:16px;border-radius:12px;background:#f8fafc;border:1px solid #dbe4f0;line-height:1.7;}
+}
+</style>
+</head>
+<body>
+<main>
+<h1>編集作業継続用エクスポート</h1>
+<p>このHTMLには編集内容が保存されています。元の仕組み紹介サイトで「インポート」を選び、このHTMLを読み込むと編集内容を復元できます。</p>
+<pre id="preview"></pre>
+</main>
+<script id="${EXPORT_MARKER_ID}" type="application/json">${encoded}<\/script>
+<script>
+(() => {
+  try{
+    const data = JSON.parse(document.getElementById("${EXPORT_MARKER_ID}").textContent || "{}");
+    document.getElementById("preview").textContent = typeof data.content === "string" ? data.content : "";
+  }catch(error){
+    document.getElementById("preview").textContent = "保存内容を表示できませんでした。";
+  }
+})();
+<\/script>
+</body>
+</html>`;
+}
+
+function exportHtml(){
+  if(!contentInput.value.length){
+    showStatus("入力内容が空です。1文字以上入力してください。");
+    contentInput.focus();
+    return;
+  }
+  const html = makeExportHtml();
+  const blob = new Blob([html],{type:"text/html;charset=utf-8"});
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = "編集作業継続用エクスポート.html";
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  setTimeout(() => URL.revokeObjectURL(url),1000);
+  showStatus("HTMLとしてエクスポートしました。",true);
+}
+
+async function importHtml(file){
+  if(!file) return;
+  try{
+    const html = await file.text();
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html,"text/html");
+    const dataNode = doc.getElementById(EXPORT_MARKER_ID);
+    if(!dataNode) throw new Error("このサンプルからエクスポートされたHTMLではありません。");
+    const data = JSON.parse(dataNode.textContent || "{}");
+    if(data.format !== EXPORT_FORMAT || typeof data.content !== "string") throw new Error("対応していないエクスポート形式です。");
+    contentInput.value = data.content;
+    updateCount();
+    showStatus("HTMLから入力内容を読み込みました。",true);
+    contentInput.focus();
+  }catch(error){
+    showStatus(error && error.message ? error.message : "HTMLを読み込めませんでした。");
+  }finally{
+    fileInput.value = "";
+  }
+}
+
+exportButton.addEventListener("click",exportHtml);
+importButton.addEventListener("click",() => fileInput.click());
+fileInput.addEventListener("change",() => importHtml(fileInput.files && fileInput.files[0]));
+contentInput.addEventListener("input",updateCount);
+document.addEventListener("keydown",event => {
+  if((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s"){
+    event.preventDefault();
+    exportHtml();
+  }
+});
+updateCount();
+})();
+</script>
+</body>
+</html>
