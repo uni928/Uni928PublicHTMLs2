@@ -261,20 +261,40 @@ async function decodeSavedUrl(url){
   return {content:data.s,compression:definition.format};
 }
 
+function applyRestoredData(restored,message){
+  contentInput.value = restored.content;
+  updateCount();
+  showStatus(message + " 圧縮形式：" + restored.compression,true);
+}
+
 async function importHtml(file){
   if(!file) return;
   try{
     const html = await file.text();
     const targetUrl = extractRedirectUrl(html);
     const restored = await decodeSavedUrl(targetUrl);
-    contentInput.value = restored.content;
-    updateCount();
-    showStatus("容量削減HTMLから作業内容を読み込みました。圧縮形式：" + restored.compression,true);
+    applyRestoredData(restored,"容量削減HTMLから作業内容を読み込みました。");
     contentInput.focus();
   }catch(error){
     showStatus(error && error.message ? error.message : "HTMLを読み込めませんでした。");
   }finally{
     fileInput.value = "";
+  }
+}
+
+async function restoreFromCurrentUrl(){
+  if(!location.hash) return false;
+  try{
+    const restored = await decodeSavedUrl(location.href);
+    applyRestoredData(restored,"URL内の保存データから作業内容を復元しました。");
+    return true;
+  }catch(error){
+    // 保存用フラグメント以外のURLでは通常どおり起動する。
+    const match = location.hash.match(/^#([^=]+)=([A-Za-z0-9_-]+)$/);
+    if(match && COMPRESSION_FORMATS.some(item=>item.key===match[1])){
+      showStatus(error && error.message ? "URL内の保存データを復元できませんでした：" + error.message : "URL内の保存データを復元できませんでした。");
+    }
+    return false;
   }
 }
 
@@ -290,6 +310,7 @@ document.addEventListener("keydown",event=>{
 });
 
 updateCount();
+restoreFromCurrentUrl();
 })();
 </script>
 </body>
