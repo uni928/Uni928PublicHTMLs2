@@ -73,7 +73,7 @@ a{color:var(--accent);overflow-wrap:anywhere;}
 
 <section class="panel main-panel">
 <div class="lead-box">
-<strong>使い方：</strong>下の入力欄に文章を書き、「エクスポート」でHTMLとして保存します。後で「インポート」から、そのHTMLを選ぶと内容を復元できます。<br>
+<strong>使い方：</strong>下の入力欄に文章を書き、「エクスポート」でHTMLとして保存します。保存したHTMLを開くだけで入力内容が自動復元され、そのまま編集を再開できます。「インポート」から同じHTMLを読み込むこともできます。<br>
 Ctrl+S / Command+S でもエクスポートできます。
 <div class="reference">
 参考サイト：<a href="https://uni928.github.io/Uni928PublicHTMLs/index80.html" target="_blank" rel="noopener noreferrer">https://uni928.github.io/Uni928PublicHTMLs/index80.html</a><br>
@@ -91,19 +91,25 @@ Ctrl+S / Command+S でもエクスポートできます。
 <label for="contentInput">入力内容</label>
 <small id="charCount">0文字</small>
 </div>
-<textarea id="contentInput" class="text-input" placeholder="ここに文章を入力してください。\n\nエクスポートしたHTMLは、後からこのページの「インポート」で読み込めます。"></textarea>
+<textarea id="contentInput" class="text-input" placeholder="ここに文章を入力してください。\n\nエクスポートしたHTMLを開くと、そのまま作業を再開できます。"></textarea>
 <div id="status" class="status" aria-live="polite"></div>
 
-<div class="note">エクスポートされるHTML内には、このサンプル専用のデータ領域が埋め込まれます。インポート時はそのデータだけを読み取り、入力欄へ戻します。外部サーバーへの送信は行いません。</div>
+<div class="note">エクスポートされるHTML内には、入力内容をJSON化して圧縮した作業再開用データを埋め込みます。対応している複数の圧縮形式を比較し、最も短くなるものを採用します。保存HTMLを直接開いた場合も、インポートした場合も同じデータから入力欄を復元します。外部サーバーへの送信は行いません。</div>
 </section>
 </main>
 
+<script id="readableExportData" type="application/json">{"v":2,"empty":true}</script>
 <script>
 (() => {
 "use strict";
 
 const EXPORT_MARKER_ID = "readableExportData";
-const EXPORT_FORMAT = "readable-html-export-v1";
+const EXPORT_FORMAT = "readable-html-export-v2";
+const COMPRESSION_FORMATS = [
+  {format:"brotli",key:"br"},
+  {format:"deflate-raw",key:"dr"},
+  {format:"gzip",key:"gz"}
+];
 const contentInput = document.getElementById("contentInput");
 const exportButton = document.getElementById("exportButton");
 const importButton = document.getElementById("importButton");
@@ -120,73 +126,138 @@ function showStatus(message, success = false){
   status.classList.toggle("success", success);
 }
 
-function escapeForScriptData(value){
-  return String(value).replace(/</g,"\\u003c").replace(/>/g,"\\u003e").replace(/&/g,"\\u0026");
-}
-
-function makeExportHtml(){
-  const payload = {
-    format: EXPORT_FORMAT,
-    exportedAt: new Date().toISOString(),
-    content: contentInput.value
-  };
-  const encoded = escapeForScriptData(JSON.stringify(payload));
-  return `<!DOCTYPE html>
-<html lang="ja">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>編集作業継続用エクスポート</title>
-<style>
-@layer base;
-@layer base{
-/* エクスポートファイル単体で内容確認できる最小表示。 */
-body{margin:0;padding:28px;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f4f7fb;color:#1e293b;}
-main{max-width:760px;margin:auto;padding:24px;border:1px solid #dbe4f0;border-radius:18px;background:#fff;box-shadow:0 16px 40px rgba(30,41,59,.08);}
-h1{margin-top:0;font-size:1.45rem;}
-p{line-height:1.8;color:#64748b;}
-pre{white-space:pre-wrap;overflow-wrap:anywhere;padding:16px;border-radius:12px;background:#f8fafc;border:1px solid #dbe4f0;line-height:1.7;}
-}
-</style>
-</head>
-<body>
-<main>
-<h1>編集作業継続用エクスポート</h1>
-<p>このHTMLには編集内容が保存されています。元の仕組み紹介サイトで「インポート」を選び、このHTMLを読み込むと編集内容を復元できます。</p>
-<pre id="preview"></pre>
-</main>
-<script id="${EXPORT_MARKER_ID}" type="application/json">${encoded}<\/script>
-<script>
-(() => {
-  try{
-    const data = JSON.parse(document.getElementById("${EXPORT_MARKER_ID}").textContent || "{}");
-    document.getElementById("preview").textContent = typeof data.content === "string" ? data.content : "";
-  }catch(error){
-    document.getElementById("preview").textContent = "保存内容を表示できませんでした。";
+function bytesToBase64Url(bytes){
+  let binary = "";
+  const chunkSize = 0x8000;
+  for(let offset=0;offset<bytes.length;offset+=chunkSize){
+    const chunk = bytes.subarray(offset,offset+chunkSize);
+    for(let i=0;i<chunk.length;i++) binary += String.fromCharCode(chunk[i]);
   }
-})();
-<\/script>
-</body>
-</html>`;
+  return btoa(binary).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/g,"");
 }
 
-function exportHtml(){
+function base64UrlToBytes(value){
+  const base64 = String(value).replace(/-/g,"+").replace(/_/g,"/");
+  const padded = base64 + "=".repeat((4-base64.length%4)%4);
+  const binary = atob(padded);
+  const bytes = new Uint8Array(binary.length);
+  for(let i=0;i<binary.length;i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
+async function compressWithFormat(bytes,format){
+  const stream = new Blob([bytes]).stream().pipeThrough(new CompressionStream(format));
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+
+async function decompressWithFormat(bytes,format){
+  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream(format));
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+
+function sameBytes(a,b){
+  if(a.length !== b.length) return false;
+  for(let i=0;i<a.length;i++) if(a[i] !== b[i]) return false;
+  return true;
+}
+
+async function makeBestPayload(){
+  if(!("CompressionStream" in window) || !("DecompressionStream" in window)){
+    throw new Error("このブラウザは圧縮エクスポートに対応していません。");
+  }
+  const data = {format:EXPORT_FORMAT,exportedAt:new Date().toISOString(),content:contentInput.value};
+  const bytes = new TextEncoder().encode(JSON.stringify(data));
+  const candidates = [];
+  for(const definition of COMPRESSION_FORMATS){
+    try{
+      new DecompressionStream(definition.format);
+      const compressed = await compressWithFormat(bytes,definition.format);
+      const restored = await decompressWithFormat(compressed,definition.format);
+      if(!sameBytes(bytes,restored)) continue;
+      candidates.push({
+        format:definition.format,
+        key:definition.key,
+        encoded:bytesToBase64Url(compressed)
+      });
+    }catch(error){
+      // このブラウザで使えない圧縮形式は候補から外す。
+    }
+  }
+  if(!candidates.length) throw new Error("利用可能な圧縮形式がありません。");
+  candidates.sort((a,b)=>(a.key.length+a.encoded.length)-(b.key.length+b.encoded.length));
+  return candidates[0];
+}
+
+async function decodePayload(raw){
+  const meta = JSON.parse(raw || "{}");
+  if(meta && meta.empty) return null;
+  if(!meta || meta.v !== 2 || typeof meta.k !== "string" || typeof meta.d !== "string"){
+    throw new Error("対応していないエクスポート形式です。");
+  }
+  const definition = COMPRESSION_FORMATS.find(item=>item.key===meta.k);
+  if(!definition) throw new Error("圧縮形式を判別できません。");
+  const restored = await decompressWithFormat(base64UrlToBytes(meta.d),definition.format);
+  const data = JSON.parse(new TextDecoder().decode(restored));
+  if(!data || data.format !== EXPORT_FORMAT || typeof data.content !== "string"){
+    throw new Error("エクスポートデータが正しくありません。");
+  }
+  return {data,compression:definition.format,encodedLength:meta.d.length};
+}
+
+async function readEmbeddedData(doc=document){
+  const dataNode = doc.getElementById(EXPORT_MARKER_ID);
+  if(!dataNode) throw new Error("作業再開用データが見つかりません。");
+  return decodePayload(dataNode.textContent || "{}");
+}
+
+async function makeExportHtml(){
+  const payload = await makeBestPayload();
+  const clone = document.documentElement.cloneNode(true);
+  const dataNode = clone.querySelector("#" + EXPORT_MARKER_ID);
+  if(!dataNode) throw new Error("保存用データ領域を取得できませんでした。");
+  dataNode.textContent = JSON.stringify({v:2,k:payload.key,d:payload.encoded});
+  const clonedInput = clone.querySelector("#contentInput");
+  if(clonedInput){
+    clonedInput.value = "";
+    clonedInput.textContent = "";
+  }
+  const clonedStatus = clone.querySelector("#status");
+  if(clonedStatus){
+    clonedStatus.textContent = "";
+    clonedStatus.classList.remove("success");
+  }
+  const clonedFileInput = clone.querySelector("#fileInput");
+  if(clonedFileInput) clonedFileInput.value = "";
+  return {html:"<!DOCTYPE html>\n" + clone.outerHTML,payload};
+}
+
+async function exportHtml(){
   if(!contentInput.value.length){
     showStatus("入力内容が空です。1文字以上入力してください。");
     contentInput.focus();
     return;
   }
-  const html = makeExportHtml();
-  const blob = new Blob([html],{type:"text/html;charset=utf-8"});
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = "編集作業継続用エクスポート.html";
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-  setTimeout(() => URL.revokeObjectURL(url),1000);
-  showStatus("HTMLとしてエクスポートしました。",true);
+  const originalText = exportButton.textContent;
+  try{
+    exportButton.disabled = true;
+    exportButton.textContent = "圧縮中…";
+    const result = await makeExportHtml();
+    const blob = new Blob([result.html],{type:"text/html;charset=utf-8"});
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "編集作業継続用エクスポート.html";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+    showStatus("作業再開可能なHTMLをエクスポートしました。圧縮形式：" + result.payload.format + "、圧縮後Base64：" + result.payload.encoded.length.toLocaleString("ja-JP") + "文字",true);
+  }catch(error){
+    showStatus(error && error.message ? error.message : "エクスポートに失敗しました。");
+  }finally{
+    exportButton.textContent = originalText;
+    exportButton.disabled = false;
+  }
 }
 
 async function importHtml(file){
@@ -195,13 +266,11 @@ async function importHtml(file){
     const html = await file.text();
     const parser = new DOMParser();
     const doc = parser.parseFromString(html,"text/html");
-    const dataNode = doc.getElementById(EXPORT_MARKER_ID);
-    if(!dataNode) throw new Error("このサンプルからエクスポートされたHTMLではありません。");
-    const data = JSON.parse(dataNode.textContent || "{}");
-    if(data.format !== EXPORT_FORMAT || typeof data.content !== "string") throw new Error("対応していないエクスポート形式です。");
-    contentInput.value = data.content;
+    const restored = await readEmbeddedData(doc);
+    if(!restored) throw new Error("このHTMLには作業再開用データがありません。");
+    contentInput.value = restored.data.content;
     updateCount();
-    showStatus("HTMLから入力内容を読み込みました。",true);
+    showStatus("HTMLから作業内容を読み込みました。圧縮形式：" + restored.compression,true);
     contentInput.focus();
   }catch(error){
     showStatus(error && error.message ? error.message : "HTMLを読み込めませんでした。");
@@ -210,17 +279,31 @@ async function importHtml(file){
   }
 }
 
+async function restoreOnOpen(){
+  try{
+    const restored = await readEmbeddedData(document);
+    if(!restored) return;
+    contentInput.value = restored.data.content;
+    updateCount();
+    showStatus("エクスポートHTMLから作業内容を復元しました。このまま編集を再開できます。圧縮形式：" + restored.compression,true);
+  }catch(error){
+    showStatus(error && error.message ? "作業内容を復元できませんでした：" + error.message : "作業内容を復元できませんでした。");
+  }
+}
+
 exportButton.addEventListener("click",exportHtml);
-importButton.addEventListener("click",() => fileInput.click());
-fileInput.addEventListener("change",() => importHtml(fileInput.files && fileInput.files[0]));
+importButton.addEventListener("click",()=>fileInput.click());
+fileInput.addEventListener("change",()=>importHtml(fileInput.files && fileInput.files[0]));
 contentInput.addEventListener("input",updateCount);
-document.addEventListener("keydown",event => {
-  if((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s"){
+document.addEventListener("keydown",event=>{
+  if((event.ctrlKey || event.metaKey) && event.key.toLowerCase()==="s"){
     event.preventDefault();
     exportHtml();
   }
 });
+
 updateCount();
+restoreOnOpen();
 })();
 </script>
 </body>
