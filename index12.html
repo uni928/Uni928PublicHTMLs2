@@ -105,15 +105,15 @@
       <div class="steps">
         <div class="step"><div><h3>公開サイトを開く</h3><p>この仕組みを設置したWebページを開きます。</p></div></div>
         <div class="step"><div><h3>HTMLショートカットを保存</h3><p>ボタンを押すと、遷移先URLだけを持つ小さなHTMLファイルを保存します。</p></div></div>
-        <div class="step"><div><h3>後からファイルを開く</h3><p>保存したHTMLをダブルクリックすると、ブラウザで元のWebページへ移動します。</p></div></div>
+        <div class="step"><div><h3>後からファイルを開く</h3><p>保存したHTMLをダブルクリックすると、その時点の <code>Date.now()</code> をクエリに付けて元のWebページへ移動します。</p></div></div>
       </div>
     </section>
 
     <section class="card">
       <h2>保存されるHTMLは非常に短い</h2>
-      <p>中身は、ほぼ「このURLへ移動する」という処理だけです。</p>
-      <pre><code>&lt;!doctype html&gt;&lt;meta charset="utf-8"&gt;&lt;script&gt;location.replace("このページ自身のURL")&lt;\/script&gt;</code></pre>
-      <p class="note mt14">元サイトの内容そのものを保存するのではなく、元サイトへ戻るための入口だけを保存する仕組みです。</p>
+      <p>中身は、ほぼ「このURLへ移動する」という処理だけです。開いた瞬間に <code>Date.now()</code> を付けることで、古いキャッシュが使われにくくなります。</p>
+      <pre><code>&lt;!doctype html&gt;&lt;meta charset="utf-8"&gt;&lt;script&gt;location.replace("このページ自身のURL?"+Date.now())&lt;\/script&gt;</code></pre>
+      <p class="note mt14">元サイトの内容そのものを保存するのではなく、元サイトへ戻るための入口だけを保存する仕組みです。<code>Date.now()</code> は保存時ではなく、ショートカットHTMLを開いた時に評価されます。</p>
     </section>
 
     <section class="grid">
@@ -122,8 +122,8 @@
         <p>フォルダに分類したり、USBメモリやクラウドストレージへ置いたりできます。</p>
       </article>
       <article class="mini">
-        <h3>元ページが更新されても反映される</h3>
-        <p>HTML自体に内容をコピーしていないため、開いた時点の最新版へ移動します。</p>
+        <h3>元ページが更新されても反映されやすい</h3>
+        <p>HTML自体に内容をコピーせず、遷移時に毎回異なるクエリを付けるため、古いキャッシュの影響も受けにくくできます。</p>
       </article>
       <article class="mini">
         <h3>容量が非常に小さい</h3>
@@ -142,18 +142,18 @@
         <button class="button" id="downloadShortcut" type="button">開くとこのサイトにアクセスできるファイルをダウンロード</button>
       </div>
       <div class="status" id="status" aria-live="polite"></div>
-      <p class="note">実際の実装では、固定URLではなく <code>location.href</code> を使うことで「ボタンを押したページ自身のURL」を自動で埋め込めます。</p>
+      <p class="note">実際の実装では、固定URLではなく <code>location.href</code> を使って「ボタンを押したページ自身のURL」を取得し、保存したHTMLを開いた時に <code>? + Date.now()</code> を付けて遷移します。</p>
     </section>
 
     <section class="card">
       <h2>実装例</h2>
-      <p>各ページに同じボタンを置き、押されたページ自身のURLをHTMLへ埋め込む場合は、次のような形にできます。</p>
+      <p>各ページに同じボタンを置き、押されたページ自身のURLをHTMLへ埋め込み、遷移時にキャッシュ対策用の値を付ける場合は、次のような形にできます。</p>
       <pre><code>&lt;button id="saveShortcut"&gt;開くとこのサイトにアクセスできるファイルをダウンロード&lt;/button&gt;
 
 &lt;script&gt;
 document.getElementById("saveShortcut").addEventListener("click", () =&gt; {
-  const url = location.href;
-  const html = '&lt;!doctype html&gt;&lt;meta charset="utf-8"&gt;&lt;script&gt;location.replace(' + JSON.stringify(url) + ')&lt;\/script&gt;';
+  const url = location.href.split("#")[0].split("?")[0];
+  const html = '&lt;!doctype html&gt;&lt;meta charset="utf-8"&gt;&lt;script&gt;location.replace(' + JSON.stringify(url + "?") + '+Date.now())&lt;\\/script&gt;';
   const blob = new Blob([html], { type: "text/html;charset=utf-8" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
@@ -174,8 +174,11 @@ document.getElementById("saveShortcut").addEventListener("click", () =&gt; {
   const status = document.getElementById("status");
 
   button.addEventListener("click", () => {
-    const targetUrl = location.href;
-    const shortcutHtml = '<!doctype html><meta charset="utf-8"><script>location.replace(' + JSON.stringify(targetUrl) + ')<\/script>';
+    const url = new URL(location.href);
+    url.search = "";
+    url.hash = "";
+    const targetBaseUrl = url.href;
+    const shortcutHtml = '<!doctype html><meta charset="utf-8"><script>location.replace(' + JSON.stringify(targetBaseUrl + "?") + '+Date.now())<\/script>';
     const blob = new Blob([shortcutHtml], { type: "text/html;charset=utf-8" });
     const objectUrl = URL.createObjectURL(blob);
     const a = document.createElement("a");
