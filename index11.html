@@ -203,11 +203,14 @@ function getCurrentExportBaseUrl(){
 }
 
 function buildSavedUrl(payload){
-  return getCurrentExportBaseUrl() + "?" + Date.now() + "#" + payload.key + "=" + payload.encoded;
+  return getCurrentExportBaseUrl() + "#" + payload.key + "=" + payload.encoded;
 }
 
 function makeLightweightRedirectHtml(targetUrl){
-  return '<!doctype html><meta charset="utf-8"><script>location.replace(' + JSON.stringify(targetUrl) + ')<\/script>';
+  const hashIndex = targetUrl.indexOf("#");
+  const baseUrl = hashIndex >= 0 ? targetUrl.slice(0,hashIndex) : targetUrl;
+  const fragment = hashIndex >= 0 ? targetUrl.slice(hashIndex) : "";
+  return '<!doctype html><meta charset="utf-8"><script>location.replace(' + JSON.stringify(baseUrl + "?") + '+Date.now()+' + JSON.stringify(fragment) + ')<\/script>';
 }
 
 async function exportHtml(){
@@ -243,9 +246,14 @@ async function exportHtml(){
 }
 
 function extractRedirectUrl(html){
-  const jsonMatch = String(html).match(/location\.replace\(("(?:[^"\\]|\\.)*")\)/);
+  const text = String(html);
+  const jsonMatch = text.match(/location\.replace\(("(?:[^"\\]|\\.)*")\)/);
   if(jsonMatch){
     try{return JSON.parse(jsonMatch[1]);}catch(error){}
+  }
+  const dynamicMatch = text.match(/location\.replace\(("(?:[^"\\]|\\.)*")\+Date\.now\(\)\+("(?:[^"\\]|\\.)*")\)/);
+  if(dynamicMatch){
+    try{return JSON.parse(dynamicMatch[1]) + "0" + JSON.parse(dynamicMatch[2]);}catch(error){}
   }
   throw new Error("容量削減保存URLを取得できませんでした。");
 }
