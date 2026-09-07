@@ -94,7 +94,7 @@ Ctrl+S / Command+S でも同じエクスポートを実行します。
 <textarea id="contentInput" class="text-input" placeholder="ここに文章を入力してください。\n\nエクスポートしたHTMLを開くと、参考サイトへ移動して作業を再開できます。"></textarea>
 <div id="status" class="status" aria-live="polite"></div>
 
-<div class="note">入力内容は参考サイトの編集再開用JSON形式に変換し、対応している複数の圧縮形式を比較して最も短いものを採用します。エクスポートHTMLには元の編集画面やJSON本文を直接含めず、圧縮データ付きURLへのリダイレクト処理だけを保存します。</div>
+<div class="note">入力内容は参考サイトの編集再開用JSON形式に変換し、対応している複数の圧縮形式を比較して最も短いものを採用します。エクスポートHTMLには元の編集画面やJSON本文を直接含めず、エクスポート実行時に開いているこのページのURLへ、圧縮データを付加して戻るリダイレクト処理だけを保存します。</div>
 </section>
 </main>
 
@@ -102,7 +102,6 @@ Ctrl+S / Command+S でも同じエクスポートを実行します。
 (() => {
 "use strict";
 
-const LONG_URL_BASE = "https://uni928.github.io/Uni928PublicHTMLs/index80.html";
 const COMPRESSION_FORMATS = [
   {format:"brotli",key:"br"},
   {format:"deflate-raw",key:"dr"},
@@ -196,8 +195,14 @@ async function makeBestPayload(){
   return candidates[0];
 }
 
+function getCurrentExportBaseUrl(){
+  const url = new URL(location.href);
+  url.hash = "";
+  return url.href;
+}
+
 function buildSavedUrl(payload){
-  return LONG_URL_BASE + "#" + payload.key + "=" + payload.encoded;
+  return getCurrentExportBaseUrl() + "#" + payload.key + "=" + payload.encoded;
 }
 
 function makeLightweightRedirectHtml(targetUrl){
@@ -237,8 +242,6 @@ async function exportHtml(){
 }
 
 function extractRedirectUrl(html){
-  const match = String(html).match(/location\.replace\((['"])(https:\/\/uni928\.github\.io\/Uni928PublicHTMLs\/index80\.html#[^'"]+)\1\)/);
-  if(match) return match[2];
   const jsonMatch = String(html).match(/location\.replace\(("(?:[^"\\]|\\.)*")\)/);
   if(jsonMatch){
     try{return JSON.parse(jsonMatch[1]);}catch(error){}
