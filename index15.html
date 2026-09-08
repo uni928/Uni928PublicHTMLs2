@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>キャッシュ対策URL作成</title>
+<style>
+@layer reset, base, components;
+
+/* reset: ブラウザ差を抑える */
+@layer reset {
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  button,input{font:inherit}
+}
+
+/* base: ページ全体の基本設定 */
+@layer base {
+  :root{
+    color-scheme:light dark;
+    font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+  }
+  body{
+    min-height:100vh;
+    display:grid;
+    place-items:center;
+    background:#f5f6f8;
+    color:#1f2328;
+    padding:20px;
+  }
+  main{
+    width:min(680px,100%);
+  }
+}
+
+/* components: 入力欄・ボタン・説明カード */
+@layer components {
+  .card{
+    background:#fff;
+    border:1px solid #d8dee4;
+    border-radius:16px;
+    padding:24px;
+    box-shadow:0 8px 28px rgba(0,0,0,.06);
+  }
+  h1{
+    margin:0 0 8px;
+    font-size:clamp(22px,5vw,30px);
+  }
+  p{
+    margin:0;
+    line-height:1.7;
+  }
+  .lead{color:#57606a;margin-bottom:20px}
+  label{
+    display:block;
+    font-weight:700;
+    margin-bottom:8px;
+  }
+  input{
+    width:100%;
+    border:1px solid #afb8c1;
+    border-radius:10px;
+    padding:13px 14px;
+    background:#fff;
+    color:#1f2328;
+    outline:none;
+  }
+  input:focus{border-color:#0969da;box-shadow:0 0 0 3px rgba(9,105,218,.12)}
+  .preview{
+    margin-top:12px;
+    padding:12px 14px;
+    border-radius:10px;
+    background:#f6f8fa;
+    color:#57606a;
+    overflow-wrap:anywhere;
+    font-size:14px;
+  }
+  button{
+    width:100%;
+    margin-top:14px;
+    border:0;
+    border-radius:10px;
+    padding:13px 16px;
+    background:#1f6feb;
+    color:#fff;
+    font-weight:700;
+    cursor:pointer;
+  }
+  button:disabled{opacity:.55;cursor:not-allowed}
+  .note{
+    margin-top:18px;
+    padding-top:18px;
+    border-top:1px solid #d8dee4;
+    color:#57606a;
+    font-size:14px;
+  }
+  .status{
+    min-height:1.5em;
+    margin-top:10px;
+    text-align:center;
+    color:#1a7f37;
+    font-size:14px;
+  }
+  @media (prefers-color-scheme:dark){
+    body{background:#0d1117;color:#f0f6fc}
+    .card{background:#161b22;border-color:#30363d;box-shadow:none}
+    .lead,.note,.preview{color:#8b949e}
+    input{background:#0d1117;color:#f0f6fc;border-color:#484f58}
+    .preview{background:#0d1117}
+    .note{border-color:#30363d}
+  }
+}
+</style>
+</head>
+<body>
+<main>
+  <section class="card">
+    <h1>キャッシュ対策URL作成</h1>
+    <p class="lead">URLを入力すると、このページを経由して開くたびに現在時刻の数値を付けて遷移するURLを作成します。このページ自体を更新しなくても、毎回新しいクエリパラメータで移動できます。</p>
+
+    <label for="target">移動先URL</label>
+    <input id="target" type="url" inputmode="url" autocomplete="url" placeholder="https://example.com/page.html#section">
+
+    <div id="preview" class="preview">URLを入力すると、ここにキャッシュ対策URLが表示されます。</div>
+
+    <button id="copy" type="button" disabled>キャッシュ対策URLをコピー</button>
+    <div id="status" class="status" aria-live="polite"></div>
+
+    <p class="note">生成されたURLが長い場合は、x.gd などのURL短縮サービスで短縮できます。短縮後のURLからこのページへアクセスする形になるため、短縮しても移動時のキャッシュ対策は機能します。</p>
+  </section>
+</main>
+<script>
+(() => {
+  const BASE = 'https://uni928.github.io/Uni928PublicHTMLs2/index15.html';
+  const target = document.getElementById('target');
+  const preview = document.getElementById('preview');
+  const copy = document.getElementById('copy');
+  const status = document.getElementById('status');
+
+  const addCacheBuster = raw => {
+    const hashIndex = raw.indexOf('#');
+    const beforeHash = hashIndex >= 0 ? raw.slice(0, hashIndex) : raw;
+    const hash = hashIndex >= 0 ? raw.slice(hashIndex) : '';
+    const separator = beforeHash.includes('?') ? '&' : '?';
+    return beforeHash + separator + Date.now() + hash;
+  };
+
+  const getEmbeddedTarget = () => {
+    if (!location.search || location.search === '?') return '';
+    return location.search.slice(1) + location.hash;
+  };
+
+  const embeddedTarget = getEmbeddedTarget();
+  if (embeddedTarget) {
+    const destination = 'https://' + embeddedTarget.replace(/^https?:\/\//i, '');
+    location.replace(addCacheBuster(destination));
+    return;
+  }
+
+  const buildShortcutUrl = value => {
+    const trimmed = value.trim();
+    if (!trimmed) return '';
+    let url;
+    try {
+      url = new URL(/^https?:\/\//i.test(trimmed) ? trimmed : 'https://' + trimmed);
+    } catch {
+      return '';
+    }
+    if (url.protocol !== 'https:') return '';
+    const withoutHttps = url.href.replace(/^https:\/\//i, '');
+    return BASE + '?' + withoutHttps;
+  };
+
+  const update = () => {
+    status.textContent = '';
+    const result = buildShortcutUrl(target.value);
+    preview.textContent = result || 'https:// で始まるURLを入力してください。';
+    copy.disabled = !result;
+  };
+
+  target.addEventListener('input', update);
+
+  copy.addEventListener('click', async () => {
+    const result = buildShortcutUrl(target.value);
+    if (!result) return;
+    try {
+      await navigator.clipboard.writeText(result);
+      status.textContent = 'コピーしました。';
+    } catch {
+      const textarea = document.createElement('textarea');
+      textarea.value = result;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      textarea.remove();
+      status.textContent = 'コピーしました。';
+    }
+  });
+})();
+</script>
+</body>
+</html>
