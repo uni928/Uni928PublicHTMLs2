@@ -3,26 +3,31 @@
     const query = location.search;
     const now = Date.now();
     const cacheLimit = 5 * 60 * 1000;
-    const queryParts = query ? query.slice(1).split('&') : [];
 
-    // ?1788843986414 や &1788843986414 のような単独のDate.now()値
+    const queryParts = query
+      ? query.slice(1).split('&').filter(Boolean)
+      : [];
+
     const isDateNowValue = value => /^\d{13}$/.test(value);
-    const dateNowPart = queryParts.find(isDateNowValue);
 
-    const shouldRedirect =
-      !query ||
-      (
-        dateNowPart !== undefined &&
-        now - Number(dateNowPart) >= cacheLimit
-      );
+    const dateNowParts = queryParts.filter(isDateNowValue);
+    const latestDateNow = dateNowParts.at(-1);
 
-    // 先に遷移判定を確定する
-    if (shouldRedirect) {
-      const otherParts = queryParts.filter(
-        part => !isDateNowValue(part)
-      );
+    const otherParts = queryParts.filter(
+      part => !isDateNowValue(part)
+    );
 
-      const newQuery = [...otherParts, String(now)].join('&');
+    const hasDateNow = latestDateNow !== undefined;
+    const isExpired =
+      hasDateNow &&
+      now - Number(latestDateNow) >= cacheLimit;
+
+    // クエリがない、またはDate.now()がない場合は必ず付与する
+    if (!hasDateNow || isExpired) {
+      const newQuery = [
+        ...otherParts,
+        String(now)
+      ].join('&');
 
       location.replace(
         location.pathname + '?' + newQuery + location.hash
@@ -31,11 +36,7 @@
       return;
     }
 
-    // 5分以内なら遷移せず、Date.now()部分だけを削除する
-    const otherParts = queryParts.filter(
-      part => !isDateNowValue(part)
-    );
-
+    // Date.now()が5分以内なら遷移せず、Date.now()部分だけ削除する
     const cleanedQuery = otherParts.length
       ? '?' + otherParts.join('&')
       : '';
