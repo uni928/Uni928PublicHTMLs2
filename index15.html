@@ -4,6 +4,34 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>キャッシュ対策URL作成</title>
+<script>
+(() => {
+  const hasSearch = !!(location.search && location.search !== '?');
+  const hasHash = !!(location.hash && location.hash !== '#');
+
+  if (!hasSearch && !hasHash) return;
+
+  document.documentElement.hidden = true;
+
+  const addCacheBuster = raw => {
+    const hashIndex = raw.indexOf('#');
+    const beforeHash = hashIndex >= 0 ? raw.slice(0, hashIndex) : raw;
+    const hash = hashIndex >= 0 ? raw.slice(hashIndex) : '';
+    const separator = beforeHash.includes('?') ? '&' : '?';
+    return beforeHash + separator + Date.now() + hash;
+  };
+
+  let embeddedTarget = '';
+  if (hasSearch) {
+    embeddedTarget = location.search.slice(1) + (hasHash ? location.hash : '');
+  } else {
+    embeddedTarget = location.hash.slice(1);
+  }
+
+  const destination = 'https://' + embeddedTarget.replace(/^https?:\/\//i, '');
+  location.replace(addCacheBuster(destination));
+})();
+</script>
 <style>
 @layer reset, base, components;
 
@@ -96,31 +124,6 @@
   const xgdCopy = document.getElementById('xgdCopy');
   const normalStatus = document.getElementById('normalStatus');
   const xgdStatus = document.getElementById('xgdStatus');
-
-  const addCacheBuster = raw => {
-    const hashIndex = raw.indexOf('#');
-    const beforeHash = hashIndex >= 0 ? raw.slice(0, hashIndex) : raw;
-    const hash = hashIndex >= 0 ? raw.slice(hashIndex) : '';
-    const separator = beforeHash.includes('?') ? '&' : '?';
-    return beforeHash + separator + Date.now() + hash;
-  };
-
-  const getEmbeddedTarget = () => {
-    if (location.search && location.search !== '?') {
-      return location.search.slice(1) + location.hash;
-    }
-    if (location.hash && location.hash !== '#') {
-      return location.hash.slice(1);
-    }
-    return '';
-  };
-
-  const embeddedTarget = getEmbeddedTarget();
-  if (embeddedTarget) {
-    const destination = 'https://' + embeddedTarget.replace(/^https?:\/\//i, '');
-    location.replace(addCacheBuster(destination));
-    return;
-  }
 
   const normalizeTarget = value => {
     const trimmed = value.trim();
