@@ -49,7 +49,8 @@
     line-height: 1.8;
   }
 
-  .scale-panel {
+  .scale-panel,
+  .noise-panel {
     margin-top: 16px;
   }
 
@@ -184,7 +185,8 @@
     pointer-events: none;
   }
 
-  .scale-panel {
+  .scale-panel,
+  .noise-panel {
     padding: 18px 20px;
     background: rgba(255,255,255,.97);
     border: 1px solid rgba(255,255,255,.9);
@@ -192,7 +194,8 @@
     box-shadow: 0 8px 24px rgba(41,50,75,.06);
   }
 
-  .scale-panel__label {
+  .scale-panel__label,
+  .noise-panel__label {
     display: block;
     margin-bottom: 10px;
     color: #344054;
@@ -200,7 +203,8 @@
     font-weight: 800;
   }
 
-  .scale-panel__select {
+  .scale-panel__select,
+  .noise-panel__select {
     width: 100%;
     min-height: 46px;
     padding: 0 14px;
@@ -212,7 +216,8 @@
     outline: none;
   }
 
-  .scale-panel__select:focus {
+  .scale-panel__select:focus,
+  .noise-panel__select:focus {
     border-color: rgba(117,103,220,.55);
     box-shadow: 0 0 0 4px rgba(117,103,220,.08);
   }
@@ -315,7 +320,17 @@
     </select>
   </div>
 
-  <p class="quality-note">倍率が高いほど複数段階に分けて拡大し、輪郭のぼやけを抑える補正を自動で加えます。</p>
+  <div class="noise-panel">
+    <label class="noise-panel__label" for="noiseSelect">ノイズキャンセル</label>
+    <select class="noise-panel__select" id="noiseSelect">
+      <option value="none">なし</option>
+      <option value="weak" selected>弱</option>
+      <option value="medium">中</option>
+      <option value="strong">強い</option>
+    </select>
+  </div>
+
+  <p class="quality-note">倍率が高いほど複数段階に分けて拡大し、輪郭のぼやけを抑える補正を自動で加えます。ノイズキャンセルは強くするほど細部が滑らかになります。</p>
 
   <div class="actions">
     <button class="download" type="button" disabled>高画質化した画像をダウンロード</button>
@@ -334,6 +349,7 @@
   const status = root.querySelector('.status');
   const download = document.querySelector('.download');
   const scaleSelect = document.querySelector('#scaleSelect');
+  const noiseSelect = document.querySelector('#noiseSelect');
   const canvas = document.querySelector('canvas');
   const ctx = canvas.getContext('2d');
 
@@ -387,6 +403,59 @@
     }
 
     return current;
+  };
+
+  const reduceNoise = (targetCanvas, level) => {
+    if (level === 'none') return;
+
+    const tctx = targetCanvas.getContext('2d', { willReadFrequently: true });
+    const w = targetCanvas.width;
+    const h = targetCanvas.height;
+    const imageData = tctx.getImageData(0, 0, w, h);
+    const src = imageData.data;
+    const out = new Uint8ClampedArray(src);
+
+    const passes = level === 'weak' ? 1 : level === 'medium' ? 2 : 3;
+    const blend = level === 'weak' ? 0.18 : level === 'medium' ? 0.30 : 0.42;
+    const row = w * 4;
+
+    let current = src;
+
+    for (let pass = 0; pass < passes; pass++) {
+      const next = new Uint8ClampedArray(current);
+
+      for (let y = 1; y < h - 1; y++) {
+        for (let x = 1; x < w - 1; x++) {
+          const i = y * row + x * 4;
+
+          for (let c = 0; c < 3; c++) {
+            const center = current[i + c];
+            const neighbors = [
+              current[i - row - 4 + c],
+              current[i - row + c],
+              current[i - row + 4 + c],
+              current[i - 4 + c],
+              center,
+              current[i + 4 + c],
+              current[i + row - 4 + c],
+              current[i + row + c],
+              current[i + row + 4 + c]
+            ].sort((a, b) => a - b);
+
+            const median = neighbors[4];
+            const diff = Math.abs(center - median);
+            const localBlend = diff < 18 ? blend : blend * 0.45;
+            next[i + c] = Math.round(center * (1 - localBlend) + median * localBlend);
+          }
+        }
+      }
+
+      current = next;
+    }
+
+    out.set(current);
+    imageData.data.set(out);
+    tctx.putImageData(imageData, 0, 0);
   };
 
   const enhanceImage = (targetCanvas, strength) => {
@@ -453,6 +522,7 @@
       ctx.drawImage(scaled, 0, 0);
 
       if (outWidth * outHeight <= 36_000_000) {
+        reduceNoise(canvas, noiseSelect.value);
         enhanceImage(canvas, scale);
       }
 
@@ -469,7 +539,8 @@
 
         resultUrl = URL.createObjectURL(blob);
         download.disabled = false;
-        status.textContent = `${width} × ${height} → ${outWidth} × ${outHeight} px（${scale}x・自動高画質化）`;
+        const noiseLabel = noiseSelect.options[noiseSelect.selectedIndex].text;
+        status.textContent = `${width} × ${height} → ${outWidth} × ${outHeight} px（${scale}x・ノイズ ${noiseLabel}）`;
       }, 'image/png');
     };
 
@@ -501,6 +572,10 @@
   zone.addEventListener('drop', (event) => processImage(event.dataTransfer.files[0]));
 
   scaleSelect.addEventListener('change', () => {
+    if (selectedFile) processImage(selectedFile);
+  });
+
+  noiseSelect.addEventListener('change', () => {
     if (selectedFile) processImage(selectedFile);
   });
 
