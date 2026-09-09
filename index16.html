@@ -101,9 +101,9 @@
   const makeText = () => {
     let count = Number(countInput.value);
     if (!Number.isFinite(count)) count = 40;
-    count = Math.max(20, Math.min(100, Math.round(count)));
+    count = Math.max(20, Math.min(500, Math.round(count)));
     countInput.value = count;
-    return "つb" + "\u0302".repeat(count) + "ダイレクトアタックや！";
+    return "つb" + "\u0352".repeat(count) + "ダイレクトアタックや！";
   };
 
   copyButton.addEventListener("click", async () => {
