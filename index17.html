@@ -1,0 +1,520 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>画像を高画質のまま拡大</title>
+<style>
+@layer reset, base, layout, components, responsive;
+
+@layer reset {
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  button, input { font: inherit; }
+}
+
+@layer base {
+  body {
+    min-height: 100vh;
+    background:
+      radial-gradient(circle at top left, rgba(117,103,220,.10), transparent 34%),
+      linear-gradient(180deg, #f8f9fc, #f2f4f8);
+    color: #182033;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans JP", sans-serif;
+  }
+}
+
+@layer layout {
+  .page {
+    width: min(720px, calc(100% - 32px));
+    margin: 0 auto;
+    padding: 52px 0;
+  }
+
+  .intro {
+    margin-bottom: 20px;
+    text-align: center;
+  }
+
+  .intro h1 {
+    margin: 0 0 10px;
+    font-size: clamp(24px, 5vw, 34px);
+    line-height: 1.25;
+  }
+
+  .intro p {
+    margin: 0;
+    color: #667085;
+    font-size: 14px;
+    line-height: 1.8;
+  }
+
+  .scale-panel {
+    margin-top: 16px;
+  }
+
+  .actions {
+    margin-top: 20px;
+  }
+}
+
+@layer components {
+  .uni-photo-dropbox {
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.97);
+    border: 1px solid rgba(255, 255, 255, 0.9);
+    border-radius: 24px;
+    box-shadow: 0 8px 24px rgba(41, 50, 75, 0.07);
+  }
+
+  .uni-photo-dropbox__zone {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 100%;
+    height: 220px;
+    overflow: hidden;
+    border: 1.5px dashed rgba(117, 103, 220, 0.28);
+    border-radius: 22px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,247,253,0.98));
+    cursor: pointer;
+    transition: border-color .18s ease, transform .18s ease, box-shadow .18s ease;
+  }
+
+  .uni-photo-dropbox__zone:hover,
+  .uni-photo-dropbox__zone.is-dragging {
+    border-color: rgba(117, 103, 220, 0.58);
+    box-shadow: 0 12px 28px rgba(117, 103, 220, 0.10);
+    transform: translateY(-1px);
+  }
+
+  .uni-photo-dropbox__inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 22px;
+    text-align: center;
+    pointer-events: none;
+  }
+
+  .uni-photo-dropbox__icon {
+    display: grid;
+    place-items: center;
+    width: 54px;
+    height: 54px;
+    border-radius: 18px;
+    background: linear-gradient(135deg, rgba(117,103,220,0.12), rgba(217,137,180,0.16));
+  }
+
+  .uni-photo-dropbox__icon svg {
+    width: 25px;
+    height: 25px;
+    stroke: #6e65ad;
+  }
+
+  .uni-photo-dropbox__copy {
+    display: grid;
+    gap: 5px;
+    text-align: center;
+  }
+
+  .uni-photo-dropbox__title {
+    color: #182033;
+    font-size: 16px;
+    font-weight: 800;
+    line-height: 1.35;
+    letter-spacing: .01em;
+  }
+
+  .uni-photo-dropbox__guide {
+    color: #667085;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.55;
+  }
+
+  .uni-photo-dropbox__meta {
+    color: #98a2b3;
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.4;
+  }
+
+  .uni-photo-dropbox__input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  .uni-photo-dropbox__preview-wrap {
+    position: relative;
+    display: none;
+  }
+
+  .uni-photo-dropbox__preview-wrap.is-visible {
+    display: block;
+  }
+
+  .uni-photo-dropbox__preview {
+    display: block;
+    width: 100%;
+    max-height: 420px;
+    object-fit: contain;
+    border: 1px solid rgba(110, 145, 210, 0.16);
+    border-radius: 18px;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+  }
+
+  .uni-photo-dropbox__change {
+    position: absolute;
+    right: 12px;
+    bottom: 12px;
+    padding: 8px 12px;
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 999px;
+    background: linear-gradient(180deg, rgba(34,46,66,.84), rgba(56,69,92,.90));
+    color: #fff;
+    font: 700 12px/1 system-ui, sans-serif;
+    box-shadow: 0 6px 16px rgba(15,23,42,.18);
+    pointer-events: none;
+  }
+
+  .scale-panel {
+    padding: 18px 20px;
+    background: rgba(255,255,255,.97);
+    border: 1px solid rgba(255,255,255,.9);
+    border-radius: 20px;
+    box-shadow: 0 8px 24px rgba(41,50,75,.06);
+  }
+
+  .scale-panel__label {
+    display: block;
+    margin-bottom: 10px;
+    color: #344054;
+    font-size: 13px;
+    font-weight: 800;
+  }
+
+  .scale-panel__select {
+    width: 100%;
+    min-height: 46px;
+    padding: 0 14px;
+    border: 1px solid rgba(117,103,220,.20);
+    border-radius: 14px;
+    background: #fff;
+    color: #182033;
+    font-weight: 700;
+    outline: none;
+  }
+
+  .scale-panel__select:focus {
+    border-color: rgba(117,103,220,.55);
+    box-shadow: 0 0 0 4px rgba(117,103,220,.08);
+  }
+
+  .status {
+    margin: 12px 4px 0;
+    color: #667085;
+    font-size: 12px;
+    line-height: 1.6;
+    text-align: center;
+  }
+
+  .quality-note {
+    margin: 12px 4px 0;
+    color: #7b8496;
+    font-size: 12px;
+    line-height: 1.65;
+    text-align: center;
+  }
+
+  .download {
+    width: 100%;
+    min-height: 52px;
+    border: 0;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #6e65ad, #8175cf);
+    color: #fff;
+    font-weight: 800;
+    cursor: pointer;
+    box-shadow: 0 10px 24px rgba(110,101,173,.22);
+    transition: transform .15s ease, opacity .15s ease;
+  }
+
+  .download:hover:not(:disabled) {
+    transform: translateY(-1px);
+  }
+
+  .download:disabled {
+    opacity: .42;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+
+  canvas {
+    display: none;
+  }
+}
+
+@layer responsive {
+  @media (max-width: 540px) {
+    .page { width: min(100% - 24px, 720px); padding: 30px 0; }
+    .uni-photo-dropbox { padding: 16px; }
+    .uni-photo-dropbox__zone { height: 190px; }
+  }
+}
+</style>
+</head>
+<body>
+<main class="page">
+  <section class="intro">
+    <h1>画像を高画質で拡大</h1>
+    <p>画像を入れて倍率を選ぶと、段階的拡大・高品質補間・輪郭補正・局所コントラスト補正を自動で組み合わせて高画質化します。処理した画像はPNGで保存できます。</p>
+  </section>
+
+  <div class="uni-photo-dropbox">
+    <label class="uni-photo-dropbox__zone">
+      <span class="uni-photo-dropbox__inner">
+        <span class="uni-photo-dropbox__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2">
+            <rect x="3" y="5" width="18" height="14" rx="3"></rect>
+            <circle cx="12" cy="12" r="3"></circle>
+          </svg>
+        </span>
+        <span class="uni-photo-dropbox__copy">
+          <span class="uni-photo-dropbox__title">画像をアップロード</span>
+          <span class="uni-photo-dropbox__guide">クリックして選択、またはここへドラッグ</span>
+          <span class="uni-photo-dropbox__meta">JPG・PNG・WebPなどに対応</span>
+        </span>
+      </span>
+      <input class="uni-photo-dropbox__input" type="file" accept="image/*">
+    </label>
+
+    <div class="uni-photo-dropbox__preview-wrap">
+      <img class="uni-photo-dropbox__preview" alt="アップロードした画像のプレビュー">
+      <span class="uni-photo-dropbox__change">画像を入れ替える</span>
+    </div>
+
+    <div class="status" aria-live="polite">画像を選択してください。</div>
+  </div>
+
+  <div class="scale-panel">
+    <label class="scale-panel__label" for="scaleSelect">拡大倍率</label>
+    <select class="scale-panel__select" id="scaleSelect">
+      <option value="1.2">1.2x</option>
+      <option value="1.3">1.3x</option>
+      <option value="1.5">1.5x</option>
+      <option value="2" selected>2x</option>
+      <option value="4">4x</option>
+      <option value="8">8x</option>
+    </select>
+  </div>
+
+  <p class="quality-note">倍率が高いほど複数段階に分けて拡大し、輪郭のぼやけを抑える補正を自動で加えます。</p>
+
+  <div class="actions">
+    <button class="download" type="button" disabled>高画質化した画像をダウンロード</button>
+  </div>
+
+  <canvas></canvas>
+</main>
+
+<script>
+(() => {
+  const root = document.querySelector('.uni-photo-dropbox');
+  const zone = root.querySelector('.uni-photo-dropbox__zone');
+  const input = root.querySelector('.uni-photo-dropbox__input');
+  const previewWrap = root.querySelector('.uni-photo-dropbox__preview-wrap');
+  const preview = root.querySelector('.uni-photo-dropbox__preview');
+  const status = root.querySelector('.status');
+  const download = document.querySelector('.download');
+  const scaleSelect = document.querySelector('#scaleSelect');
+  const canvas = document.querySelector('canvas');
+  const ctx = canvas.getContext('2d');
+
+  let selectedFile = null;
+  let resultUrl = '';
+
+  const revokeResultUrl = () => {
+    if (resultUrl) {
+      URL.revokeObjectURL(resultUrl);
+      resultUrl = '';
+    }
+  };
+
+  const makeFileName = (name, scale) => {
+    const base = name.replace(/\.[^.]+$/, '') || 'image';
+    return `${base}_${scale}x.png`;
+  };
+
+  const makeCanvas = (width, height) => {
+    const c = document.createElement('canvas');
+    c.width = Math.max(1, Math.round(width));
+    c.height = Math.max(1, Math.round(height));
+    return c;
+  };
+
+  const progressiveScale = (source, targetWidth, targetHeight) => {
+    let current = source;
+    let currentWidth = source.naturalWidth || source.width;
+    let currentHeight = source.naturalHeight || source.height;
+
+    while (currentWidth * 1.75 < targetWidth || currentHeight * 1.75 < targetHeight) {
+      const nextWidth = Math.min(targetWidth, Math.round(currentWidth * 1.6));
+      const nextHeight = Math.min(targetHeight, Math.round(currentHeight * 1.6));
+      const next = makeCanvas(nextWidth, nextHeight);
+      const nextCtx = next.getContext('2d', { alpha: true });
+      nextCtx.imageSmoothingEnabled = true;
+      nextCtx.imageSmoothingQuality = 'high';
+      nextCtx.drawImage(current, 0, 0, nextWidth, nextHeight);
+      current = next;
+      currentWidth = nextWidth;
+      currentHeight = nextHeight;
+    }
+
+    if (currentWidth !== targetWidth || currentHeight !== targetHeight) {
+      const next = makeCanvas(targetWidth, targetHeight);
+      const nextCtx = next.getContext('2d', { alpha: true });
+      nextCtx.imageSmoothingEnabled = true;
+      nextCtx.imageSmoothingQuality = 'high';
+      nextCtx.drawImage(current, 0, 0, targetWidth, targetHeight);
+      current = next;
+    }
+
+    return current;
+  };
+
+  const enhanceImage = (targetCanvas, strength) => {
+    const tctx = targetCanvas.getContext('2d', { willReadFrequently: true });
+    const w = targetCanvas.width;
+    const h = targetCanvas.height;
+    const imageData = tctx.getImageData(0, 0, w, h);
+    const src = imageData.data;
+    const out = new Uint8ClampedArray(src);
+    const row = w * 4;
+
+    const sharp = 0.10 + Math.min(0.18, strength * 0.02);
+    const contrast = 1.015 + Math.min(0.035, strength * 0.004);
+
+    for (let y = 1; y < h - 1; y++) {
+      for (let x = 1; x < w - 1; x++) {
+        const i = y * row + x * 4;
+        for (let c = 0; c < 3; c++) {
+          const center = src[i + c];
+          const left = src[i - 4 + c];
+          const right = src[i + 4 + c];
+          const up = src[i - row + c];
+          const down = src[i + row + c];
+
+          const blur = (left + right + up + down + center * 4) / 8;
+          const detail = center - blur;
+          let value = center + detail * sharp;
+
+          value = (value - 128) * contrast + 128;
+          out[i + c] = Math.max(0, Math.min(255, value));
+        }
+      }
+    }
+
+    imageData.data.set(out);
+    tctx.putImageData(imageData, 0, 0);
+  };
+
+  const processImage = (file) => {
+    if (!file || !file.type.startsWith('image/')) return;
+
+    selectedFile = file;
+    download.disabled = true;
+    revokeResultUrl();
+    status.textContent = '高画質化しています…';
+
+    const objectUrl = URL.createObjectURL(file);
+    const img = new Image();
+
+    img.onload = () => {
+      const width = img.naturalWidth;
+      const height = img.naturalHeight;
+      const scale = Number(scaleSelect.value);
+      const outWidth = Math.max(1, Math.round(width * scale));
+      const outHeight = Math.max(1, Math.round(height * scale));
+
+      const scaled = progressiveScale(img, outWidth, outHeight);
+
+      canvas.width = outWidth;
+      canvas.height = outHeight;
+      ctx.clearRect(0, 0, outWidth, outHeight);
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(scaled, 0, 0);
+
+      if (outWidth * outHeight <= 36_000_000) {
+        enhanceImage(canvas, scale);
+      }
+
+      preview.src = canvas.toDataURL('image/png');
+      zone.style.display = 'none';
+      previewWrap.classList.add('is-visible');
+      URL.revokeObjectURL(objectUrl);
+
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          status.textContent = '画像の変換に失敗しました。';
+          return;
+        }
+
+        resultUrl = URL.createObjectURL(blob);
+        download.disabled = false;
+        status.textContent = `${width} × ${height} → ${outWidth} × ${outHeight} px（${scale}x・自動高画質化）`;
+      }, 'image/png');
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      status.textContent = '画像を読み込めませんでした。';
+    };
+
+    img.src = objectUrl;
+  };
+
+  input.addEventListener('change', () => processImage(input.files[0]));
+  previewWrap.addEventListener('click', () => input.click());
+
+  ['dragenter', 'dragover'].forEach((type) => {
+    zone.addEventListener(type, (event) => {
+      event.preventDefault();
+      zone.classList.add('is-dragging');
+    });
+  });
+
+  ['dragleave', 'drop'].forEach((type) => {
+    zone.addEventListener(type, (event) => {
+      event.preventDefault();
+      zone.classList.remove('is-dragging');
+    });
+  });
+
+  zone.addEventListener('drop', (event) => processImage(event.dataTransfer.files[0]));
+
+  scaleSelect.addEventListener('change', () => {
+    if (selectedFile) processImage(selectedFile);
+  });
+
+  download.addEventListener('click', () => {
+    if (!resultUrl || !selectedFile) return;
+
+    const a = document.createElement('a');
+    a.href = resultUrl;
+    a.download = makeFileName(selectedFile.name, scaleSelect.value);
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  });
+})();
+</script>
+</body>
+</html>
