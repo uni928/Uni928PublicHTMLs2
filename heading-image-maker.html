@@ -125,6 +125,29 @@
     gap: 10px;
   }
 
+  .background-more {
+    margin-top: 10px;
+  }
+
+  .background-more summary {
+    list-style: none;
+    min-height: 42px;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--border);
+    border-radius: 11px;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .background-more summary::-webkit-details-marker { display: none; }
+  .background-more summary::after { content: " ＋"; }
+  .background-more[open] summary::after { content: " −"; }
+  .more-backgrounds { margin-top: 10px; }
+
   .bg-choice {
     position: relative;
     aspect-ratio: 1.55 / 1;
@@ -178,6 +201,38 @@
       radial-gradient(circle at 80% 75%,#ffb8c4 0 14%,transparent 15%),
       linear-gradient(135deg,#f8efe8,#a8cfe7);
   }
+  .bg-cream {
+    background:
+      radial-gradient(circle at 78% 25%,rgba(255,255,255,.9) 0 16%,transparent 17%),
+      linear-gradient(135deg,#fbf4e8,#e6d8c3);
+  }
+  .bg-mint {
+    background:
+      radial-gradient(circle at 78% 30%,#f8fff9 0 17%,transparent 18%),
+      linear-gradient(135deg,#e9f3ec,#a9cbbc);
+  }
+  .bg-peach {
+    background:
+      radial-gradient(circle at 80% 72%,#ffd8c8 0 17%,transparent 18%),
+      linear-gradient(135deg,#fff3e9,#efb49f);
+  }
+  .bg-lavender {
+    background:
+      radial-gradient(circle at 77% 25%,#fff 0 12%,transparent 13%),
+      linear-gradient(135deg,#f5f0fb,#c9bde0);
+  }
+  .bg-dots {
+    background:
+      radial-gradient(circle,rgba(85,77,67,.14) 0 2px,transparent 2.5px),
+      linear-gradient(135deg,#faf6ee,#e9dfcf);
+    background-size: 18px 18px,100% 100%;
+  }
+  .bg-arch {
+    background:
+      radial-gradient(ellipse at 82% 100%,#ddb5a5 0 27%,transparent 27.5%),
+      radial-gradient(ellipse at 82% 100%,#f2d8c5 0 42%,transparent 42.5%),
+      linear-gradient(135deg,#fbf5eb,#e7d8c5);
+  }
 
   .options {
     display: grid;
@@ -220,6 +275,7 @@
     overflow: hidden;
     background: #ddd;
     border: 1px solid var(--border);
+    box-shadow: 0 16px 38px rgba(0,0,0,.13);
   }
 
   canvas {
@@ -230,9 +286,45 @@
   }
 
   .actions {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
     margin-top: 14px;
+  }
+
+  .action-more {
+    margin-top: 10px;
+  }
+
+  .action-more summary {
+    list-style: none;
+    min-height: 42px;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--border);
+    border-radius: 11px;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .action-more summary::-webkit-details-marker { display: none; }
+
+  .action-more summary::after {
+    content: " ＋";
+  }
+
+  .action-more[open] summary::after {
+    content: " −";
+  }
+
+  .more-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 10px;
   }
 
   .btn {
@@ -270,7 +362,7 @@
   @media (max-width: 480px) {
     .backgrounds { grid-template-columns: repeat(2, 1fr); }
     .options { grid-template-columns: 1fr; }
-    .actions { flex-direction: column; }
+    .actions, .more-actions { grid-template-columns: 1fr; }
   }
 
   @media (prefers-color-scheme: dark) {
@@ -308,16 +400,29 @@
       </div>
 
       <h2 class="section-title">背景を選択</h2>
-      <div class="backgrounds" id="backgrounds">
-        <button class="bg-choice bg-minimal" type="button" data-bg="minimal" data-selected="true" aria-label="ミニマル"></button>
-        <button class="bg-choice bg-night" type="button" data-bg="night" data-selected="false" aria-label="ダーク"></button>
-        <button class="bg-choice bg-sky" type="button" data-bg="sky" data-selected="false" aria-label="空"></button>
-        <button class="bg-choice bg-warm" type="button" data-bg="warm" data-selected="false" aria-label="暖色"></button>
-        <button class="bg-choice bg-forest" type="button" data-bg="forest" data-selected="false" aria-label="森林"></button>
-        <button class="bg-choice bg-purple" type="button" data-bg="purple" data-selected="false" aria-label="紫"></button>
-        <button class="bg-choice bg-paper" type="button" data-bg="paper" data-selected="false" aria-label="紙"></button>
-        <button class="bg-choice bg-grid" type="button" data-bg="grid" data-selected="false" aria-label="グリッド"></button>
-        <button class="bg-choice bg-pop" type="button" data-bg="pop" data-selected="false" aria-label="ポップ"></button>
+      <div id="backgrounds">
+        <div class="backgrounds">
+          <button class="bg-choice bg-minimal" type="button" data-bg="minimal" data-selected="true" aria-label="ミニマル"></button>
+          <button class="bg-choice bg-paper" type="button" data-bg="paper" data-selected="false" aria-label="紙"></button>
+          <button class="bg-choice bg-pop" type="button" data-bg="pop" data-selected="false" aria-label="ポップ"></button>
+          <button class="bg-choice bg-cream" type="button" data-bg="cream" data-selected="false" aria-label="クリーム"></button>
+          <button class="bg-choice bg-sky" type="button" data-bg="sky" data-selected="false" aria-label="空"></button>
+          <button class="bg-choice bg-warm" type="button" data-bg="warm" data-selected="false" aria-label="暖色"></button>
+        </div>
+        <details class="background-more">
+          <summary>もっと開く</summary>
+          <div class="backgrounds more-backgrounds">
+            <button class="bg-choice bg-mint" type="button" data-bg="mint" data-selected="false" aria-label="ミント"></button>
+            <button class="bg-choice bg-peach" type="button" data-bg="peach" data-selected="false" aria-label="桃色"></button>
+            <button class="bg-choice bg-lavender" type="button" data-bg="lavender" data-selected="false" aria-label="薄紫"></button>
+            <button class="bg-choice bg-dots" type="button" data-bg="dots" data-selected="false" aria-label="ドット紙"></button>
+            <button class="bg-choice bg-arch" type="button" data-bg="arch" data-selected="false" aria-label="アーチ"></button>
+            <button class="bg-choice bg-purple" type="button" data-bg="purple" data-selected="false" aria-label="紫"></button>
+            <button class="bg-choice bg-forest" type="button" data-bg="forest" data-selected="false" aria-label="森林"></button>
+            <button class="bg-choice bg-night" type="button" data-bg="night" data-selected="false" aria-label="ダーク"></button>
+            <button class="bg-choice bg-grid" type="button" data-bg="grid" data-selected="false" aria-label="グリッド"></button>
+          </div>
+        </details>
       </div>
 
       <div class="options">
@@ -357,10 +462,11 @@
         <canvas id="canvas" width="1280" height="670"></canvas>
       </div>
 
-      <div class="actions">
-        <button class="btn" id="copyBtn" type="button">画像をコピー</button>
-        <button class="btn btn-primary" id="downloadBtn" type="button">PNGで保存</button>
-      </div>
+      <div class="actions" id="primaryActions"></div>
+      <details class="action-more" id="actionMore">
+        <summary>もっと開く</summary>
+        <div class="more-actions" id="moreActions"></div>
+      </details>
       <div class="status" id="status" aria-live="polite"></div>
     </section>
   </div>
@@ -377,8 +483,16 @@
   const overlay = document.getElementById('overlay');
   const backgrounds = document.getElementById('backgrounds');
   const status = document.getElementById('status');
+  const primaryActions = document.getElementById('primaryActions');
+  const moreActions = document.getElementById('moreActions');
+  const actionMore = document.getElementById('actionMore');
   const W = canvas.width;
   const H = canvas.height;
+  const ACTION_DB = 'heading-image-maker';
+  const ACTION_STORE = 'preferences';
+  const ACTION_ORDER_KEY = 'output-action-order';
+  const defaultActionOrder = ['png', 'copy', 'jpeg', 'webp'];
+  let actionOrder = [...defaultActionOrder];
   let selectedBg = 'minimal';
 
   function setLinear(colors, angle = 135) {
@@ -435,6 +549,16 @@
       ctx.beginPath(); ctx.arc(1115, 555, 205, 0, Math.PI * 2); ctx.fill();
     }
 
+    if (type === 'cream') {
+      setLinear([[0,'#fcf7ee'],[.55,'#f1e7d7'],[1,'#ddcdb5']], 132);
+      drawSoftCircle(1045, 115, 355, 'rgba(255,255,255,ALPHA)', .72);
+      ctx.fillStyle = 'rgba(157,122,84,.09)';
+      ctx.beginPath(); ctx.arc(1110, 545, 265, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = 'rgba(124,96,65,.11)';
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(1090, 160, 155, -.6, 2.35); ctx.stroke();
+    }
+
     if (type === 'night') {
       setLinear([[0,'#0e1422'],[.5,'#26344d'],[1,'#0d111b']], 128);
       drawSoftCircle(1010, 90, 420, 'rgba(119,148,205,ALPHA)', .40);
@@ -454,6 +578,37 @@
       });
       ctx.fillStyle = 'rgba(88,135,168,.09)';
       ctx.beginPath(); ctx.ellipse(1080, 590, 370, 120, 0, 0, Math.PI * 2); ctx.fill();
+    }
+
+    if (type === 'mint') {
+      setLinear([[0,'#edf6f0'],[.56,'#d5e8de'],[1,'#9dc5b3']], 132);
+      drawSoftCircle(1050, 110, 350, 'rgba(255,255,255,ALPHA)', .68);
+      ctx.fillStyle = 'rgba(55,101,82,.10)';
+      ctx.beginPath(); ctx.ellipse(1110, 545, 285, 170, -.18, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,.34)';
+      ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.arc(1085, 225, 175, -.9, 1.7); ctx.stroke();
+    }
+
+    if (type === 'peach') {
+      setLinear([[0,'#fff5ec'],[.54,'#f6d7c7'],[1,'#e7a58d']], 130);
+      drawSoftCircle(1030, 95, 350, 'rgba(255,255,255,ALPHA)', .62);
+      ctx.fillStyle = 'rgba(207,101,79,.11)';
+      ctx.beginPath(); ctx.arc(1120, 540, 220, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,.30)';
+      ctx.beginPath(); ctx.arc(1120, 540, 150, 0, Math.PI * 2); ctx.fill();
+    }
+
+    if (type === 'lavender') {
+      setLinear([[0,'#f8f4fc'],[.56,'#e5dcf0'],[1,'#bbaed4']], 132);
+      drawSoftCircle(1055, 100, 350, 'rgba(255,255,255,ALPHA)', .66);
+      ctx.fillStyle = 'rgba(102,83,139,.09)';
+      ctx.beginPath(); ctx.ellipse(1100, 540, 285, 165, .1, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,.32)';
+      ctx.lineWidth = 3;
+      for (let i = 0; i < 3; i++) {
+        ctx.beginPath(); ctx.arc(1070, 185, 105 + i * 48, -.75, 1.85); ctx.stroke();
+      }
     }
 
     if (type === 'warm') {
@@ -510,6 +665,30 @@
       ctx.save(); ctx.translate(1070,390); ctx.rotate(-.1); ctx.fillRect(-90,-240,180,480); ctx.restore();
     }
 
+    if (type === 'dots') {
+      setLinear([[0,'#fbf7ef'],[1,'#e9dfd0']], 135);
+      drawSoftCircle(1070, 105, 330, 'rgba(255,255,255,ALPHA)', .55);
+      ctx.fillStyle = 'rgba(91,77,61,.13)';
+      for (let y = 22; y < H; y += 27) {
+        for (let x = 22; x < W; x += 27) {
+          ctx.beginPath(); ctx.arc(x, y, 1.5, 0, Math.PI * 2); ctx.fill();
+        }
+      }
+      ctx.fillStyle = 'rgba(255,255,255,.42)';
+      ctx.beginPath(); ctx.arc(1110, 535, 205, 0, Math.PI * 2); ctx.fill();
+    }
+
+    if (type === 'arch') {
+      setLinear([[0,'#fcf7ee'],[1,'#e7d8c4']], 135);
+      drawSoftCircle(1020, 100, 340, 'rgba(255,255,255,ALPHA)', .56);
+      ctx.fillStyle = '#f0d9c5';
+      ctx.beginPath(); ctx.ellipse(1080, 690, 390, 390, 0, Math.PI, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = 'rgba(194,132,112,.34)';
+      ctx.beginPath(); ctx.ellipse(1080, 690, 260, 260, 0, Math.PI, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,.34)';
+      ctx.beginPath(); ctx.ellipse(1080, 690, 135, 135, 0, Math.PI, Math.PI * 2); ctx.fill();
+    }
+
     if (type === 'grid') {
       setLinear([[0,'#111a27'],[1,'#2d4559']], 135);
       drawSoftCircle(1050, 120, 390, 'rgba(77,142,179,ALPHA)', .28);
@@ -560,6 +739,20 @@
       ctx.fillStyle = 'rgba(0,0,0,.18)';
       ctx.fillRect(0,0,W,H);
     }
+
+    // 全背景に共通する陰影と内枠で、書き出し画像の完成度を揃える
+    const edge = ctx.createRadialGradient(W * .5, H * .42, H * .1, W * .5, H * .45, W * .72);
+    edge.addColorStop(0, 'rgba(0,0,0,0)');
+    edge.addColorStop(.72, 'rgba(0,0,0,.015)');
+    edge.addColorStop(1, 'rgba(0,0,0,.11)');
+    ctx.fillStyle = edge;
+    ctx.fillRect(0,0,W,H);
+
+    ctx.save();
+    ctx.strokeStyle = darkTypes.has(type) ? 'rgba(255,255,255,.15)' : 'rgba(30,30,30,.11)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(28,28,W - 56,H - 56);
+    ctx.restore();
   }
 
   function splitText(text, maxWidth, fontSize, fontWeight) {
@@ -633,9 +826,9 @@
     ctx.fillStyle = textColor.value;
 
     const darkText = textColor.value.toLowerCase() !== '#ffffff';
-    ctx.shadowColor = darkText ? 'rgba(255,255,255,.22)' : 'rgba(0,0,0,.28)';
-    ctx.shadowBlur = darkText ? 2 : 10;
-    ctx.shadowOffsetY = darkText ? 0 : 3;
+    ctx.shadowColor = darkText ? 'rgba(255,255,255,.34)' : 'rgba(0,0,0,.34)';
+    ctx.shadowBlur = darkText ? 3 : 13;
+    ctx.shadowOffsetY = darkText ? 1 : 4;
 
     lines.forEach((line, index) => {
       // 最終行が極端に短い場合はわずかに字間を広げて安定感を出す
@@ -661,6 +854,138 @@
     drawTitle();
   }
 
+  function openActionDb() {
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open(ACTION_DB, 1);
+      request.onupgradeneeded = () => {
+        const db = request.result;
+        if (!db.objectStoreNames.contains(ACTION_STORE)) db.createObjectStore(ACTION_STORE);
+      };
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async function loadActionOrder() {
+    try {
+      const db = await openActionDb();
+      const saved = await new Promise((resolve, reject) => {
+        const request = db.transaction(ACTION_STORE, 'readonly').objectStore(ACTION_STORE).get(ACTION_ORDER_KEY);
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+      db.close();
+      if (Array.isArray(saved)) {
+        actionOrder = [
+          ...saved.filter(id => defaultActionOrder.includes(id)),
+          ...defaultActionOrder.filter(id => !saved.includes(id))
+        ];
+      }
+    } catch {
+      actionOrder = [...defaultActionOrder];
+    }
+    renderActionButtons();
+  }
+
+  async function saveActionOrder() {
+    try {
+      const db = await openActionDb();
+      await new Promise((resolve, reject) => {
+        const request = db.transaction(ACTION_STORE, 'readwrite').objectStore(ACTION_STORE).put(actionOrder, ACTION_ORDER_KEY);
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+      });
+      db.close();
+    } catch {
+      // 保存できない環境でも、その場の並び替えは利用できる
+    }
+  }
+
+  function canvasBlob(type, quality) {
+    return new Promise((resolve, reject) => {
+      canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('encode failed')), type, quality);
+    });
+  }
+
+  function safeFilename() {
+    return (titleInput.value.trim() || 'heading-image')
+      .replace(/[\\/:*?"<>|]/g,'')
+      .slice(0,40);
+  }
+
+  async function downloadImage(type, extension, quality) {
+    render();
+    const blob = await canvasBlob(type, quality);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${safeFilename()}.${extension}`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    status.textContent = `${extension.toUpperCase()}画像を保存しました。`;
+  }
+
+  const actionDefinitions = {
+    png: {
+      label: 'PNGで保存',
+      primary: true,
+      run: () => downloadImage('image/png', 'png')
+    },
+    copy: {
+      label: '画像をコピー',
+      run: async () => {
+        render();
+        const blob = await canvasBlob('image/png');
+        if (!navigator.clipboard || !window.ClipboardItem) throw new Error('unsupported');
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+        status.textContent = '画像をクリップボードにコピーしました。';
+      }
+    },
+    jpeg: {
+      label: 'JPEGで保存',
+      run: () => downloadImage('image/jpeg', 'jpg', .95)
+    },
+    webp: {
+      label: 'WebPで保存',
+      run: () => downloadImage('image/webp', 'webp', .96)
+    }
+  };
+
+  function createActionButton(id, inPrimary) {
+    const definition = actionDefinitions[id];
+    const button = document.createElement('button');
+    button.className = `btn${inPrimary && id === actionOrder[0] ? ' btn-primary' : ''}`;
+    button.type = 'button';
+    button.textContent = definition.label;
+    button.dataset.action = id;
+    button.addEventListener('click', async () => {
+      button.disabled = true;
+      try {
+        await definition.run();
+        actionOrder = [id, ...actionOrder.filter(item => item !== id)];
+        await saveActionOrder();
+        renderActionButtons();
+      } catch {
+        status.textContent = id === 'copy'
+          ? 'このブラウザでは画像コピーに対応していません。PNG保存をご利用ください。'
+          : '画像を保存できませんでした。別の保存形式をお試しください。';
+      } finally {
+        button.disabled = false;
+      }
+    });
+    return button;
+  }
+
+  function renderActionButtons() {
+    primaryActions.replaceChildren();
+    moreActions.replaceChildren();
+    actionOrder.forEach((id, index) => {
+      const inPrimary = index < 2;
+      (inPrimary ? primaryActions : moreActions).appendChild(createActionButton(id, inPrimary));
+    });
+    actionMore.hidden = actionOrder.length <= 2;
+  }
+
   backgrounds.addEventListener('click', e => {
     const btn = e.target.closest('.bg-choice');
     if (!btn) return;
@@ -679,30 +1004,8 @@
     el.addEventListener('change', render);
   });
 
-  document.getElementById('downloadBtn').addEventListener('click', () => {
-    render();
-    const a = document.createElement('a');
-    const safe = (titleInput.value.trim() || 'heading-image')
-      .replace(/[\\/:*?"<>|]/g,'')
-      .slice(0,40);
-    a.href = canvas.toDataURL('image/png');
-    a.download = `${safe}.png`;
-    a.click();
-    status.textContent = 'PNG画像を保存しました。';
-  });
-
-  document.getElementById('copyBtn').addEventListener('click', async () => {
-    try {
-      render();
-      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
-      if (!navigator.clipboard || !window.ClipboardItem) throw new Error('unsupported');
-      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-      status.textContent = '画像をクリップボードにコピーしました。';
-    } catch {
-      status.textContent = 'このブラウザでは画像コピーに対応していません。PNG保存をご利用ください。';
-    }
-  });
-
+  renderActionButtons();
+  loadActionOrder();
   render();
 })();
 </script>
