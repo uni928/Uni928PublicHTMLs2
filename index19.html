@@ -1,0 +1,584 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AIフォルダ整理用 構成エクスポート</title>
+<style>
+@layer reset, base, layout, components, utilities;
+
+/* reset: ブラウザ差を抑える */
+@layer reset {
+  *,*::before,*::after{box-sizing:border-box}
+  html{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+  body{margin:0}
+  button{font:inherit}
+}
+
+/* base: ページ全体 */
+@layer base {
+  :root{
+    color-scheme:light;
+    background:#f4f6f8;
+    color:#172033;
+  }
+  body{
+    min-height:100vh;
+    background:radial-gradient(circle at top,#fff 0,#f4f6f8 44rem);
+  }
+  button{cursor:pointer}
+}
+
+/* layout: 配置 */
+@layer layout {
+  .wrap{
+    width:min(820px,calc(100% - 28px));
+    margin:0 auto;
+    padding:36px 0 56px;
+  }
+  .header{
+    margin-bottom:18px;
+    text-align:center;
+  }
+  .stack{
+    display:grid;
+    gap:16px;
+  }
+}
+
+/* components: UI */
+@layer components {
+  h1{
+    margin:0 0 10px;
+    font-size:clamp(1.55rem,5vw,2.25rem);
+    line-height:1.2;
+  }
+  .lead{
+    margin:0 auto;
+    max-width:710px;
+    color:#526070;
+    line-height:1.75;
+  }
+  .card{
+    padding:20px;
+    border:1px solid #dce2e8;
+    border-radius:20px;
+    background:rgba(255,255,255,.94);
+    box-shadow:0 12px 35px rgba(28,42,62,.08);
+  }
+  .drop{
+    display:grid;
+    place-items:center;
+    min-height:250px;
+    padding:28px 18px;
+    border:2px dashed #aab6c4;
+    border-radius:18px;
+    background:#fafbfd;
+    text-align:center;
+    transition:.18s ease;
+  }
+  .drop.is-over{
+    border-color:#40546b;
+    background:#eef3f7;
+    transform:translateY(-1px);
+  }
+  .drop-title{
+    margin:0 0 10px;
+    font-weight:800;
+    font-size:1.2rem;
+  }
+  .drop-sub{
+    margin:0;
+    color:#687688;
+    line-height:1.7;
+  }
+  .status{
+    min-height:1.6em;
+    margin:0;
+    color:#526070;
+    text-align:center;
+    line-height:1.6;
+  }
+  .summary{
+    display:grid;
+    grid-template-columns:repeat(2,1fr);
+    gap:10px;
+  }
+  .metric{
+    padding:12px;
+    border-radius:14px;
+    background:#f4f6f8;
+    text-align:center;
+  }
+  .metric b{
+    display:block;
+    font-size:1.2rem;
+  }
+  .metric span{
+    color:#6b7786;
+    font-size:.82rem;
+  }
+  .preview{
+    max-height:320px;
+    margin:0;
+    overflow:auto;
+    padding:14px;
+    border-radius:14px;
+    background:#111827;
+    color:#dce7f5;
+    font:13px/1.7 ui-monospace,SFMono-Regular,Consolas,monospace;
+    white-space:pre-wrap;
+    word-break:break-all;
+  }
+  .btn{
+    min-height:48px;
+    padding:0 18px;
+    border:1px solid #27374a;
+    border-radius:13px;
+    background:#27374a;
+    color:#fff;
+    font-weight:800;
+  }
+  .btn:disabled{
+    cursor:not-allowed;
+    opacity:.45;
+  }
+  .note{
+    margin:0;
+    color:#657283;
+    font-size:.91rem;
+    line-height:1.65;
+  }
+  .hidden{display:none}
+  @media(max-width:560px){
+    .wrap{padding-top:24px}
+    .card{padding:15px}
+    .drop{min-height:230px}
+    .summary{grid-template-columns:1fr}
+  }
+}
+
+/* utilities: 補助 */
+@layer utilities {
+  .warn{color:#9a3412}
+}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header class="header">
+    <h1>AIフォルダ整理用 構成エクスポート</h1>
+    <p class="lead">
+      整理したいフォルダをドラッグ＆ドロップすると、
+      フォルダ構成を記録したTXTと、目視確認用の空ファイル構成ZIPを作成し、
+      2つを1個のZIPにまとめてダウンロードできます。
+    </p>
+  </header>
+
+  <section class="card stack">
+    <div id="drop" class="drop">
+      <div>
+        <p class="drop-title">整理したいフォルダをここへドラッグ＆ドロップ</p>
+        <p class="drop-sub">
+          ファイルの中身は読み込みません。<br>
+          ファイル名・フォルダ名・相対パスだけを取得します。
+        </p>
+      </div>
+    </div>
+
+    <p id="status" class="status">まだフォルダは読み込まれていません。</p>
+
+    <div id="summary" class="summary hidden">
+      <div class="metric"><b id="dirCount">0</b><span>フォルダ</span></div>
+      <div class="metric"><b id="fileCount">0</b><span>ファイル</span></div>
+    </div>
+
+    <pre id="preview" class="preview hidden"></pre>
+
+    <button id="downloadBtn" class="btn" type="button" disabled>
+      TXT＋目視確認用ZIPを1個のZIPでダウンロード
+    </button>
+
+    <p class="note">
+      目視確認用ZIP内のファイルはすべて0バイトです。
+      元フォルダ内のファイルは変更・削除しません。
+    </p>
+  </section>
+</main>
+
+<script>
+'use strict';
+
+const state = {
+  rootName:'',
+  entries:[]
+};
+
+const drop = document.getElementById('drop');
+const statusEl = document.getElementById('status');
+const summary = document.getElementById('summary');
+const dirCountEl = document.getElementById('dirCount');
+const fileCountEl = document.getElementById('fileCount');
+const preview = document.getElementById('preview');
+const downloadBtn = document.getElementById('downloadBtn');
+
+function sanitizeFileName(name){
+  return String(name || 'folder').replace(/[\\/:*?"<>|]+/g,'_').trim() || 'folder';
+}
+
+function dedupeEntries(entries){
+  const map = new Map();
+  for(const entry of entries){
+    let path = String(entry.path || '').replaceAll('\\','/').replace(/^\/+/,'');
+    if(!path) continue;
+    if(entry.type === 'dir' && !path.endsWith('/')) path += '/';
+    map.set(entry.type + ':' + path,{type:entry.type,path});
+  }
+  return [...map.values()];
+}
+
+function setState(rootName,entries){
+  state.rootName = sanitizeFileName(rootName);
+  state.entries = dedupeEntries(entries);
+
+  const dirs = state.entries.filter(x=>x.type==='dir').length;
+  const files = state.entries.filter(x=>x.type==='file').length;
+
+  dirCountEl.textContent = dirs;
+  fileCountEl.textContent = files;
+  summary.classList.remove('hidden');
+
+  const lines = state.entries
+    .slice()
+    .sort((a,b)=>a.path < b.path ? -1 : a.path > b.path ? 1 : 0)
+    .map(x => (x.type === 'dir' ? '[DIR]  ' : '[FILE] ') + x.path);
+
+  preview.textContent =
+    lines.slice(0,500).join('\n') +
+    (lines.length > 500 ? `\n…ほか ${lines.length - 500} 件` : '');
+  preview.classList.remove('hidden');
+
+  statusEl.textContent = `「${state.rootName}」の構成を読み込みました。`;
+  downloadBtn.disabled = false;
+}
+
+for(const evt of ['dragenter','dragover']){
+  drop.addEventListener(evt,e=>{
+    e.preventDefault();
+    drop.classList.add('is-over');
+  });
+}
+
+for(const evt of ['dragleave','drop']){
+  drop.addEventListener(evt,e=>{
+    e.preventDefault();
+    drop.classList.remove('is-over');
+  });
+}
+
+drop.addEventListener('drop',async e=>{
+  const items = [...(e.dataTransfer?.items || [])].filter(item=>item.kind === 'file');
+
+  if(!items.length){
+    statusEl.textContent = 'フォルダをドラッグ＆ドロップして下さい。';
+    return;
+  }
+
+  statusEl.textContent = 'フォルダ構成を読み取っています…';
+
+  const entries = [];
+  let rootName = '';
+
+  /* 新方式: File System Access API。旧webkit FileSystemのURI制限を避ける */
+  async function readModernHandles(){
+    if(!items.every(item=>typeof item.getAsFileSystemHandle === 'function')){
+      return false;
+    }
+
+    const handles = [];
+    for(const item of items){
+      const handle = await item.getAsFileSystemHandle();
+      if(handle) handles.push(handle);
+    }
+    if(!handles.length) return false;
+
+    async function walkHandle(handle,path){
+      if(handle.kind === 'directory'){
+        entries.push({type:'dir',path:path+'/'});
+        for await(const [name,child] of handle.entries()){
+          await walkHandle(child,path+'/'+name);
+        }
+      }else if(handle.kind === 'file'){
+        /* ファイル本体は取得しない */
+        entries.push({type:'file',path});
+      }
+    }
+
+    if(handles.length === 1 && handles[0].kind === 'directory'){
+      rootName = handles[0].name;
+      await walkHandle(handles[0],rootName);
+    }else{
+      rootName = 'folder-structure';
+      entries.push({type:'dir',path:rootName+'/'});
+      for(const handle of handles){
+        await walkHandle(handle,rootName+'/'+handle.name);
+      }
+    }
+    return true;
+  }
+
+  /* 旧方式: 新API非対応ブラウザ用 */
+  function readAllEntries(reader){
+    return new Promise((resolve,reject)=>{
+      const result = [];
+      function next(){
+        reader.readEntries(batch=>{
+          if(!batch.length){
+            resolve(result);
+            return;
+          }
+          result.push(...batch);
+          next();
+        },reject);
+      }
+      next();
+    });
+  }
+
+  async function readLegacyEntries(){
+    const roots = items.map(item=>item.webkitGetAsEntry?.()).filter(Boolean);
+    if(!roots.length) return false;
+
+    async function walkEntry(entry,path){
+      if(entry.isDirectory){
+        entries.push({type:'dir',path:path+'/'});
+        const children = await readAllEntries(entry.createReader());
+        for(const child of children){
+          await walkEntry(child,path+'/'+child.name);
+        }
+      }else if(entry.isFile){
+        entries.push({type:'file',path});
+      }
+    }
+
+    if(roots.length === 1 && roots[0].isDirectory){
+      rootName = roots[0].name;
+      await walkEntry(roots[0],rootName);
+    }else{
+      rootName = 'folder-structure';
+      entries.push({type:'dir',path:rootName+'/'});
+      for(const root of roots){
+        await walkEntry(root,rootName+'/'+root.name);
+      }
+    }
+    return true;
+  }
+
+  try{
+    let ok = false;
+
+    try{
+      ok = await readModernHandles();
+    }catch(modernErr){
+      console.warn('新方式での読み取りに失敗したため旧方式を試します。',modernErr);
+      entries.length = 0;
+      rootName = '';
+    }
+
+    if(!ok){
+      ok = await readLegacyEntries();
+    }
+
+    if(!ok){
+      throw new Error('フォルダ読み取りAPIを利用できません。');
+    }
+
+    setState(rootName,entries);
+  }catch(err){
+    console.error(err);
+
+    if(err && err.name === 'EncodingError'){
+      statusEl.textContent =
+        'フォルダ構成の読み込み時にブラウザ側のURI制限へ到達しました。Chrome / Edgeの最新版で再度お試し下さい。';
+    }else{
+      statusEl.textContent = 'フォルダ構成の読み込みに失敗しました。';
+    }
+  }
+});
+
+/* ZIP生成: 外部ライブラリ不要 */
+function u16(n){
+  return new Uint8Array([n&255,(n>>>8)&255]);
+}
+function u32(n){
+  return new Uint8Array([n&255,(n>>>8)&255,(n>>>16)&255,(n>>>24)&255]);
+}
+function concatArrays(parts){
+  const total = parts.reduce((sum,p)=>sum+p.length,0);
+  const out = new Uint8Array(total);
+  let offset = 0;
+  for(const part of parts){
+    out.set(part,offset);
+    offset += part.length;
+  }
+  return out;
+}
+
+const crcTable = (()=>{
+  const table = new Uint32Array(256);
+  for(let n=0;n<256;n++){
+    let c = n;
+    for(let k=0;k<8;k++){
+      c = (c&1) ? 0xedb88320^(c>>>1) : c>>>1;
+    }
+    table[n] = c>>>0;
+  }
+  return table;
+})();
+
+function crc32(bytes){
+  let c = 0xffffffff;
+  for(const b of bytes){
+    c = crcTable[(c^b)&255]^(c>>>8);
+  }
+  return (c^0xffffffff)>>>0;
+}
+
+function dosDateTime(date=new Date()){
+  const year = Math.max(1980,date.getFullYear());
+  return {
+    time:(date.getHours()<<11)|(date.getMinutes()<<5)|Math.floor(date.getSeconds()/2),
+    day:((year-1980)<<9)|((date.getMonth()+1)<<5)|date.getDate()
+  };
+}
+
+function buildZipFiles(files){
+  const encoder = new TextEncoder();
+  const locals = [];
+  const centrals = [];
+  let offset = 0;
+  const dt = dosDateTime();
+
+  for(const file of files){
+    const nameBytes = encoder.encode(file.name);
+    const data = file.data instanceof Uint8Array ? file.data : new Uint8Array(file.data);
+    const crc = crc32(data);
+    const isDir = file.name.endsWith('/');
+
+    const local = concatArrays([
+      u32(0x04034b50),
+      u16(20),
+      u16(0x0800),
+      u16(0),
+      u16(dt.time),
+      u16(dt.day),
+      u32(crc),
+      u32(data.length),
+      u32(data.length),
+      u16(nameBytes.length),
+      u16(0),
+      nameBytes,
+      data
+    ]);
+    locals.push(local);
+
+    const central = concatArrays([
+      u32(0x02014b50),
+      u16(20),
+      u16(20),
+      u16(0x0800),
+      u16(0),
+      u16(dt.time),
+      u16(dt.day),
+      u32(crc),
+      u32(data.length),
+      u32(data.length),
+      u16(nameBytes.length),
+      u16(0),
+      u16(0),
+      u16(0),
+      u16(0),
+      u32(isDir ? 0x10 : 0),
+      u32(offset),
+      nameBytes
+    ]);
+    centrals.push(central);
+    offset += local.length;
+  }
+
+  const localData = concatArrays(locals);
+  const centralData = concatArrays(centrals);
+  const end = concatArrays([
+    u32(0x06054b50),
+    u16(0),
+    u16(0),
+    u16(files.length),
+    u16(files.length),
+    u32(centralData.length),
+    u32(localData.length),
+    u16(0)
+  ]);
+
+  return concatArrays([localData,centralData,end]);
+}
+
+function buildEmptyStructureZip(entries){
+  const empty = new Uint8Array(0);
+  const files = dedupeEntries(entries)
+    .slice()
+    .sort((a,b)=>a.path < b.path ? -1 : a.path > b.path ? 1 : 0)
+    .map(entry=>({
+      name:entry.path,
+      data:empty
+    }));
+  return buildZipFiles(files);
+}
+
+function buildStructureText(entries){
+  const lines = dedupeEntries(entries)
+    .slice()
+    .sort((a,b)=>a.path < b.path ? -1 : a.path > b.path ? 1 : 0)
+    .map(entry=>entry.path);
+  return lines.join('\r\n') + '\r\n';
+}
+
+downloadBtn.addEventListener('click',()=>{
+  if(!state.entries.length) return;
+
+  try{
+    statusEl.textContent = 'ZIPを作成しています…';
+
+    const encoder = new TextEncoder();
+    const structureText = buildStructureText(state.entries);
+    const checkZip = buildEmptyStructureZip(state.entries);
+
+    const outerZip = buildZipFiles([
+      {
+        name:'フォルダ構成.txt',
+        data:encoder.encode(structureText)
+      },
+      {
+        name:'目視確認用_空ファイル構成.zip',
+        data:checkZip
+      }
+    ]);
+
+    const blob = new Blob([outerZip],{type:'application/zip'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = sanitizeFileName(state.rootName) + '_AI整理用.zip';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    setTimeout(()=>URL.revokeObjectURL(url),2000);
+    statusEl.textContent = 'TXTと目視確認用ZIPを1つにまとめてダウンロードしました。';
+  }catch(err){
+    console.error(err);
+    statusEl.textContent = 'ZIPの作成に失敗しました。';
+  }
+});
+</script>
+</body>
+</html>
