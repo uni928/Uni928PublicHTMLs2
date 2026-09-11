@@ -5,7 +5,62 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Markdown形式の文章を読みやすい閲覧ページとして表示し、1つのHTMLとして保存できます。">
   <title>Markdownから閲覧用サイトを作成</title>
-  <style>
+  <script>
+(() => {
+  try {
+    const query = location.search;
+    const now = Date.now();
+    const cacheLimit = 5 * 60 * 1000;
+    const queryParts = query ? query.slice(1).split('&') : [];
+
+    // ?1788843986414 や &1788843986414 のような単独のDate.now()値
+    const isDateNowValue = value => /^\d{13}$/.test(value);
+    const dateNowPart = queryParts.find(isDateNowValue);
+
+    const shouldRedirect =
+      !query ||
+      (
+        dateNowPart !== undefined &&
+        now - Number(dateNowPart) >= cacheLimit
+      );
+
+    // 先に遷移判定を確定する
+    if (shouldRedirect) {
+      const otherParts = queryParts.filter(
+        part => !isDateNowValue(part)
+      );
+
+      const newQuery = [...otherParts, String(now)].join('&');
+
+      location.replace(
+        location.pathname + '?' + newQuery + location.hash
+      );
+
+      return;
+    }
+
+    // 5分以内なら遷移せず、Date.now()部分だけを削除する
+    const otherParts = queryParts.filter(
+      part => !isDateNowValue(part)
+    );
+
+    const cleanedQuery = otherParts.length
+      ? '?' + otherParts.join('&')
+      : '';
+
+    if (cleanedQuery !== query) {
+      history.replaceState(
+        history.state,
+        '',
+        location.pathname + cleanedQuery + location.hash
+      );
+    }
+  } catch (error) {
+    console.error(error);
+  }
+})();
+</script>
+<style>
 @layer base,layout,editor,viewer,responsive;
 @layer base{
 :root{color-scheme:light;--bg:#f4f7fb;--panel:#ffffff;--text:#1e293b;--muted:#64748b;--line:#dbe4f0;--accent:#2563eb;--accent-dark:#1d4ed8;--accent-soft:#eaf2ff;--danger:#b91c1c;--shadow:0 18px 48px rgba(30,41,59,0.10);}
@@ -19,7 +74,7 @@ a{color:var(--accent);overflow-wrap:anywhere;}
 .hidden{display:none !important;}
 }
 @layer layout{
-.app{width:min(920px,calc(100% - 28px));margin:0 auto;padding:28px 0 52px;}
+.app{position:relative;width:min(920px,calc(100% - 28px));margin:0 auto;padding:28px 0 52px;}
 #viewerMode{width:min(820px,calc(100% - 28px));}
 #viewerMode[data-text-size="small"]{width:min(780px,calc(100% - 28px));}
 #viewerMode[data-text-size="medium"]{width:min(820px,calc(100% - 28px));}
@@ -44,6 +99,9 @@ a{color:var(--accent);overflow-wrap:anywhere;}
 .text-input{min-height:430px;padding:16px;resize:vertical;line-height:1.75;}
 .controls{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px;}
 .controls .primary-button{flex:1 1 300px;}
+/* 説明サイトへの導線を画面右上へ配置。 */
+.help-site-button{position:absolute;top:16px;right:0;min-height:40px;padding:0 14px;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--accent-dark);font-weight:800;box-shadow:0 8px 24px rgba(30,41,59,.10);}
+.help-site-button:hover{background:var(--accent-soft);}
 .helper{margin-top:14px;padding:14px 16px;border-radius:14px;background:#f8fafc;color:var(--muted);line-height:1.7;font-size:.94rem;}
 .status{min-height:24px;margin-top:12px;color:var(--muted);font-size:.93rem;}
 .status.error{color:var(--danger);}
@@ -61,13 +119,6 @@ a{color:var(--accent);overflow-wrap:anywhere;}
 .url-save-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;}
 .url-save-actions button{width:100%;}
 .url-size-info{margin:12px 0 0;color:var(--muted);font-size:.84rem;line-height:1.6;}
-/* 短縮URLへ復号キーを付ける入力欄を追加 */
-.short-url-key-box{margin-top:14px;padding-top:14px;border-top:1px solid var(--line);}
-.short-url-key-box .field-label{margin-bottom:6px;}
-.short-url-key-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:stretch;}
-.short-url-key-row .title-input{margin:0;min-height:48px;}
-.short-url-key-row button{white-space:nowrap;}
-.short-url-key-note{margin:7px 0 0;color:var(--muted);font-size:.82rem;line-height:1.6;}
 .image-panel{margin-top:16px;padding:16px;border:1px solid var(--line);border-radius:14px;background:#f8fafc;}
 .image-panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px;}
 .image-panel-head h2{margin:0;font-size:1.05rem;}
@@ -197,6 +248,8 @@ a{color:var(--accent);overflow-wrap:anywhere;}
 .uni-photo-dropbox__zone{height:190px;}
 .controls{flex-direction:column;}
 .controls button{width:100%;}
+/* モバイルではタイトル説明文の続きとして通常配置する。 */
+.help-site-button{position:static;display:inline-flex;align-items:center;justify-content:center;margin-top:10px;min-height:36px;padding:0 12px;font-size:.82rem;}
 .password-setting-row{grid-template-columns:1fr;}
 .password-setting-row button{width:100%;}
 .url-save-actions,.file-save-actions{grid-template-columns:1fr;}
@@ -212,6 +265,7 @@ a{color:var(--accent);overflow-wrap:anywhere;}
     <header class="hero">
       <h1>Markdownから閲覧用サイトを作成</h1>
       <p>Markdown形式の文章を入力して「閲覧用サイトとして保存」ボタンを押す事で、視覚的に見やすい閲覧用HTMLをダウンロードできます。</p>
+      <button id="helpSiteButton" class="help-site-button" type="button">説明サイトを見る</button>
     </header>
 
     <section class="panel editor-panel" aria-labelledby="editorTitle">
@@ -289,6 +343,7 @@ a{color:var(--accent);overflow-wrap:anywhere;}
             <div class="password-setting-row">
               <input id="savePassword" class="title-input password-input" type="password" value="" autocomplete="new-password" placeholder="パスワード（空欄なら暗号化なし）">
               <button id="randomPasswordButton" class="secondary-button" type="button">ランダムなパスワードを設定</button>
+              <button id="copyFragmentKeyButton" class="secondary-button hidden" type="button">#key=XXX をコピー</button>
             </div>
           </div>
         </div>
@@ -347,17 +402,6 @@ a{color:var(--accent);overflow-wrap:anywhere;}
           <button id="copyEditorUrlButton" class="secondary-button" type="button">「編集作業継続用サイトを保存」<br>のURLをコピー</button>
         </div>
         <p id="urlSizeInfo" class="url-size-info"></p>
-        <div class="short-url-key-box">
-          <div class="field-label">
-            <label for="shortenedUrlInput">生成した短縮URL</label>
-            <small>パスワード付きURL用</small>
-          </div>
-          <div class="short-url-key-row">
-            <input id="shortenedUrlInput" class="title-input" type="url" inputmode="url" autocomplete="off" placeholder="https://短縮URL.example/xxxxx">
-            <button id="makePasswordShortUrlButton" class="secondary-button" type="button">パスワード付きURLを作る</button>
-          </div>
-          <p class="short-url-key-note">保存用パスワードを <code>#key=...</code> として短縮URLの末尾へ付け、クリップボードへコピーします。パスワード付きのURL保存データは、短縮後もキーを受け取れるよう本文データをクエリ側へ保存します。</p>
-        </div>
       </section>
 
       <div id="notePanel" class="note-panel hidden">
@@ -422,6 +466,7 @@ async function initApp() {
     const viewerFontInputs = Array.from(document.querySelectorAll('input[name="viewerFont"]'));
     const savePasswordInput = document.getElementById("savePassword");
     const randomPasswordButton = document.getElementById("randomPasswordButton");
+    const copyFragmentKeyButton = document.getElementById("copyFragmentKeyButton");
     const imageDropZone = document.getElementById("imageDropZone");
     const insertAtCursorCheck = document.getElementById("insertAtCursorCheck");
     const saveMethodButton = document.getElementById("saveMethodButton");
@@ -440,8 +485,6 @@ async function initApp() {
     const copyDiscordLinkButton = document.getElementById("copyDiscordLinkButton");
     const copyEditorUrlButton = document.getElementById("copyEditorUrlButton");
     const urlSizeInfo = document.getElementById("urlSizeInfo");
-    const shortenedUrlInput = document.getElementById("shortenedUrlInput");
-    const makePasswordShortUrlButton = document.getElementById("makePasswordShortUrlButton");
 
     const IMAGE_BASE64_LIMIT = 18000;
     const DISCORD_BASE64_LIMIT = 1920;
@@ -734,6 +777,7 @@ async function initApp() {
           source: typeof parsed.source === "string" ? parsed.source : "",
           createdAt: typeof parsed.createdAt === "string" ? parsed.createdAt : "",
           note: typeof parsed.note === "string" ? parsed.note : "",
+          savePassword: typeof parsed.savePassword === "string" ? parsed.savePassword : "",
           startMode: parsed.startMode === "editor" ? "editor" : "auto",
           textSize: ["large", "medium"].includes(parsed.textSize) ? parsed.textSize : "small",
           fonts: normalizeViewerFontIds(parsed.fonts),
@@ -744,7 +788,7 @@ async function initApp() {
           }) : []
         };
       } catch (error) {
-        return { title: "", source: "", createdAt: "", note: "", startMode: "auto", textSize: "medium", fonts: Object.keys(VIEWER_FONT_CHOICES), images: [] };
+        return { title: "", source: "", createdAt: "", note: "", savePassword: "", startMode: "auto", textSize: "medium", fonts: Object.keys(VIEWER_FONT_CHOICES), images: [] };
       }
     }
 
@@ -982,27 +1026,34 @@ async function initApp() {
       }
     }
 
-    function readPasswordFromHash() {
-      const match = location.hash.match(/^#key=([^&]*)$/);
-      if (!match) return "";
-      try { return decodeURIComponent(match[1]); } catch (error) { return match[1]; }
+    function readFragmentPassword() {
+      const hash = String(location.hash || "");
+      const marker = "#key=";
+      const index = hash.lastIndexOf(marker);
+      if (index < 0) return "";
+      const raw = hash.slice(index + marker.length);
+      try { return decodeURIComponent(raw); }
+      catch (error) { return raw; }
     }
 
-    async function decryptBytesAuto(encoded) {
+    async function decryptBytesAuto(encoded, fragmentPassword) {
       const payload = parseEncryptedBytes(encoded);
-      // 短縮URLの #key=... を最優先で試す。
-      let password = readPasswordFromHash();
+      let password = String(fragmentPassword || "");
       if (password) {
         try {
           const result = await decryptBytesWithPassword(encoded, password);
           await saveSuccessfulPassword(result.id, password);
-          return result;
-        } catch (error) { password = ""; }
+          return { bytes: result.bytes, id: result.id, password: password };
+        } catch (error) {
+          password = "";
+        }
       }
       password = await readSuccessfulPassword(payload.id);
       if (password) {
-        try { return await decryptBytesWithPassword(encoded, password); }
-        catch (error) { password = ""; }
+        try {
+          const result = await decryptBytesWithPassword(encoded, password);
+          return { bytes: result.bytes, id: result.id, password: password };
+        } catch (error) { password = ""; }
       }
       while (true) {
         const entered = window.prompt("この保存データはパスワードで保護されています。パスワードを入力してください。");
@@ -1011,7 +1062,7 @@ async function initApp() {
         try {
           const result = await decryptBytesWithPassword(encoded, entered);
           await saveSuccessfulPassword(result.id, entered);
-          return result;
+          return { bytes: result.bytes, id: result.id, password: entered };
         } catch (error) {
           window.alert(error.message);
         }
@@ -1094,6 +1145,7 @@ async function initApp() {
         t: titleInput.value,
         s: sourceText.value,
         n: noteText.value,
+        p: savePasswordInput.value,
         m: startMode === "editor" ? "editor" : "auto",
         z: getViewerTextSize(),
         f: getEnabledViewerFontIds(),
@@ -1140,8 +1192,12 @@ async function initApp() {
 
     async function decodeUrlSaveData(encoded, format, encrypted) {
       let compressedBytes;
-      if (encrypted) compressedBytes = (await decryptBytesAuto(encoded)).bytes;
-      else compressedBytes = base64UrlToBytes(encoded);
+      let successfulPassword = "";
+      if (encrypted) {
+        const decrypted = await decryptBytesAuto(encoded, readFragmentPassword());
+        compressedBytes = decrypted.bytes;
+        successfulPassword = decrypted.password || "";
+      } else compressedBytes = base64UrlToBytes(encoded);
       const decompressedBytes = await decompressWithFormat(compressedBytes, format);
       const data = JSON.parse(new TextDecoder().decode(decompressedBytes));
       if (!data || data.v !== 1) throw new Error("対応していないURL保存データです。");
@@ -1150,6 +1206,7 @@ async function initApp() {
         source: typeof data.s === "string" ? data.s : "",
         createdAt: "",
         note: typeof data.n === "string" ? data.n : "",
+        savePassword: typeof data.p === "string" && data.p ? data.p : successfulPassword,
         startMode: data.m === "editor" ? "editor" : "auto",
         textSize: ["large", "medium"].includes(data.z) ? data.z : "small",
         fonts: normalizeViewerFontIds(data.f),
@@ -1161,31 +1218,19 @@ async function initApp() {
       };
     }
 
-    function parseUrlPayloadKeyAndData(key, encoded) {
-      if (!key || !encoded || !/^[A-Za-z0-9_-]+$/.test(encoded)) return null;
-      if (key === LEGACY_URL_HASH_KEY) return { encoded: encoded, format: "gzip", encrypted: false };
-      const encrypted = key.startsWith("e");
-      const rawKey = encrypted ? key.slice(1) : key;
-      const definition = URL_COMPRESSION_FORMATS.find(function (item) { return item.hashKey === rawKey; });
-      return definition ? { encoded: encoded, format: definition.format, encrypted: encrypted } : null;
-    }
-
     function readUrlHashPayload() {
-      const match = location.hash.match(/^#([^=]+)=([A-Za-z0-9_-]+)$/);
-      return match ? parseUrlPayloadKeyAndData(match[1], match[2]) : null;
-    }
-
-    function readUrlQueryPayload() {
-      const value = new URLSearchParams(location.search).get("p");
-      if (!value) return null;
-      const separator = value.indexOf(".");
-      if (separator <= 0) return null;
-      return parseUrlPayloadKeyAndData(value.slice(0, separator), value.slice(separator + 1));
+      const hashWithoutFragmentPassword = String(location.hash || "").split("#key=", 1)[0];
+      const match = hashWithoutFragmentPassword.match(/^#([^=]+)=([A-Za-z0-9_-]+)$/);
+      if (!match) return null;
+      if (match[1] === LEGACY_URL_HASH_KEY) return { encoded: match[2], format: "gzip" };
+      const encrypted = match[1].startsWith("e");
+      const rawKey = encrypted ? match[1].slice(1) : match[1];
+      const definition = URL_COMPRESSION_FORMATS.find(function (item) { return item.hashKey === rawKey; });
+      return definition ? { encoded: match[2], format: definition.format, encrypted: encrypted } : null;
     }
 
     async function readUrlSaveData() {
-      // パスワード付きURLは ?p=... に本文を置き、#key=... を復号キー専用にする。従来の #dr=... 等も継続対応。
-      const payload = readUrlQueryPayload() || readUrlHashPayload();
+      const payload = readUrlHashPayload();
       if (!payload) return null;
       try {
         return await decodeUrlSaveData(payload.encoded, payload.format, payload.encrypted);
@@ -1197,9 +1242,6 @@ async function initApp() {
     }
 
     function buildUrlWithPayload(payload) {
-      if (payload.encrypted) {
-        return LONG_URL_BASE + "?p=" + encodeURIComponent(payload.hashKey + "." + payload.encoded);
-      }
       return LONG_URL_BASE + "#" + payload.hashKey + "=" + payload.encoded;
     }
 
@@ -1577,6 +1619,7 @@ async function initApp() {
           source: typeof data.source === "string" ? data.source : "",
           createdAt: "",
           note: typeof data.note === "string" ? data.note : "",
+          savePassword: typeof data.savePassword === "string" ? data.savePassword : "",
           startMode: "editor",
           textSize: ["large", "medium"].includes(data.textSize) ? data.textSize : "small",
           fonts: normalizeViewerFontIds(data.fonts),
@@ -1690,6 +1733,7 @@ async function initApp() {
         source: sourceText.value,
         createdAt: new Intl.DateTimeFormat("ja-JP", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date()),
         note: noteText.value,
+        savePassword: savePasswordInput.value,
         startMode: startMode === "editor" ? "editor" : "auto",
         textSize: getViewerTextSize(),
         fonts: getEnabledViewerFontIds(),
@@ -1713,7 +1757,10 @@ async function initApp() {
     }
 
     function makeLightweightRedirectHtml(targetUrl) {
-      return '<!doctype html><meta charset="utf-8"><script>location.replace(' + JSON.stringify(targetUrl) + ')<\/script>';
+      return '<!doctype html><meta charset="utf-8"><script>' +
+        'const u=' + JSON.stringify(targetUrl) + ',i=u.indexOf("#");' +
+        'location.replace((i>=0?u.slice(0,i):u)+"?"+Date.now()+(i>=0?u.slice(i):""))' +
+        '<\/script>';
     }
 
     async function downloadLightweightRedirect(startMode, button) {
@@ -1788,24 +1835,13 @@ async function initApp() {
     copyViewerUrlButton.addEventListener("click", function () { copySavedUrl("auto", copyViewerUrlButton); });
     copyDiscordLinkButton.addEventListener("click", function () { copyDiscordSavedLink(copyDiscordLinkButton); });
     copyEditorUrlButton.addEventListener("click", function () { copySavedUrl("editor", copyEditorUrlButton); });
-    function makePasswordShortUrl() {
-      const shortUrl = shortenedUrlInput.value.trim();
-      const password = savePasswordInput.value;
-      if (!shortUrl) { showStatus("生成した短縮URLを入力してください。", true); shortenedUrlInput.focus(); return; }
-      if (!password) { showStatus("先に保存用パスワードを設定してください。", true); savePasswordInput.focus(); return; }
-      let url;
-      try { url = new URL(shortUrl); } catch (error) { showStatus("短縮URLの形式が正しくありません。", true); shortenedUrlInput.focus(); return; }
-      url.hash = "key=" + encodeURIComponent(password);
-      const result = url.toString();
-      shortenedUrlInput.value = result;
-      copyText(result).then(function () {
-        showStatus("#key=... を付けたパスワード付き短縮URLをコピーしました。");
-      }).catch(function () {
-        showStatus("パスワード付きURLを作成しました。入力欄からコピーしてください。");
-      });
-    }
-    makePasswordShortUrlButton.addEventListener("click", makePasswordShortUrl);
     document.getElementById("viewButton").addEventListener("click", showViewer);
+    document.getElementById("helpSiteButton").addEventListener("click", function () {
+      const targetUrl = "https://uni928.github.io/Uni928PublicHTMLs/index80exp1.html";
+      const hashIndex = targetUrl.indexOf("#");
+      const timestampedUrl = (hashIndex >= 0 ? targetUrl.slice(0, hashIndex) : targetUrl) + "?" + Date.now() + (hashIndex >= 0 ? targetUrl.slice(hashIndex) : "");
+      window.open(timestampedUrl, "_blank", "noopener,noreferrer");
+    });
     document.getElementById("editButton").addEventListener("click", showEditor);
     noteEditButton.addEventListener("click", function () {
       const willOpen = notePanel.classList.contains("hidden");
@@ -1885,15 +1921,30 @@ async function initApp() {
       }
     });
 
+    function updateFragmentKeyCopyButton() {
+      copyFragmentKeyButton.classList.toggle("hidden", !savePasswordInput.value);
+    }
+
     randomPasswordButton.addEventListener("click", function () {
       savePasswordInput.value = randomBase64Password32();
       savePasswordInput.type = "text";
       savePasswordInput.focus();
       savePasswordInput.select();
+      updateFragmentKeyCopyButton();
       scheduleUrlSaveAvailabilityUpdate();
       showStatus("32文字のランダムなBase64パスワードを設定しました。安全な場所へ控えてください。");
     });
-    savePasswordInput.addEventListener("input", scheduleUrlSaveAvailabilityUpdate);
+    copyFragmentKeyButton.addEventListener("click", async function () {
+      if (!savePasswordInput.value) return;
+      const originalText = copyFragmentKeyButton.textContent;
+      await copyText("#key=" + encodeURIComponent(savePasswordInput.value));
+      copyFragmentKeyButton.textContent = "コピーしました";
+      setTimeout(function () { copyFragmentKeyButton.textContent = originalText; }, 1400);
+    });
+    savePasswordInput.addEventListener("input", function () {
+      updateFragmentKeyCopyButton();
+      scheduleUrlSaveAvailabilityUpdate();
+    });
 
     imagePanelToggle.addEventListener("click", function () {
       const willOpen = imagePanelBody.classList.contains("hidden");
@@ -2003,6 +2054,8 @@ async function initApp() {
     titleInput.value = initialData.title;
     sourceText.value = initialData.source;
     noteText.value = initialData.note;
+    savePasswordInput.value = typeof initialData.savePassword === "string" ? initialData.savePassword : "";
+    updateFragmentKeyCopyButton();
     applyViewerTextSize(initialData.textSize);
     const storedViewerFontIds = readStoredViewerFontIds();
     applyViewerFontIds(storedViewerFontIds === null ? initialData.fonts : storedViewerFontIds);
@@ -2017,6 +2070,9 @@ async function initApp() {
 
     if (initialData.startMode !== "editor" && (initialData.title + initialData.source).length >= 1) showViewer();
     else showEditor();
+
+    // 読み込み完了後、保存済みのフォント設定を最後にもう一度反映する。
+    applyViewerFontIds(storedViewerFontIds === null ? initialData.fonts : storedViewerFontIds);
   }
 
   if (document.readyState === "loading") window.addEventListener("DOMContentLoaded", initApp, { once: true });
