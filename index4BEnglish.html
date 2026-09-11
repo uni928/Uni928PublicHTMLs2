@@ -5,768 +5,142 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Search</title>
 <style>
-@layer reset, base, scenery, components, states, responsive;
-
-@layer reset {
-  /* Basic reset */
-  *, *::before, *::after { box-sizing: border-box; }
-  button, input { font: inherit; }
+@layer reset,base,scenery,components,states,responsive;
+@layer reset{
+*,*::before,*::after{box-sizing:border-box;}
+button,input{font:inherit;}
 }
-
-@layer base {
-  /* Meadow theme colors and readability */
-  :root {
-    color-scheme: light;
-    --sky-top: #dff3ff;
-    --sky-bottom: #f5fbff;
-    --grass-near: #b8d98a;
-    --grass-far: #d9e9ad;
-    --fg: #203025;
-    --muted: #607064;
-    --accent: #3e7d4d;
-    --accent-strong: #2f633c;
-    --accent-soft: #e6f1df;
-    --card: rgba(255, 255, 255, .94);
-    --tile: rgba(255, 255, 255, .91);
-    --tile-hover: #ffffff;
-    --ring: rgba(52, 91, 60, .16);
-    --danger: #d65353;
-    --shadow-sm: 0 8px 22px rgba(45, 74, 49, .10);
-    --shadow-md: 0 18px 44px rgba(45, 74, 49, .14);
-  }
-
-  html, body { min-height: 100%; }
-
-  body {
-    margin: 0;
-    overflow-x: hidden;
-    font-family: Inter, "Noto Sans JP", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    color: var(--fg);
-    background: linear-gradient(to bottom, var(--sky-top) 0%, var(--sky-bottom) 54%, #eef7da 54%, var(--grass-far) 72%, var(--grass-near) 100%);
-  }
-
-  button { color: inherit; }
+@layer base{
+:root{color-scheme:light;--sky-top:#dff3ff;--sky-bottom:#f5fbff;--grass-near:#b8d98a;--grass-far:#d9e9ad;--fg:#203025;--muted:#607064;--accent:#3e7d4d;--accent-strong:#2f633c;--accent-soft:#e6f1df;--card:rgba(255,255,255,.94);--tile:rgba(255,255,255,.91);--tile-hover:#ffffff;--ring:rgba(52,91,60,.16);--danger:#d65353;--shadow-sm:0 8px 22px rgba(45,74,49,.10);--shadow-md:0 18px 44px rgba(45,74,49,.14);}
+html,body{min-height:100%;}
+body{margin:0;overflow-x:hidden;font-family:Inter,"Noto Sans JP",system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--fg);background:linear-gradient(to bottom,var(--sky-top) 0%,var(--sky-bottom) 54%,#eef7da 54%,var(--grass-far) 72%,var(--grass-near) 100%);}
+button{color:inherit;}
 }
-
-@layer scenery {
-  /* Create the sky, hills, and meadow with CSS only */
-  body::before,
-  body::after {
-    content: "";
-    position: fixed;
-    left: -10vw;
-    width: 120vw;
-    pointer-events: none;
-    z-index: 0;
-  }
-
-  body::before {
-    bottom: 22vh;
-    height: 29vh;
-    background:
-      radial-gradient(70% 130% at 15% 100%, #cce39c 0 50%, transparent 51%),
-      radial-gradient(75% 125% at 56% 100%, #d7e9aa 0 52%, transparent 53%),
-      radial-gradient(62% 120% at 92% 100%, #c4df94 0 50%, transparent 51%);
-    opacity: .95;
-  }
-
-  body::after {
-    bottom: 0;
-    height: 28vh;
-    background:
-      linear-gradient(178deg, transparent 0 8%, rgba(119, 164, 82, .18) 8% 10%, transparent 10%),
-      repeating-linear-gradient(100deg, rgba(75, 125, 56, .10) 0 2px, transparent 2px 16px),
-      linear-gradient(to bottom, #b8d98a, #9dc875);
-    clip-path: polygon(0 16%, 10% 11%, 23% 15%, 37% 8%, 52% 14%, 66% 7%, 80% 13%, 100% 6%, 100% 100%, 0 100%);
-  }
+@layer scenery{
+body::before,body::after{content:"";position:fixed;left:-10vw;width:120vw;pointer-events:none;z-index:0;}
+body::before{bottom:22vh;height:29vh;background:radial-gradient(70% 130% at 15% 100%,#cce39c 0 50%,transparent 51%),radial-gradient(75% 125% at 56% 100%,#d7e9aa 0 52%,transparent 53%),radial-gradient(62% 120% at 92% 100%,#c4df94 0 50%,transparent 51%);opacity:.95;}
+body::after{bottom:0;height:28vh;background:linear-gradient(178deg,transparent 0 8%,rgba(119,164,82,.18) 8% 10%,transparent 10%),repeating-linear-gradient(100deg,rgba(75,125,56,.10) 0 2px,transparent 2px 16px),linear-gradient(to bottom,#b8d98a,#9dc875);clip-path:polygon(0 16%,10% 11%,23% 15%,37% 8%,52% 14%,66% 7%,80% 13%,100% 6%,100% 100%,0 100%);}
 }
-
-@layer components {
-  /* Main layout */
-  .page {
-    position: relative;
-    z-index: 1;
-    min-height: 100vh;
-    display: grid;
-    place-items: center;
-    padding: 48px 20px;
-  }
-
-  .stack {
-    width: min(840px, 94vw);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 34px;
-  }
-
-  /* Search bar */
-  .search {
-    width: min(760px, 94vw);
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 10px 12px 10px 18px;
-    border: 1px solid rgba(46, 92, 55, .13);
-    border-radius: 24px;
-    background: var(--card);
-    box-shadow: var(--shadow-md), inset 0 1px 0 rgba(255, 255, 255, .7);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
-  }
-
-  .search:focus-within {
-    transform: translateY(-1px);
-    border-color: rgba(62, 125, 77, .42);
-    box-shadow: 0 20px 50px rgba(44, 82, 50, .18), 0 0 0 4px rgba(62, 125, 77, .11);
-  }
-
-  .search svg { flex: 0 0 auto; opacity: .78; }
-  .search svg path,
-  .search svg circle { stroke: #55705d; }
-
-  .search input {
-    min-width: 0;
-    flex: 1;
-    border: 0;
-    outline: 0;
-    background: transparent;
-    color: var(--fg);
-    font-size: 18px;
-    padding: 10px 2px;
-  }
-
-  .search input::placeholder { color: #849189; }
-
-  .search button {
-    border: 0;
-    padding: 10px 18px;
-    border-radius: 15px;
-    background: linear-gradient(135deg, #4c925d, var(--accent-strong));
-    color: #fff;
-    font-weight: 700;
-    cursor: pointer;
-    box-shadow: 0 8px 18px rgba(47, 99, 60, .22);
-    transition: transform .16s ease, box-shadow .16s ease, filter .16s ease;
-  }
-
-  .search button:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 10px 24px rgba(47, 99, 60, .29);
-    filter: saturate(1.06);
-  }
-
-  .search button:active { transform: translateY(0) scale(.98); }
-
-  /* Shortcuts */
-  .grid {
-    width: min(760px, 94vw);
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(108px, 1fr));
-    gap: 18px 14px;
-    padding: 18px 10px;
-    border: 1px solid rgba(63, 103, 70, .10);
-    border-radius: 30px;
-    background: rgba(255, 255, 255, .22);
-    box-shadow: 0 18px 46px rgba(65, 96, 56, .07);
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
-  }
-
-  .tile {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 10px;
-    padding: 12px 6px 10px;
-    border-radius: 22px;
-    user-select: none;
-    transition: transform .18s ease, background .18s ease;
-  }
-
-  .tile:hover {
-    transform: translateY(-3px);
-    background: rgba(255, 255, 255, .48);
-  }
-
-  .tile .dot {
-    width: 72px;
-    height: 72px;
-    display: grid;
-    place-items: center;
-    overflow: hidden;
-    border: 1px solid rgba(65, 105, 71, .14);
-    border-radius: 22px;
-    background: var(--tile);
-    box-shadow: var(--shadow-sm), inset 0 0 0 1px rgba(255,255,255,.52);
-    cursor: pointer;
-    font-size: 30px;
-    font-weight: 700;
-    letter-spacing: .03em;
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
-  }
-
-  .tile .dot:hover {
-    transform: scale(1.045);
-    background: var(--tile-hover);
-    box-shadow: 0 14px 30px rgba(46, 80, 50, .16), inset 0 0 0 1px var(--ring);
-  }
-
-  .tile .dot img {
-    width: 44%;
-    height: 44%;
-    object-fit: contain;
-  }
-
-  .tile .cap {
-    max-width: 100px;
-    overflow: hidden;
-    color: #263b2b;
-    font-size: 13px;
-    font-weight: 700;
-    line-height: 1.4;
-    text-align: center;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    text-shadow: 0 1px 0 rgba(255,255,255,.75);
-  }
-
-  .add .dot {
-    border: 1px dashed rgba(62, 125, 77, .48);
-    background: rgba(239, 248, 231, .94);
-    color: var(--accent-strong);
-    box-shadow: none;
-    font-size: 31px;
-    font-weight: 500;
-  }
-
-  /* Edit buttons */
-  .btnmini {
-    position: absolute;
-    top: 2px;
-    right: 8px;
-    display: flex;
-    gap: 6px;
-    z-index: 2;
-  }
-
-  .btnmini button {
-    width: 28px;
-    height: 28px;
-    display: grid;
-    place-items: center;
-    border: 2px solid rgba(255, 255, 255, .94);
-    border-radius: 50%;
-    color: #fff;
-    cursor: pointer;
-    box-shadow: 0 5px 12px rgba(31, 55, 37, .20);
-    transition: transform .15s ease, filter .15s ease;
-  }
-
-  .btnmini button:hover { transform: scale(1.08); filter: brightness(1.04); }
-  .btnmini .rename { background: var(--accent); }
-  .btnmini .remove { background: var(--danger); }
-
-  /* Modals */
-  .modalWrap {
-    position: fixed;
-    inset: 0;
-    display: none;
-    place-items: center;
-    padding: 20px;
-    background: rgba(24, 42, 29, .38);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    z-index: 1000;
-  }
-
-  .modal {
-    width: min(500px, 92vw);
-    padding: 24px;
-    border: 1px solid rgba(52, 95, 60, .13);
-    border-radius: 24px;
-    background: rgba(255, 255, 255, .97);
-    box-shadow: 0 28px 80px rgba(28, 54, 34, .26);
-  }
-
-  .modal h3 {
-    margin: 0 0 18px;
-    color: #233b29;
-    font-size: 19px;
-    letter-spacing: .01em;
-  }
-
-  .modal .row {
-    display: flex;
-    flex-direction: column;
-    gap: 7px;
-    margin-bottom: 14px;
-  }
-
-  .modal .row[hidden] {
-    display: none;
-  }
-
-  .modal label {
-    color: var(--muted);
-    font-size: 12px;
-    font-weight: 700;
-  }
-
-  .modal input {
-    width: 100%;
-    padding: 12px 13px;
-    border: 1px solid rgba(54, 91, 60, .18);
-    border-radius: 13px;
-    outline: 0;
-    background: #fbfdf9;
-    color: var(--fg);
-    font-size: 14px;
-    transition: border-color .16s ease, box-shadow .16s ease, background .16s ease;
-  }
-
-  .modal input:focus {
-    border-color: rgba(62, 125, 77, .52);
-    background: #fff;
-    box-shadow: 0 0 0 4px rgba(62, 125, 77, .10);
-  }
-
-  .modal .actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 9px;
-    margin-top: 20px;
-  }
-
-  .modal .actions button {
-    border: 0;
-    padding: 10px 16px;
-    border-radius: 12px;
-    cursor: pointer;
-    font-weight: 700;
-    transition: transform .15s ease, background .15s ease;
-  }
-
-  #cancelBtn, #operationCloseBtn, #searchCloseBtn, #helpCloseBtn { background: #edf2eb; color: #56635a; }
-  #okBtn { background: var(--accent); color: #fff; }
-  .modal .actions button:hover { transform: translateY(-1px); }
-
-  /* Dragging */
-  .placeholder {
-    width: 72px;
-    height: 72px;
-    border: 2px dashed rgba(62, 125, 77, .42);
-    border-radius: 22px;
-    background: rgba(62, 125, 77, .08);
-  }
-
-  /* Toast */
-  .toast {
-    position: fixed;
-    left: 50%;
-    bottom: 24px;
-    z-index: 2000;
-    transform: translate(-50%, 10px);
-    padding: 10px 15px;
-    border: 1px solid rgba(255, 255, 255, .16);
-    border-radius: 999px;
-    background: rgba(30, 54, 36, .92);
-    color: #fff;
-    box-shadow: 0 10px 28px rgba(22, 45, 27, .23);
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity .2s ease, transform .2s ease;
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-  }
-
-  /* Folder navigation and folder tiles */
-  .folderBar {
-    width: min(760px, 94vw);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 14px;
-    min-height: 48px;
-    padding: 8px 14px;
-    border: 1px solid rgba(63, 103, 70, .11);
-    border-radius: 18px;
-    background: rgba(255, 255, 255, .72);
-    box-shadow: 0 10px 28px rgba(65, 96, 56, .07);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-  }
-
-  .folderBar[hidden] { display: none; }
-
-  .folderHeading {
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-
-  .folderHeading strong {
-    overflow: hidden;
-    color: #294431;
-    font-size: 14px;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-
-  .backButton {
-    flex: 0 0 auto;
-    border: 1px solid rgba(62, 125, 77, .18);
-    border-radius: 12px;
-    padding: 8px 12px;
-    background: #f4f8f1;
-    color: var(--accent-strong);
-    font-size: 13px;
-    font-weight: 800;
-    cursor: pointer;
-    transition: transform .15s ease, background .15s ease;
-  }
-
-  .backButton:hover { transform: translateY(-1px); background: #fff; }
-
-  /* Action tile and action menu */
-  .operations .dot {
-    border: 1px dashed rgba(62, 125, 77, .48);
-    background: rgba(239, 248, 231, .96);
-    color: var(--accent-strong);
-    box-shadow: none;
-    font-size: 28px;
-  }
-
-  .operationMenu {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-  }
-
-  .operationButton {
-    min-height: 78px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    border: 1px solid rgba(62, 125, 77, .15);
-    border-radius: 16px;
-    background: #f7fbf4;
-    color: #2f5938;
-    cursor: pointer;
-    font-weight: 800;
-    transition: transform .15s ease, background .15s ease, border-color .15s ease;
-  }
-
-  .operationButton:hover {
-    transform: translateY(-1px);
-    border-color: rgba(62, 125, 77, .34);
-    background: #fff;
-  }
-
-  .operationButton span:first-child { font-size: 24px; line-height: 1; }
-  .operationButton span:last-child { font-size: 13px; }
-
-  .folder .dot {
-    background: linear-gradient(145deg, #fffdf0, #eef3c8);
-    color: #7d8736;
-    font-size: 32px;
-  }
-
-  .folder .cap { color: #3f4e25; }
-
-  /* Quick help: keep the text concise and easy to read */
-  .helpText {
-    display: grid;
-    gap: 10px;
-    margin: 4px 0 8px;
-    padding: 14px 16px;
-    border: 1px solid var(--ring);
-    border-radius: 14px;
-    background: rgba(247, 251, 244, .92);
-    color: var(--fg);
-    line-height: 1.7;
-  }
-
-  .helpText p { margin: 0; }
-
-  /* Search within saved items */
-  .searchControls {
-    display: grid;
-    grid-template-columns: 150px minmax(0, 1fr) auto;
-    gap: 10px;
-    align-items: center;
-  }
-
-  .searchControls select,
-  .searchControls input {
-    width: 100%;
-    min-width: 0;
-    padding: 11px 12px;
-    border: 1px solid rgba(54, 91, 60, .18);
-    border-radius: 13px;
-    outline: 0;
-    background: #fbfdf9;
-    color: var(--fg);
-  }
-
-  .searchControls select:focus,
-  .searchControls input:focus {
-    border-color: rgba(62, 125, 77, .52);
-    background: #fff;
-    box-shadow: 0 0 0 4px rgba(62, 125, 77, .10);
-  }
-
-  .searchControls button {
-    border: 0;
-    padding: 11px 16px;
-    border-radius: 12px;
-    background: var(--accent);
-    color: #fff;
-    font-weight: 800;
-    cursor: pointer;
-  }
-
-  .searchHint {
-    margin: 10px 0 12px;
-    color: var(--muted);
-    font-size: 12px;
-    line-height: 1.6;
-  }
-
-  .searchResults {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    max-height: min(52vh, 440px);
-    overflow: auto;
-    padding-right: 2px;
-  }
-
-  .searchResult {
-    display: grid;
-    grid-template-columns: 42px minmax(0, 1fr);
-    gap: 11px;
-    align-items: center;
-    width: 100%;
-    padding: 10px 11px;
-    border: 1px solid rgba(62, 125, 77, .13);
-    border-radius: 14px;
-    background: #fbfdf9;
-    color: inherit;
-    text-align: left;
-    cursor: pointer;
-    transition: transform .15s ease, background .15s ease, border-color .15s ease;
-  }
-
-  .searchResult:hover {
-    transform: translateY(-1px);
-    border-color: rgba(62, 125, 77, .30);
-    background: #fff;
-  }
-
-  .searchResultIcon {
-    width: 42px;
-    height: 42px;
-    display: grid;
-    place-items: center;
-    overflow: hidden;
-    border: 1px solid rgba(62, 125, 77, .12);
-    border-radius: 12px;
-    background: #f1f6ed;
-    font-size: 21px;
-  }
-
-  .searchResultIcon img { width: 23px; height: 23px; object-fit: contain; }
-
-  .searchResultBody { min-width: 0; }
-  .searchResultTitle {
-    overflow: hidden;
-    color: #294431;
-    font-size: 14px;
-    font-weight: 800;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .searchResultMeta {
-    overflow: hidden;
-    margin-top: 3px;
-    color: var(--muted);
-    font-size: 11px;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .searchEmpty {
-    padding: 24px 12px;
-    color: var(--muted);
-    text-align: center;
-    font-size: 13px;
-  }
-
-  /* News panel at the bottom. External content is created only when opened. */
-  .newsPanel {
-    width: min(760px, 94vw);
-    overflow: hidden;
-    border: 1px solid rgba(63, 103, 70, .12);
-    border-radius: 24px;
-    background: rgba(255, 255, 255, .82);
-    box-shadow: 0 16px 38px rgba(65, 96, 56, .10);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-  }
-
-  .newsToggle {
-    width: 100%;
-    min-height: 54px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 12px 16px;
-    border: 0;
-    background: transparent;
-    color: #294431;
-    cursor: pointer;
-    font-weight: 800;
-    text-align: left;
-  }
-
-  .newsToggle:hover { background: rgba(255, 255, 255, .52); }
-
-  .newsToggleText {
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    min-width: 0;
-  }
-
-  .newsToggleMark {
-    flex: 0 0 auto;
-    font-size: 13px;
-    transition: transform .18s ease;
-  }
-
-  .newsBody {
-    padding: 0 12px 12px;
-  }
-
-  .newsBody[hidden] { display: none; }
-
-  .newsFrameWrap {
-    min-height: 720px;
-    overflow: hidden;
-    border: 1px solid rgba(62, 125, 77, .10);
-    border-radius: 16px;
-    background: #fff;
-  }
-
-  .newsFrame {
-    display: block;
-    width: 100%;
-    height: 720px;
-    border: 0;
-    background: #fff;
-  }
-
-  .newsLoading {
-    min-height: 720px;
-    display: grid;
-    place-items: center;
-    padding: 24px;
-    color: var(--muted);
-    font-size: 13px;
-    text-align: center;
-  }
-
-  /* News refresh control: reload the external feed only when needed. */
-  .newsRefreshRow {
-    display: flex;
-    justify-content: flex-end;
-    padding: 0 0 10px;
-  }
-
-  .newsRefreshButton {
-    border: 1px solid rgba(62, 125, 77, .16);
-    border-radius: 999px;
-    padding: 7px 11px;
-    background: rgba(247, 251, 244, .96);
-    color: #395943;
-    cursor: pointer;
-    font-size: 12px;
-    font-weight: 800;
-  }
-
-  .newsRefreshButton:hover { background: #fff; }
-
+@layer components{
+.page{position:relative;z-index:1;min-height:100vh;display:grid;place-items:center;padding:48px 20px;}
+.stack{width:min(840px,94vw);display:flex;flex-direction:column;align-items:center;gap:34px;}
+.search{width:min(760px,94vw);display:flex;align-items:center;gap:12px;padding:10px 12px 10px 18px;border:1px solid rgba(46,92,55,.13);border-radius:24px;background:var(--card);box-shadow:var(--shadow-md),inset 0 1px 0 rgba(255,255,255,.7);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;}
+.search:focus-within{transform:translateY(-1px);border-color:rgba(62,125,77,.42);box-shadow:0 20px 50px rgba(44,82,50,.18),0 0 0 4px rgba(62,125,77,.11);}
+.search svg{flex:0 0 auto;opacity:.78;}
+.search svg path,.search svg circle{stroke:#55705d;}
+.search input{min-width:0;flex:1;border:0;outline:0;background:transparent;color:var(--fg);font-size:18px;padding:10px 2px;}
+.search input::placeholder{color:#849189;}
+.search button{border:0;padding:10px 18px;border-radius:15px;background:linear-gradient(135deg,#4c925d,var(--accent-strong));color:#fff;font-weight:700;cursor:pointer;box-shadow:0 8px 18px rgba(47,99,60,.22);transition:transform .16s ease,box-shadow .16s ease,filter .16s ease;}
+.search button:hover{transform:translateY(-1px);box-shadow:0 10px 24px rgba(47,99,60,.29);filter:saturate(1.06);}
+.search button:active{transform:translateY(0) scale(.98);}
+.grid{width:min(760px,94vw);display:grid;grid-template-columns:repeat(auto-fill,minmax(108px,1fr));gap:18px 14px;padding:18px 10px;border:1px solid rgba(63,103,70,.10);border-radius:30px;background:rgba(255,255,255,.22);box-shadow:0 18px 46px rgba(65,96,56,.07);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);}
+.tile{position:relative;display:flex;flex-direction:column;align-items:center;gap:10px;padding:12px 6px 10px;border-radius:22px;user-select:none;transition:transform .18s ease,background .18s ease;}
+.tile:hover{transform:translateY(-3px);background:rgba(255,255,255,.48);}
+.tile .dot{width:72px;height:72px;display:grid;place-items:center;overflow:hidden;border:1px solid rgba(65,105,71,.14);border-radius:22px;background:var(--tile);box-shadow:var(--shadow-sm),inset 0 0 0 1px rgba(255,255,255,.52);cursor:pointer;font-size:30px;font-weight:700;letter-spacing:.03em;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);transition:transform .18s ease,box-shadow .18s ease,background .18s ease;}
+.tile .dot:hover{transform:scale(1.045);background:var(--tile-hover);box-shadow:0 14px 30px rgba(46,80,50,.16),inset 0 0 0 1px var(--ring);}
+.tile .dot img{width:44%;height:44%;object-fit:contain;}
+.tile .cap{max-width:100px;overflow:hidden;color:#263b2b;font-size:13px;font-weight:700;line-height:1.4;text-align:center;text-overflow:ellipsis;white-space:nowrap;text-shadow:0 1px 0 rgba(255,255,255,.75);}
+.add .dot{border:1px dashed rgba(62,125,77,.48);background:rgba(239,248,231,.94);color:var(--accent-strong);box-shadow:none;font-size:31px;font-weight:500;}
+.btnmini{position:absolute;top:2px;right:8px;display:flex;gap:6px;z-index:2;}
+.btnmini button{width:28px;height:28px;display:grid;place-items:center;border:2px solid rgba(255,255,255,.94);border-radius:50%;color:#fff;cursor:pointer;box-shadow:0 5px 12px rgba(31,55,37,.20);transition:transform .15s ease,filter .15s ease;}
+.btnmini button:hover{transform:scale(1.08);filter:brightness(1.04);}
+.btnmini .rename{background:var(--accent);}
+.btnmini .remove{background:var(--danger);}
+.modalWrap{position:fixed;inset:0;display:none;place-items:center;padding:20px;background:rgba(24,42,29,.38);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:1000;}
+.modal{width:min(500px,92vw);padding:24px;border:1px solid rgba(52,95,60,.13);border-radius:24px;background:rgba(255,255,255,.97);box-shadow:0 28px 80px rgba(28,54,34,.26);}
+.modal h3{margin:0 0 18px;color:#233b29;font-size:19px;letter-spacing:.01em;}
+.modal .row{display:flex;flex-direction:column;gap:7px;margin-bottom:14px;}
+.modal .row[hidden]{display:none;}
+.modal label{color:var(--muted);font-size:12px;font-weight:700;}
+.modal input{width:100%;padding:12px 13px;border:1px solid rgba(54,91,60,.18);border-radius:13px;outline:0;background:#fbfdf9;color:var(--fg);font-size:14px;transition:border-color .16s ease,box-shadow .16s ease,background .16s ease;}
+.modal input:focus{border-color:rgba(62,125,77,.52);background:#fff;box-shadow:0 0 0 4px rgba(62,125,77,.10);}
+.modal .actions{display:flex;justify-content:flex-end;gap:9px;margin-top:20px;}
+.modal .actions button{border:0;padding:10px 16px;border-radius:12px;cursor:pointer;font-weight:700;transition:transform .15s ease,background .15s ease;}
+#cancelBtn,#operationCloseBtn,#searchCloseBtn,#helpCloseBtn{background:#edf2eb;color:#56635a;}
+#okBtn{background:var(--accent);color:#fff;}
+.modal .actions button:hover{transform:translateY(-1px);}
+.placeholder{width:72px;height:72px;border:2px dashed rgba(62,125,77,.42);border-radius:22px;background:rgba(62,125,77,.08);}
+.toast{position:fixed;left:50%;bottom:24px;z-index:2000;transform:translate(-50%,10px);padding:10px 15px;border:1px solid rgba(255,255,255,.16);border-radius:999px;background:rgba(30,54,36,.92);color:#fff;box-shadow:0 10px 28px rgba(22,45,27,.23);opacity:0;pointer-events:none;transition:opacity .2s ease,transform .2s ease;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);}
+.folderBar{width:min(760px,94vw);display:flex;align-items:center;justify-content:space-between;gap:14px;min-height:48px;padding:8px 14px;border:1px solid rgba(63,103,70,.11);border-radius:18px;background:rgba(255,255,255,.72);box-shadow:0 10px 28px rgba(65,96,56,.07);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);}
+.folderBar[hidden]{display:none;}
+.folderHeading{min-width:0;display:flex;flex-direction:column;gap:2px;}
+.folderHeading strong{overflow:hidden;color:#294431;font-size:14px;text-overflow:ellipsis;white-space:nowrap;}
+.backButton{flex:0 0 auto;border:1px solid rgba(62,125,77,.18);border-radius:12px;padding:8px 12px;background:#f4f8f1;color:var(--accent-strong);font-size:13px;font-weight:800;cursor:pointer;transition:transform .15s ease,background .15s ease;}
+.backButton:hover{transform:translateY(-1px);background:#fff;}
+.operations .dot{border:1px dashed rgba(62,125,77,.48);background:rgba(239,248,231,.96);color:var(--accent-strong);box-shadow:none;font-size:28px;}
+.operationMenu{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
+.operationButton{min-height:78px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;border:1px solid rgba(62,125,77,.15);border-radius:16px;background:#f7fbf4;color:#2f5938;cursor:pointer;font-weight:800;transition:transform .15s ease,background .15s ease,border-color .15s ease;}
+.operationButton:hover{transform:translateY(-1px);border-color:rgba(62,125,77,.34);background:#fff;}
+.operationButton span:first-child{font-size:24px;line-height:1;}
+.operationButton span:last-child{font-size:13px;}
+.folder .dot{background:linear-gradient(145deg,#fffdf0,#eef3c8);color:#7d8736;font-size:32px;}
+.folder .cap{color:#3f4e25;}
+.helpText{display:grid;gap:10px;margin:4px 0 8px;padding:14px 16px;border:1px solid var(--ring);border-radius:14px;background:rgba(247,251,244,.92);color:var(--fg);line-height:1.7;}
+.helpText p{margin:0;}
+.searchControls{display:grid;grid-template-columns:150px minmax(0,1fr) auto;gap:10px;align-items:center;}
+.searchControls select,.searchControls input{width:100%;min-width:0;padding:11px 12px;border:1px solid rgba(54,91,60,.18);border-radius:13px;outline:0;background:#fbfdf9;color:var(--fg);}
+.searchControls select:focus,.searchControls input:focus{border-color:rgba(62,125,77,.52);background:#fff;box-shadow:0 0 0 4px rgba(62,125,77,.10);}
+.searchControls button{border:0;padding:11px 16px;border-radius:12px;background:var(--accent);color:#fff;font-weight:800;cursor:pointer;}
+.searchHint{margin:10px 0 12px;color:var(--muted);font-size:12px;line-height:1.6;}
+.searchResults{display:flex;flex-direction:column;gap:8px;max-height:min(52vh,440px);overflow:auto;padding-right:2px;}
+.searchResult{display:grid;grid-template-columns:42px minmax(0,1fr);gap:11px;align-items:center;width:100%;padding:10px 11px;border:1px solid rgba(62,125,77,.13);border-radius:14px;background:#fbfdf9;color:inherit;text-align:left;cursor:pointer;transition:transform .15s ease,background .15s ease,border-color .15s ease;}
+.searchResult:hover{transform:translateY(-1px);border-color:rgba(62,125,77,.30);background:#fff;}
+.searchResultIcon{width:42px;height:42px;display:grid;place-items:center;overflow:hidden;border:1px solid rgba(62,125,77,.12);border-radius:12px;background:#f1f6ed;font-size:21px;}
+.searchResultIcon img{width:23px;height:23px;object-fit:contain;}
+.searchResultBody{min-width:0;}
+.searchResultTitle{overflow:hidden;color:#294431;font-size:14px;font-weight:800;text-overflow:ellipsis;white-space:nowrap;}
+.searchResultMeta{overflow:hidden;margin-top:3px;color:var(--muted);font-size:11px;text-overflow:ellipsis;white-space:nowrap;}
+.searchEmpty{padding:24px 12px;color:var(--muted);text-align:center;font-size:13px;}
+.newsPanel{width:min(760px,94vw);overflow:hidden;border:1px solid rgba(63,103,70,.12);border-radius:24px;background:rgba(255,255,255,.82);box-shadow:0 16px 38px rgba(65,96,56,.10);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);}
+.newsToggle{width:100%;min-height:54px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border:0;background:transparent;color:#294431;cursor:pointer;font-weight:800;text-align:left;}
+.newsToggle:hover{background:rgba(255,255,255,.52);}
+.newsToggleText{display:flex;align-items:center;gap:9px;min-width:0;}
+.newsToggleMark{flex:0 0 auto;font-size:13px;transition:transform .18s ease;}
+.newsBody{padding:0 12px 12px;}
+.newsBody[hidden]{display:none;}
+.newsFrameWrap{min-height:720px;overflow:hidden;border:1px solid rgba(62,125,77,.10);border-radius:16px;background:#fff;}
+.newsFrame{display:block;width:100%;height:720px;border:0;background:#fff;}
+.newsLoading{min-height:720px;display:grid;place-items:center;padding:24px;color:var(--muted);font-size:13px;text-align:center;}
+.newsRefreshRow{display:flex;justify-content:flex-end;padding:0 0 10px;}
+.newsRefreshButton{border:1px solid rgba(62,125,77,.16);border-radius:999px;padding:7px 11px;background:rgba(247,251,244,.96);color:#395943;cursor:pointer;font-size:12px;font-weight:800;}
+.newsRefreshButton:hover{background:#fff;}
 }
-
-@layer states {
-  /* Make edit mode easy to see */
-  .edit .tile .dot { cursor: grab; }
-  .edit .tile,
-  .edit .tile .dot { touch-action: none; }
-  .edit .tile:not(.add) { background: rgba(255, 255, 255, .48); }
-
-  .ghost {
-    opacity: .74;
-    filter: drop-shadow(0 16px 24px rgba(37, 72, 43, .20));
-  }
-
-  .toast.show {
-    opacity: 1;
-    transform: translate(-50%, 0);
-  }
+@layer states{
+.edit .tile .dot{cursor:grab;}
+.edit .tile,.edit .tile .dot{touch-action:none;}
+.edit .tile:not(.add){background:rgba(255,255,255,.48);}
+.ghost{opacity:.74;filter:drop-shadow(0 16px 24px rgba(37,72,43,.20));}
+.toast.show{opacity:1;transform:translate(-50%,0);}
 }
-
-@layer responsive {
-  /* Mobile adjustments */
-  @media (max-width: 600px) {
-    .page { place-items: start center; padding: 34px 14px; }
-    .stack { gap: 26px; }
-    .search { width: 100%; border-radius: 20px; padding-left: 14px; }
-    .search input { font-size: 16px; }
-    .search button { padding-inline: 14px; }
-    .grid { width: 100%; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px 6px; padding: 14px 4px; }
-    .tile { padding-inline: 2px; }
-    .tile .dot { width: 64px; height: 64px; border-radius: 20px; }
-    .tile .cap { max-width: 76px; font-size: 12px; }
-    .btnmini { right: 0; }
-    .operationMenu { grid-template-columns: 1fr; }
-    .operationButton { min-height: 62px; flex-direction: row; justify-content: flex-start; padding: 0 18px; }
-    .searchControls { grid-template-columns: 1fr; }
-    .searchControls button { width: 100%; }
-    /* Make the news panel use the full content width on mobile. */
-    .newsPanel { width: 100%; border-radius: 20px; }
-    .newsFrameWrap, .newsFrame, .newsLoading { min-height: 620px; }
-    .newsFrame { height: 620px; }
-    body::before { bottom: 18vh; }
-    body::after { height: 24vh; }
-  }
-
-  @media (max-width: 390px) {
-    .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after { scroll-behavior: auto; }
-    .search,
-    .search button,
-    .tile,
-    .tile .dot,
-    .btnmini button,
-    .modal input,
-    .modal .actions button,
-    .toast { transition: none; }
-  }
+@layer responsive{
+@media (max-width:600px){
+.page{place-items:start center;padding:34px 14px;}
+.stack{gap:26px;}
+.search{width:100%;border-radius:20px;padding-left:14px;}
+.search input{font-size:16px;}
+.search button{padding-inline:14px;}
+.grid{width:100%;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px 6px;padding:14px 4px;}
+.tile{padding-inline:2px;}
+.tile .dot{width:64px;height:64px;border-radius:20px;}
+.tile .cap{max-width:76px;font-size:12px;}
+.btnmini{right:0;}
+.operationMenu{grid-template-columns:1fr;}
+.operationButton{min-height:62px;flex-direction:row;justify-content:flex-start;padding:0 18px;}
+.searchControls{grid-template-columns:1fr;}
+.searchControls button{width:100%;}
+.newsPanel{width:100%;border-radius:20px;}
+.newsFrameWrap,.newsFrame,.newsLoading{min-height:620px;}
+.newsFrame{height:620px;}
+body::before{bottom:18vh;}
+body::after{height:24vh;}
+}
+@media (max-width:390px){
+.grid{grid-template-columns:repeat(3,minmax(0,1fr));}
+}
+@media (prefers-reduced-motion:reduce){
+*,*::before,*::after{scroll-behavior:auto;}
+.search,.search button,.tile,.tile .dot,.btnmini button,.modal input,.modal .actions button,.toast{transition:none;}
+}
 }
 </style>
 </head>
@@ -873,1179 +247,87 @@
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
 <script>
-const DB_NAME = 'shortcut-db';
-const STORE = 'shortcuts';
-const SETTINGS_STORE = 'settings';
-const ROOT_FOLDER = 'root';
-let dbPromise;
-let modalMode = 'shortcut';
-let nameWasEdited = false;
-
-function openDB() {
-  if (!dbPromise) {
-    dbPromise = new Promise((resolve, reject) => {
-      const request = indexedDB.open(DB_NAME, 3);
-      request.onupgradeneeded = (event) => {
-        const db = event.target.result;
-        let store;
-
-        if (!db.objectStoreNames.contains(STORE)) {
-          store = db.createObjectStore(STORE, { keyPath: 'id', autoIncrement: true });
-        } else {
-          store = event.target.transaction.objectStore(STORE);
-        }
-
-        if (!store.indexNames.contains('by_order')) store.createIndex('by_order', 'order');
-        if (store.indexNames.contains('by_url')) store.deleteIndex('by_url');
-        store.createIndex('by_url', 'url', { unique: false });
-        if (!store.indexNames.contains('by_parent')) store.createIndex('by_parent', 'parentFolder', { unique: false });
-        if (!store.indexNames.contains('by_folder_key')) store.createIndex('by_folder_key', 'folderKey', { unique: false });
-
-        // Store for display settings such as the news panel.
-        if (!db.objectStoreNames.contains(SETTINGS_STORE)) {
-          db.createObjectStore(SETTINGS_STORE, { keyPath: 'key' });
-        }
-
-        // Migrate legacy data as shortcuts directly under the root folder.
-        store.openCursor().onsuccess = (e) => {
-          const cursor = e.target.result;
-          if (!cursor) return;
-          const value = cursor.value;
-          let changed = false;
-          if (!value.type) { value.type = 'shortcut'; changed = true; }
-          if (!value.parentFolder) { value.parentFolder = ROOT_FOLDER; changed = true; }
-          if (changed) cursor.update(value);
-          cursor.continue();
-        };
-      };
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
-  }
-  return dbPromise;
-}
-
-async function txStore(mode = 'readonly') {
-  const db = await openDB();
-  const tx = db.transaction(STORE, mode);
-  return { tx, st: tx.objectStore(STORE) };
-}
-
-async function getSetting(key, fallback = null) {
-  const db = await openDB();
-  const tx = db.transaction(SETTINGS_STORE, 'readonly');
-  const st = tx.objectStore(SETTINGS_STORE);
-  return new Promise((resolve, reject) => {
-    const request = st.get(key);
-    request.onsuccess = () => resolve(request.result?.value ?? fallback);
-    request.onerror = () => reject(request.error);
-  });
-}
-
-async function setSetting(key, value) {
-  const db = await openDB();
-  const tx = db.transaction(SETTINGS_STORE, 'readwrite');
-  tx.objectStore(SETTINGS_STORE).put({ key, value });
-  return new Promise((resolve, reject) => {
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-    tx.onabort = () => reject(tx.error);
-  });
-}
-
-async function getAll() {
-  const { st } = await txStore();
-  return new Promise((resolve, reject) => {
-    const request = st.getAll();
-    request.onsuccess = () => resolve(request.result || []);
-    request.onerror = () => reject(request.error);
-  });
-}
-
-function currentFolderKey() {
-  return new URL(location.href).searchParams.get('folder') || ROOT_FOLDER;
-}
-
-function folderUrl(folderKey) {
-  const url = new URL(location.href);
-  if (!folderKey || folderKey === ROOT_FOLDER) url.searchParams.delete('folder');
-  else url.searchParams.set('folder', folderKey);
-  return url.href;
-}
-
-function normUrl(value) {
-  if (!value) return '';
-  let v = value.trim();
-  if (!/^https?:\/\//i.test(v)) v = 'https://' + v;
-  try {
-    const url = new URL(v);
-    // Treat URLs with only different parameter order as identical; keep different values as separate sites.
-    const sorted = [...url.searchParams.entries()].sort(([ak, av], [bk, bv]) =>
-      ak.localeCompare(bk) || av.localeCompare(bv)
-    );
-    url.search = '';
-    sorted.forEach(([key, val]) => url.searchParams.append(key, val));
-    return url.href;
-  } catch {
-    return '';
-  }
-}
-
+const DB_NAME = 'shortcut-db'; const STORE = 'shortcuts'; const SETTINGS_STORE = 'settings'; const ROOT_FOLDER = 'root'; let dbPromise; let modalMode = 'shortcut'; let nameWasEdited = false;
+function openDB() { if (!dbPromise) { dbPromise = new Promise((resolve, reject) => { const request = indexedDB.open(DB_NAME, 3); request.onupgradeneeded = (event) => { const db = event.target.result; let store; if (!db.objectStoreNames.contains(STORE)) { store = db.createObjectStore(STORE, { keyPath: 'id', autoIncrement: true }); } else { store = event.target.transaction.objectStore(STORE); } if (!store.indexNames.contains('by_order')) store.createIndex('by_order', 'order'); if (store.indexNames.contains('by_url')) store.deleteIndex('by_url'); store.createIndex('by_url', 'url', { unique: false }); if (!store.indexNames.contains('by_parent')) store.createIndex('by_parent', 'parentFolder', { unique: false }); if (!store.indexNames.contains('by_folder_key')) store.createIndex('by_folder_key', 'folderKey', { unique: false }); // Store for display settings such as the news panel.
+if (!db.objectStoreNames.contains(SETTINGS_STORE)) { db.createObjectStore(SETTINGS_STORE, { keyPath: 'key' }); } // Migrate legacy data as shortcuts directly under the root folder.
+store.openCursor().onsuccess = (e) => { const cursor = e.target.result; if (!cursor) return; const value = cursor.value; let changed = false; if (!value.type) { value.type = 'shortcut'; changed = true; } if (!value.parentFolder) { value.parentFolder = ROOT_FOLDER; changed = true; } if (changed) cursor.update(value); cursor.continue(); }; }; request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); }); } return dbPromise; }
+async function txStore(mode = 'readonly') { const db = await openDB(); const tx = db.transaction(STORE, mode); return { tx, st: tx.objectStore(STORE) }; }
+async function getSetting(key, fallback = null) { const db = await openDB(); const tx = db.transaction(SETTINGS_STORE, 'readonly'); const st = tx.objectStore(SETTINGS_STORE); return new Promise((resolve, reject) => { const request = st.get(key); request.onsuccess = () => resolve(request.result?.value ?? fallback); request.onerror = () => reject(request.error); }); }
+async function setSetting(key, value) { const db = await openDB(); const tx = db.transaction(SETTINGS_STORE, 'readwrite'); tx.objectStore(SETTINGS_STORE).put({ key, value }); return new Promise((resolve, reject) => { tx.oncomplete = () => resolve(); tx.onerror = () => reject(tx.error); tx.onabort = () => reject(tx.error); }); }
+async function getAll() { const { st } = await txStore(); return new Promise((resolve, reject) => { const request = st.getAll(); request.onsuccess = () => resolve(request.result || []); request.onerror = () => reject(request.error); }); }
+function currentFolderKey() { return new URL(location.href).searchParams.get('folder') || ROOT_FOLDER; }
+function folderUrl(folderKey) { const url = new URL(location.href); if (!folderKey || folderKey === ROOT_FOLDER) url.searchParams.delete('folder'); else url.searchParams.set('folder', folderKey); return url.href; }
+function normUrl(value) { if (!value) return ''; let v = value.trim(); if (!/^https?:\/\//i.test(v)) v = 'https://' + v; try { const url = new URL(v); // Treat URLs with only different parameter order as identical; keep different values as separate sites.
+const sorted = [...url.searchParams.entries()].sort(([ak, av], [bk, bv]) => ak.localeCompare(bk) || av.localeCompare(bv) ); url.search = ''; sorted.forEach(([key, val]) => url.searchParams.append(key, val)); return url.href; } catch { return ''; } }
 // Extract a display name from a URL.
 // 1) Remove everything after the first / (path, query, and hash)
 // 2) Remove http(s):// and www.
 // 3) Remove trailing domains such as .com, .net, .jp, .io, and .co.jp
 // 4) Capitalize the first character
-function extractSiteName(url) {
-  let value = String(url || '').trim();
-  if (!value) return '';
-
-  // Add a scheme so the value can be treated as a URL.
-  if (!/^https?:\/\//i.test(value)) value = `https://${value}`;
-
-  try {
-    const parsed = new URL(value);
-    let host = parsed.hostname
-      .replace(/^www\./i, '')
-      .replace(/\.$/, '');
-
-    const labels = host.split('.').filter(Boolean);
-    if (!labels.length) return '';
-
-    // Remove country-code domains and common TLDs/SLDs from the end.
-    // Examples: example.com -> example / example.co.jp -> example / example.ne.jp -> example
-    const commonSuffixes = new Set([
-      'com','net','ne','org','or','gov','go','edu','ac','mil','int','co',
-      'jp','io','ai','me','tv','cc','us','uk','de','fr','it','es','ca','au','nz','cn','kr','tw','hk','sg','in','br','mx','ru','ch','se','no','fi','dk','nl','be','at','pl','cz','gr','pt','ie','za',
-      'info','biz','name','mobi','app','dev','tech','site','online','store','cloud','xyz','club','pro','shop','blog','design','digital','live','news','world','space','website','services','solutions','systems','network'
-    ]);
-
-    while (labels.length > 1) {
-      const tail = labels[labels.length - 1].toLowerCase();
-      if (commonSuffixes.has(tail) || /^[a-z]{2}$/.test(tail)) labels.pop();
-      else break;
-    }
-
-    const site = labels
-      .map(label => label ? label.charAt(0).toUpperCase() + label.slice(1) : '')
-      .join('');
-    return site;
-  } catch {
-    return '';
-  }
-}
-
-function hostTitle(url) {
-  return extractSiteName(url);
-}
-
-function suggestedTitle(url) {
-  return extractSiteName(url);
-}
-
-function faviconUrl(url) {
-  try {
-    const parsed = new URL(url);
-    return `https://www.google.com/s2/favicons?domain=${parsed.hostname}&sz=64`;
-  } catch {
-    return '';
-  }
-}
-
-async function generateFolderKey(name) {
-  const all = await getAll();
-  const used = new Set(all.filter(x => x.type === 'folder').map(x => x.folderKey));
-
-  for (let attempt = 0; attempt < 8; attempt += 1) {
-    const random = new Uint8Array(24);
-    crypto.getRandomValues(random);
-    const seed = `${name}|${Date.now()}|${performance.now()}|${Array.from(random).join(',')}`;
-    let key;
-
-    if (crypto.subtle) {
-      const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(seed));
-      key = Array.from(new Uint8Array(digest)).map(v => v.toString(16).padStart(2, '0')).join('').slice(0, 32);
-    } else {
-      key = Array.from(random).map(v => v.toString(16).padStart(2, '0')).join('').slice(0, 32);
-    }
-
-    if (!used.has(key)) return key;
-  }
-  throw new Error('folder-key-collision');
-}
-
-async function addShortcut(url, title) {
-  const normalized = normUrl(url);
-  if (!normalized) throw new Error('invalid');
-  const parentFolder = currentFolderKey();
-  const all = await getAll();
-  if (all.some(x => x.type === 'shortcut' && x.parentFolder === parentFolder && normUrl(x.url) === normalized)) return null;
-
-  const siblings = all.filter(x => x.parentFolder === parentFolder);
-  const order = (siblings.reduce((max, x) => Math.max(max, x.order || 0), 0) || 0) + 1;
-  const finalTitle = title && title.trim() ? title.trim() : suggestedTitle(normalized) || hostTitle(normalized);
-  const { st, tx } = await txStore('readwrite');
-  st.add({ type: 'shortcut', parentFolder, url: normalized, title: finalTitle, order });
-  return new Promise(resolve => tx.oncomplete = () => resolve(true));
-}
-
-async function addFolder(title) {
-  const name = title.trim() || 'New folder';
-  const parentFolder = currentFolderKey();
-  const all = await getAll();
-  const siblings = all.filter(x => x.parentFolder === parentFolder);
-  const order = (siblings.reduce((max, x) => Math.max(max, x.order || 0), 0) || 0) + 1;
-  const folderKey = await generateFolderKey(name);
-  const { st, tx } = await txStore('readwrite');
-  st.add({ type: 'folder', parentFolder, folderKey, title: name, order });
-  return new Promise(resolve => tx.oncomplete = () => resolve(folderKey));
-}
-
-async function updateEntry(id, title, url = '') {
-  const numericId = Number(id);
-  const current = window._cache.get(numericId);
-  if (!current) return false;
-
-  const nextTitle = title.trim() || current.title;
-  let updated = { ...current, title: nextTitle };
-
-  if (current.type === 'shortcut') {
-    const normalized = normUrl(url);
-    if (!normalized) throw new Error('invalid-url');
-
-    const all = await getAll();
-    const duplicate = all.some(item =>
-      item.id !== numericId &&
-      item.type === 'shortcut' &&
-      item.parentFolder === current.parentFolder &&
-      normUrl(item.url) === normalized
-    );
-    if (duplicate) return null;
-
-    updated = { ...updated, url: normalized };
-  }
-
-  const { st, tx } = await txStore('readwrite');
-  st.put(updated);
-  return new Promise(resolve => tx.oncomplete = () => resolve(true));
-}
-
-async function removeEntry(id) {
-  const all = await getAll();
-  const target = all.find(x => x.id === Number(id));
-  if (!target) return;
-  const ids = new Set([target.id]);
-
-  if (target.type === 'folder') {
-    const folderQueue = [target.folderKey];
-    while (folderQueue.length) {
-      const parent = folderQueue.shift();
-      for (const item of all.filter(x => x.parentFolder === parent)) {
-        ids.add(item.id);
-        if (item.type === 'folder') folderQueue.push(item.folderKey);
-      }
-    }
-  }
-
-  const { st, tx } = await txStore('readwrite');
-  ids.forEach(entryId => st.delete(entryId));
-  return new Promise(resolve => tx.oncomplete = () => resolve(true));
-}
-
-async function saveOrder(ids) {
-  const { st, tx } = await txStore('readwrite');
-  ids.forEach((id, i) => {
-    const numericId = Number(id);
-    const current = window._cache?.get(numericId);
-    if (current) st.put({ ...current, order: i + 1 });
-  });
-  return new Promise(resolve => tx.oncomplete = () => resolve(true));
-}
-
-const grid = document.getElementById('grid');
-const modalWrap = document.getElementById('modalWrap');
-const modalTitle = document.getElementById('modalTitle');
-const nameInput = document.getElementById('nameInput');
-const urlInput = document.getElementById('urlInput');
-const urlRow = document.getElementById('urlRow');
-const okBtn = document.getElementById('okBtn');
-const cancelBtn = document.getElementById('cancelBtn');
-const toastEl = document.getElementById('toast');
-const folderBar = document.getElementById('folderBar');
-const folderTitle = document.getElementById('folderTitle');
-const backButton = document.getElementById('backButton');
-const operationWrap = document.getElementById('operationWrap');
-const operationCloseBtn = document.getElementById('operationCloseBtn');
-const addShortcutAction = document.getElementById('addShortcutAction');
-const addFolderAction = document.getElementById('addFolderAction');
-const importAction = document.getElementById('importAction');
-const exportAction = document.getElementById('exportAction');
-const importFile = document.getElementById('importFile');
-const searchAction = document.getElementById('searchAction');
-const helpAction = document.getElementById('helpAction');
-const helpWrap = document.getElementById('helpWrap');
-const helpCloseBtn = document.getElementById('helpCloseBtn');
-const shortcutSearchWrap = document.getElementById('shortcutSearchWrap');
-const shortcutSearchType = document.getElementById('shortcutSearchType');
-const shortcutSearchInput = document.getElementById('shortcutSearchInput');
-const shortcutSearchButton = document.getElementById('shortcutSearchButton');
-const shortcutSearchResults = document.getElementById('shortcutSearchResults');
-const shortcutSearchHint = document.getElementById('shortcutSearchHint');
-const searchCloseBtn = document.getElementById('searchCloseBtn');
-const newsToggle = document.getElementById('newsToggle');
-const newsToggleMark = document.getElementById('newsToggleMark');
-const newsBody = document.getElementById('newsBody');
-const newsFrameWrap = document.getElementById('newsFrameWrap');
-const newsRefreshButton = document.getElementById('newsRefreshButton');
-const NEWS_CACHE_MS = 5 * 60 * 1000;
-const NEWS_FRAME_SRC = 'https://rss.app/embed/v1/list/Rd2nDxAXJTMIB27W';
-let newsFrame = null;
-let newsLoadedAt = 0;
-
-window.editMode = false;
-window.editingId = null;
-window.editTimer = null;
-window._cache = window._cache || new Map();
-
-let draggingGhost = null;
-let draggingId = null;
-let dragPlaceholder = null;
-let dragStartY = 0;
-let draggingNode = null;
-
-function toast(message) {
-  toastEl.textContent = message;
-  toastEl.classList.add('show');
-  setTimeout(() => toastEl.classList.remove('show'), 1500);
-}
-
-function enterEditMode() {
-  if (editMode) return;
-  editMode = true;
-  render();
-  toast('Edit mode');
-  resetEditTimer();
-}
-
-function exitEditMode() {
-  if (!editMode) return;
-  editMode = false;
-  clearTimeout(editTimer);
-  render();
-  toast('Edit mode ended');
-}
-
-function resetEditTimer() {
-  clearTimeout(editTimer);
-  editTimer = setTimeout(() => exitEditMode(), 8000);
-}
-
-function openModal(mode, item = null) {
-  modalMode = mode;
-  editingId = item?.id ?? null;
-  nameWasEdited = Boolean(item);
-  const isFolder = mode === 'folder';
-  const isEdit = Boolean(item);
-  modalTitle.textContent = isEdit
-    ? (isFolder ? 'Rename folder' : 'Edit shortcut')
-    : (isFolder ? 'Add folder' : 'Add shortcut');
-  urlRow.hidden = isFolder;
-  nameInput.value = item?.title || '';
-  urlInput.value = item?.url || '';
-  modalWrap.style.display = 'grid';
-  setTimeout(() => nameInput.focus(), 50);
-}
-
-function closeModal() {
-  modalWrap.style.display = 'none';
-  editingId = null;
-  modalMode = 'shortcut';
-}
-
-function onDragMove(e) {
-  if (!draggingGhost) return;
-  e.preventDefault();
-  const dy = e.clientY - dragStartY;
-  draggingGhost.style.transform = `translateY(${dy}px)`;
-  const el = document.elementFromPoint(e.clientX, e.clientY);
-  const tile = el && el.closest('.tile[data-id]');
-  if (tile === draggingGhost || tile === dragPlaceholder) return;
-  if (tile && tile.parentElement === grid) {
-    const rect = tile.getBoundingClientRect();
-    const before = (e.clientY - rect.top) < rect.height / 2;
-    grid.insertBefore(dragPlaceholder, before ? tile : tile.nextSibling);
-  }
-}
-
-async function onDragUp() {
-  if (draggingGhost) { draggingGhost.remove(); draggingGhost = null; }
-  if (draggingNode && dragPlaceholder) grid.insertBefore(draggingNode, dragPlaceholder);
-  if (dragPlaceholder) { dragPlaceholder.remove(); dragPlaceholder = null; }
-  const ids = [...grid.querySelectorAll('.tile[data-id]')].map(node => node.dataset.id);
-  await saveOrder(ids);
-  toast('Order saved');
-  draggingId = null;
-  draggingNode = null;
-  window.removeEventListener('pointermove', onDragMove);
-}
-
-async function renderFolderBar(all, folderKey) {
-  if (folderKey === ROOT_FOLDER) {
-    folderBar.hidden = true;
-    document.title = 'Search';
-    return;
-  }
-
-  const folder = all.find(x => x.type === 'folder' && x.folderKey === folderKey);
-  if (!folder) {
-    const url = new URL(location.href);
-    url.searchParams.delete('folder');
-    history.replaceState(null, '', url.href);
-    folderBar.hidden = true;
-    document.title = 'Search';
-    toast('The folder was not found, so you were returned to Home');
-    return ROOT_FOLDER;
-  }
-
-  folderBar.hidden = false;
-  folderTitle.textContent = folder.title;
-  document.title = `${folder.title} - Search`;
-  backButton.onclick = () => { location.href = folderUrl(folder.parentFolder || ROOT_FOLDER); };
-  return folderKey;
-}
-
-function openOperationMenu() {
-  operationWrap.style.display = 'grid';
-}
-
-function closeOperationMenu() {
-  operationWrap.style.display = 'none';
-}
-
-
-
-function siteNameFromUrl(url) {
-  return extractSiteName(url);
-}
-
-function normalizeSearchText(value) {
-  return String(value || '')
-    .normalize('NFKC')
-    .toLocaleLowerCase('ja')
-    .replace(/\s+/g, '')
-    .replace(/[._\-/:?#&=]+/g, '');
-}
-
-function levenshteinDistance(a, b) {
-  if (a === b) return 0;
-  if (!a.length) return b.length;
-  if (!b.length) return a.length;
-  const prev = Array.from({ length: b.length + 1 }, (_, i) => i);
-  const curr = new Array(b.length + 1);
-  for (let i = 1; i <= a.length; i++) {
-    curr[0] = i;
-    for (let j = 1; j <= b.length; j++) {
-      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      curr[j] = Math.min(curr[j - 1] + 1, prev[j] + 1, prev[j - 1] + cost);
-    }
-    for (let j = 0; j <= b.length; j++) prev[j] = curr[j];
-  }
-  return prev[b.length];
-}
-
-function fuzzyScore(value, query) {
-  const text = normalizeSearchText(value);
-  const q = normalizeSearchText(query);
-  if (!text || !q) return 0;
-  if (text === q) return 1;
-  if (text.includes(q)) return 0.96 - Math.min(0.2, (text.length - q.length) * 0.003);
-
-  let qi = 0;
-  for (const ch of text) {
-    if (ch === q[qi]) qi++;
-    if (qi === q.length) break;
-  }
-  const subsequenceScore = qi === q.length ? 0.72 * (q.length / text.length) + 0.18 : 0;
-
-  const maxLen = Math.max(text.length, q.length);
-  const distance = levenshteinDistance(text, q);
-  const editScore = maxLen ? 1 - distance / maxLen : 0;
-  const score = Math.max(subsequenceScore, editScore);
-  const threshold = q.length <= 2 ? 0.8 : q.length <= 4 ? 0.58 : 0.48;
-  return score >= threshold ? score : 0;
-}
-
-function collectSearchScope(all, startFolderKey) {
-  const depthByFolder = new Map([[startFolderKey, 0]]);
-  const queue = [startFolderKey];
-
-  while (queue.length) {
-    const parentKey = queue.shift();
-    const nextDepth = (depthByFolder.get(parentKey) || 0) + 1;
-    for (const item of all) {
-      if (item.type !== 'folder') continue;
-      if ((item.parentFolder || ROOT_FOLDER) !== parentKey) continue;
-      if (depthByFolder.has(item.folderKey)) continue;
-      depthByFolder.set(item.folderKey, nextDepth);
-      queue.push(item.folderKey);
-    }
-  }
-
-  return depthByFolder;
-}
-
-function folderPathMap(all, startFolderKey) {
-  const paths = new Map([[startFolderKey, 'Current folder']]);
-  const queue = [startFolderKey];
-  while (queue.length) {
-    const parentKey = queue.shift();
-    const base = paths.get(parentKey) || 'Current folder';
-    const children = all.filter(item => item.type === 'folder' && (item.parentFolder || ROOT_FOLDER) === parentKey);
-    for (const child of children) {
-      if (paths.has(child.folderKey)) continue;
-      paths.set(child.folderKey, `${base} / ${child.title}`);
-      queue.push(child.folderKey);
-    }
-  }
-  return paths;
-}
-
-async function searchRegisteredEntries() {
-  const query = shortcutSearchInput.value.trim();
-  const type = shortcutSearchType.value;
-  shortcutSearchResults.innerHTML = '';
-  if (!query) {
-    shortcutSearchResults.innerHTML = '<div class="searchEmpty">Enter a search term.</div>';
-    shortcutSearchInput.focus();
-    return;
-  }
-
-  const all = await getAll();
-  const startFolderKey = currentFolderKey();
-  const depthByFolder = collectSearchScope(all, startFolderKey);
-  const paths = folderPathMap(all, startFolderKey);
-
-  const results = all.map(item => {
-    const parentKey = item.parentFolder || ROOT_FOLDER;
-    if (!depthByFolder.has(parentKey)) return null;
-
-    let target = '';
-    if (type === 'name') {
-      target = item.title || '';
-    } else {
-      if (item.type !== 'shortcut') return null;
-      if (type === 'url') target = item.url || '';
-      else if (type === 'site') target = siteNameFromUrl(item.url);
-      else return null;
-    }
-
-    const score = fuzzyScore(target, query);
-    return score > 0 ? { item, score } : null;
-  }).filter(Boolean).sort((a, b) => {
-    const da = depthByFolder.get(a.item.parentFolder || ROOT_FOLDER) ?? Number.MAX_SAFE_INTEGER;
-    const db = depthByFolder.get(b.item.parentFolder || ROOT_FOLDER) ?? Number.MAX_SAFE_INTEGER;
-    return da - db || b.score - a.score || (a.item.order || 0) - (b.item.order || 0) || a.item.id - b.item.id;
-  });
-
-  if (!results.length) {
-    shortcutSearchResults.innerHTML = '<div class="searchEmpty">No matching items were found.</div>';
-    return;
-  }
-
-  const fragment = document.createDocumentFragment();
-  for (const { item, score } of results) {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'searchResult';
-    const parentKey = item.parentFolder || ROOT_FOLDER;
-    const depth = depthByFolder.get(parentKey) || 0;
-    const locationLabel = depth === 0 ? 'Current folder' : (paths.get(parentKey) || `Descendant folder, depth ${depth}`);
-    const meta = item.type === 'folder'
-      ? `${locationLabel} · Folder`
-      : `${locationLabel} ・ ${siteNameFromUrl(item.url)}`;
-    const icon = item.type === 'folder'
-      ? '📁'
-      : `<img src="${escapeHtml(faviconUrl(item.url))}" alt="" onerror="this.style.display='none'">`;
-    button.innerHTML = `<span class="searchResultIcon">${icon}</span><span class="searchResultBody"><span class="searchResultTitle">${escapeHtml(item.title)}</span><span class="searchResultMeta">${escapeHtml(meta)}</span></span>`;
-    button.title = `Match: ${Math.round(score * 100)}%`;
-    button.addEventListener('click', () => {
-      if (item.type === 'folder') location.href = folderUrl(item.folderKey);
-      else location.href = item.url;
-    });
-    fragment.appendChild(button);
-  }
-  shortcutSearchResults.appendChild(fragment);
-}
-
-function openShortcutSearch() {
-  closeOperationMenu();
-  shortcutSearchResults.innerHTML = '<div class="searchEmpty">Choose a search method and enter a search term.</div>';
-  shortcutSearchWrap.style.display = 'grid';
-  setTimeout(() => shortcutSearchInput.focus(), 50);
-}
-
-function closeShortcutSearch() {
-  shortcutSearchWrap.style.display = 'none';
-}
-
-function openHelp() {
-  closeOperationMenu();
-  helpWrap.style.display = 'grid';
-}
-
-function closeHelp() {
-  helpWrap.style.display = 'none';
-}
-
-function createOperationTile() {
-  const tile = document.createElement('div');
-  tile.className = 'tile operations';
-  tile.innerHTML = '<div class="dot" aria-hidden="true">☰</div><div class="cap">Actions</div>';
-  tile.addEventListener('click', openOperationMenu);
-  tile.addEventListener('pointerdown', () => {});
-  return tile;
-}
-
-async function render() {
-  const all = await getAll();
-  let folderKey = currentFolderKey();
-  const resolved = await renderFolderBar(all, folderKey);
-  if (resolved === ROOT_FOLDER && folderKey !== ROOT_FOLDER) folderKey = ROOT_FOLDER;
-
-  const items = all
-    .filter(x => (x.parentFolder || ROOT_FOLDER) === folderKey)
-    .sort((a, b) => (a.order || 0) - (b.order || 0) || a.id - b.id);
-
-  window._cache.clear();
-  items.forEach(x => window._cache.set(x.id, x));
-  document.body.classList.toggle('edit', editMode);
-  grid.innerHTML = '';
-
-  // Add and import/export actions are grouped under “Actions”.
-  grid.append(createOperationTile());
-
-  items.forEach(item => {
-    const tile = document.createElement('div');
-    tile.className = item.type === 'folder' ? 'tile folder' : 'tile';
-    tile.dataset.id = item.id;
-
-    const icon = item.type === 'folder'
-      ? '📁'
-      : (faviconUrl(item.url)
-          ? `<img src="${faviconUrl(item.url)}" alt="" onerror="this.style.display='none'">`
-          : (item.title || hostTitle(item.url)).charAt(0).toUpperCase());
-
-    tile.innerHTML = `<div class="dot" title="${escapeHtml(item.title)}">${icon}</div><div class="cap">${escapeHtml(item.title)}</div>`;
-    const dot = tile.querySelector('.dot');
-
-    dot.addEventListener('click', () => {
-      if (editMode) return;
-      location.href = item.type === 'folder' ? folderUrl(item.folderKey) : item.url;
-    });
-
-    let longPressTimer = null;
-    tile.addEventListener('pointerdown', () => {
-      if (editMode) return;
-      longPressTimer = setTimeout(() => enterEditMode(), 500);
-    });
-    tile.addEventListener('pointerup', () => clearTimeout(longPressTimer));
-    tile.addEventListener('pointerleave', () => clearTimeout(longPressTimer));
-    tile.addEventListener('contextmenu', (e) => { e.preventDefault(); enterEditMode(); });
-
-    if (editMode) {
-      const buttons = document.createElement('div');
-      buttons.className = 'btnmini';
-      const rename = document.createElement('button');
-      rename.className = 'rename';
-      rename.type = 'button';
-      rename.textContent = '✎';
-      rename.setAttribute('aria-label', 'Rename');
-      rename.onclick = () => openModal(item.type === 'folder' ? 'folder' : 'shortcut', item);
-
-      const remove = document.createElement('button');
-      remove.className = 'remove';
-      remove.type = 'button';
-      remove.textContent = '×';
-      remove.setAttribute('aria-label', 'Delete');
-      remove.onclick = async () => {
-        if (item.type === 'folder') {
-          const ok = confirm(`Delete “${item.title}” and everything inside it?`);
-          if (!ok) return;
-        }
-        await removeEntry(item.id);
-        await render();
-        toast(item.type === 'folder' ? 'Folder deleted' : 'Deleted');
-      };
-      buttons.append(rename, remove);
-      tile.appendChild(buttons);
-
-      tile.addEventListener('pointerdown', (e) => {
-        if (e.target.closest('.btnmini')) return;
-        draggingId = tile.dataset.id;
-        dragStartY = e.clientY;
-        dragPlaceholder = document.createElement('div');
-        dragPlaceholder.className = 'placeholder';
-        dragPlaceholder.style.width = `${tile.offsetWidth}px`;
-        dragPlaceholder.style.height = `${tile.offsetHeight}px`;
-        grid.insertBefore(dragPlaceholder, tile);
-        draggingNode = tile;
-        grid.removeChild(tile);
-        const rect = dragPlaceholder.getBoundingClientRect();
-        draggingGhost = draggingNode.cloneNode(true);
-        draggingGhost.classList.add('ghost');
-        Object.assign(draggingGhost.style, {
-          position: 'fixed', left: rect.left + 'px', top: rect.top + 'px',
-          width: rect.width + 'px', zIndex: 999, pointerEvents: 'none'
-        });
-        document.body.appendChild(draggingGhost);
-        window.addEventListener('pointermove', onDragMove, { passive: false });
-        window.addEventListener('pointerup', onDragUp, { once: true });
-      });
-    }
-
-    grid.appendChild(tile);
-  });
-}
-
-function escapeHtml(value) {
-  return String(value ?? '').replace(/[&<>'"]/g, ch => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
-  })[ch]);
-}
-
-async function exportData() {
-  const all = await getAll();
-  const payload = {
-    format: 'meadow-shortcuts',
-    version: 1,
-    exportedAt: new Date().toISOString(),
-    entries: all.map(({ id, ...entry }) => entry)
-  };
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-  a.href = url;
-  a.download = `meadow-shortcuts-${stamp}.json`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 0);
-  toast('Export complete');
-}
-
-function validateImportEntries(entries) {
-  if (!Array.isArray(entries)) throw new Error('invalid-entries');
-  const folderKeys = new Set([ROOT_FOLDER]);
-  const normalized = entries.map((entry, index) => {
-    if (!entry || (entry.type !== 'shortcut' && entry.type !== 'folder')) throw new Error('invalid-entry');
-    const title = String(entry.title || '').trim() || (entry.type === 'folder' ? 'New folder' : 'Untitled');
-    const parentFolder = String(entry.parentFolder || ROOT_FOLDER);
-    const order = Number.isFinite(Number(entry.order)) ? Number(entry.order) : index + 1;
-
-    if (entry.type === 'folder') {
-      const folderKey = String(entry.folderKey || '').trim();
-      if (!/^[a-f0-9]{16,64}$/i.test(folderKey) || folderKeys.has(folderKey)) throw new Error('invalid-folder-key');
-      folderKeys.add(folderKey);
-      return { type: 'folder', parentFolder, folderKey, title, order };
-    }
-
-    const url = normUrl(String(entry.url || ''));
-    if (!url) throw new Error('invalid-url');
-    return { type: 'shortcut', parentFolder, url, title, order };
-  });
-
-  for (const entry of normalized) {
-    if (entry.parentFolder !== ROOT_FOLDER && !folderKeys.has(entry.parentFolder)) throw new Error('missing-parent');
-  }
-  return normalized;
-}
-
-async function generateImportFolderKey(name, usedKeys) {
-  for (let attempt = 0; attempt < 8; attempt += 1) {
-    const random = new Uint8Array(24);
-    crypto.getRandomValues(random);
-    const seed = `${name}|${Date.now()}|${performance.now()}|${Array.from(random).join(',')}|${attempt}`;
-    let key;
-
-    if (crypto.subtle) {
-      const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(seed));
-      key = Array.from(new Uint8Array(digest)).map(v => v.toString(16).padStart(2, '0')).join('').slice(0, 32);
-    } else {
-      key = Array.from(random).map(v => v.toString(16).padStart(2, '0')).join('').slice(0, 32);
-    }
-
-    if (!usedKeys.has(key)) {
-      usedKeys.add(key);
-      return key;
-    }
-  }
-  throw new Error('folder-key-collision');
-}
-
-async function parseBrowserBookmarks(text) {
-  const doc = new DOMParser().parseFromString(text, 'text/html');
-  if (!doc.querySelector('a[href]') && !doc.querySelector('h3')) throw new Error('not-browser-bookmarks');
-
-  const entries = [];
-  const usedKeys = new Set([ROOT_FOLDER]);
-  const orderByParent = new Map();
-  let skipped = 0;
-
-  const nextOrder = (parentFolder) => {
-    const next = (orderByParent.get(parentFolder) || 0) + 1;
-    orderByParent.set(parentFolder, next);
-    return next;
-  };
-
-  const directChild = (element, tagName) =>
-    Array.from(element.children).find(child => child.tagName === tagName) || null;
-
-  const addBookmark = (anchor, parentFolder) => {
-    const rawUrl = String(anchor.getAttribute('href') || '').trim();
-    // Do not import browser-internal pages or javascript: URLs for safety.
-    if (!/^https?:\/\//i.test(rawUrl)) {
-      skipped += 1;
-      return;
-    }
-    const url = normUrl(rawUrl);
-    if (!url) {
-      skipped += 1;
-      return;
-    }
-    const title = String(anchor.textContent || '').trim() || suggestedTitle(url) || hostTitle(url) || 'Untitled';
-    entries.push({ type: 'shortcut', parentFolder, url, title, order: nextOrder(parentFolder) });
-  };
-
-  const walk = async (container, parentFolder) => {
-    const children = Array.from(container.children);
-    let pendingFolderKey = null;
-
-    for (let i = 0; i < children.length; i += 1) {
-      const element = children[i];
-      const tag = element.tagName;
-
-      if (tag === 'DT') {
-        const heading = directChild(element, 'H3');
-        const anchor = directChild(element, 'A');
-        const nestedList = directChild(element, 'DL');
-
-        if (heading) {
-          const title = String(heading.textContent || '').trim() || 'New folder';
-          const folderKey = await generateImportFolderKey(title, usedKeys);
-          entries.push({ type: 'folder', parentFolder, folderKey, title, order: nextOrder(parentFolder) });
-
-          if (nestedList) {
-            await walk(nestedList, folderKey);
-            pendingFolderKey = null;
-          } else {
-            // In Netscape Bookmark format, the DL after a folder heading may be a sibling element.
-            pendingFolderKey = folderKey;
-          }
-          continue;
-        }
-
-        if (anchor) {
-          addBookmark(anchor, parentFolder);
-          pendingFolderKey = null;
-          continue;
-        }
-
-        if (nestedList) await walk(nestedList, pendingFolderKey || parentFolder);
-        pendingFolderKey = null;
-        continue;
-      }
-
-      if (tag === 'DL') {
-        await walk(element, pendingFolderKey || parentFolder);
-        pendingFolderKey = null;
-        continue;
-      }
-
-      if (tag === 'P' && element.children.length) {
-        await walk(element, pendingFolderKey || parentFolder);
-        pendingFolderKey = null;
-      }
-    }
-  };
-
-  const rootList = doc.querySelector('dl');
-  if (rootList) {
-    await walk(rootList, ROOT_FOLDER);
-  } else {
-    // Provide minimal support for exports with slightly different structures.
-    for (const anchor of doc.querySelectorAll('a[href]')) addBookmark(anchor, ROOT_FOLDER);
-  }
-
-  if (!entries.some(entry => entry.type === 'shortcut')) throw new Error('no-importable-bookmarks');
-  return { entries, skipped };
-}
-
-async function replaceImportedEntries(entries) {
-  const { st, tx } = await txStore('readwrite');
-  st.clear();
-  entries.forEach(entry => st.add(entry));
-  await new Promise((resolve, reject) => {
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-    tx.onabort = () => reject(tx.error);
-  });
-
-  const url = new URL(location.href);
-  url.searchParams.delete('folder');
-  history.replaceState(null, '', url.href);
-  closeOperationMenu();
-  await render();
-}
-
-async function importData(file) {
-  const text = await file.text();
-
-  // First, try to read it as JSON exported by this site.
-  try {
-    const parsed = JSON.parse(text);
-    if (parsed?.format === 'meadow-shortcuts' && parsed?.version === 1) {
-      const entries = validateImportEntries(parsed.entries);
-      if (!confirm(`Replace the current saved items and import ${entries.length} entries?`)) return;
-      await replaceImportedEntries(entries);
-      toast('Import complete');
-      return;
-    }
-  } catch (error) {
-    // If it is not JSON, try parsing it as browser bookmark HTML.
-  }
-
-  const browserData = await parseBrowserBookmarks(text);
-  const shortcutCount = browserData.entries.filter(entry => entry.type === 'shortcut').length;
-  const folderCount = browserData.entries.filter(entry => entry.type === 'folder').length;
-  const skippedText = browserData.skipped ? `\n${browserData.skipped} unsupported URLs will be skipped.` : '';
-  if (!confirm(`The file was parsed as browser bookmarks.\nImport ${folderCount} folders and ${shortcutCount} bookmarks?\nThe current saved items will be replaced.${skippedText}`)) return;
-
-  await replaceImportedEntries(browserData.entries);
-  toast(browserData.skipped ? `Import complete (${browserData.skipped} skipped)` : 'Bookmarks imported');
-}
-
-function createNewsLoading() {
-  const loading = document.createElement('div');
-  loading.className = 'newsLoading';
-  loading.textContent = 'Loading news…';
-  return loading;
-}
-
-async function loadNews(force = false) {
-  const now = Date.now();
-
-  // While this page remains open, keep the already loaded iframe for five minutes.
-  // A cross-origin iframe cannot be serialized into IndexedDB, so a full page reload
-  // still requires the external frame to be requested again.
-  if (!force && newsFrame && now - newsLoadedAt < NEWS_CACHE_MS) return;
-
-  if (newsFrame) newsFrame.remove();
-  newsFrameWrap.replaceChildren(createNewsLoading());
-
-  const frame = document.createElement('iframe');
-  frame.className = 'newsFrame';
-  frame.title = 'News feed';
-  frame.loading = 'eager';
-  frame.referrerPolicy = 'strict-origin-when-cross-origin';
-
-  // On refresh, add a fragment-only marker. It does not send a query parameter
-  // to the embed endpoint, but guarantees a new iframe navigation in this page.
-  frame.src = force ? `${NEWS_FRAME_SRC}#refresh-${now}` : NEWS_FRAME_SRC;
-  frame.addEventListener('load', async () => {
-    newsFrameWrap.querySelector('.newsLoading')?.remove();
-    newsLoadedAt = Date.now();
-    try { await setSetting('newsLastLoadedAt', newsLoadedAt); }
-    catch (error) { console.error('Failed to save the news load time', error); }
-  }, { once: true });
-
-  newsFrame = frame;
-  newsFrameWrap.appendChild(frame);
-}
-
-async function setNewsOpen(open, persist = true) {
-  const isOpen = Boolean(open);
-  newsBody.hidden = !isOpen;
-  newsToggle.setAttribute('aria-expanded', String(isOpen));
-  newsToggleMark.style.transform = isOpen ? 'rotate(180deg)' : '';
-
-  if (isOpen) {
-    const expired = newsFrame && Date.now() - newsLoadedAt >= NEWS_CACHE_MS;
-    await loadNews(Boolean(expired));
-  }
-  if (persist) {
-    try { await setSetting('newsPanelOpen', isOpen); }
-    catch (error) { console.error('Failed to save the news panel state', error); }
-  }
-}
-
-newsToggle.addEventListener('click', () => {
-  setNewsOpen(newsBody.hidden);
-});
-
-newsRefreshButton.addEventListener('click', () => {
-  loadNews(true);
-});
-
-addShortcutAction.onclick = () => { closeOperationMenu(); openModal('shortcut'); };
-addFolderAction.onclick = () => { closeOperationMenu(); openModal('folder'); };
-searchAction.onclick = openShortcutSearch;
-helpAction.onclick = openHelp;
-helpCloseBtn.onclick = closeHelp;
-helpWrap.onclick = e => { if (e.target === helpWrap) closeHelp(); };
-shortcutSearchButton.onclick = searchRegisteredEntries;
-shortcutSearchInput.addEventListener('keydown', e => { if (e.key === 'Enter') searchRegisteredEntries(); });
-shortcutSearchType.addEventListener('change', () => {
-  const labels = { url: 'Fuzzy search URLs', site: 'Fuzzy search site names (case-insensitive)', name: 'Fuzzy search names' };
-  shortcutSearchInput.placeholder = labels[shortcutSearchType.value] || 'Enter a search term';
-});
-searchCloseBtn.onclick = closeShortcutSearch;
-shortcutSearchWrap.onclick = e => { if (e.target === shortcutSearchWrap) closeShortcutSearch(); };
-exportAction.onclick = async () => { closeOperationMenu(); await exportData(); };
-importAction.onclick = () => importFile.click();
-operationCloseBtn.onclick = closeOperationMenu;
-operationWrap.onclick = e => { if (e.target === operationWrap) closeOperationMenu(); };
-importFile.addEventListener('change', async () => {
-  const file = importFile.files?.[0];
-  importFile.value = '';
-  if (!file) return;
-  try {
-    await importData(file);
-  } catch (error) {
-    console.error(error);
-    toast('Import failed');
-  }
-});
-
-nameInput.addEventListener('input', () => { nameWasEdited = true; });
-urlInput.addEventListener('input', () => {
-  if (!nameWasEdited || !nameInput.value.trim()) {
-    const title = suggestedTitle(urlInput.value);
-    if (title) nameInput.value = title;
-  }
-});
-urlInput.addEventListener('blur', () => {
-  if (!nameInput.value.trim()) nameInput.value = suggestedTitle(urlInput.value);
-});
-
-okBtn.onclick = async () => {
-  const name = nameInput.value.trim();
-
-  if (editingId) {
-    const editedMode = modalMode;
-    const url = urlInput.value.trim();
-
-    try {
-      const updated = await updateEntry(editingId, name || 'Untitled', url);
-      if (updated === null) {
-        toast('This URL already exists in the folder');
-        return;
-      }
-      closeModal();
-      await render();
-      toast(editedMode === 'folder' ? 'Folder name updated' : 'Shortcut updated');
-    } catch {
-      if (editedMode === 'shortcut') {
-        toast('The URL is invalid');
-        urlInput.focus();
-      } else {
-        toast('Update failed');
-      }
-    }
-    return;
-  }
-
-  if (modalMode === 'folder') {
-    await addFolder(name);
-    closeModal();
-    await render();
-    toast('Folder added');
-    return;
-  }
-
-  const url = urlInput.value.trim();
-  if (!url) { urlInput.focus(); return; }
-  try {
-    const added = await addShortcut(url, name);
-    if (added === null) {
-      toast('This URL already exists in the folder');
-      return;
-    }
-    closeModal();
-    await render();
-    toast('Shortcut added');
-  } catch {
-    toast('Add failed');
-  }
-};
-
-cancelBtn.onclick = () => closeModal();
-modalWrap.onclick = e => { if (e.target === modalWrap) closeModal(); };
-document.addEventListener('click', e => {
-  if (!editMode) return;
-  if (!e.target.closest('.tile') && !e.target.closest('.modalWrap')) exitEditMode();
-});
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') {
-    if (shortcutSearchWrap.style.display === 'grid') closeShortcutSearch();
-    if (helpWrap.style.display === 'grid') closeHelp();
-    else if (operationWrap.style.display === 'grid') closeOperationMenu();
-    else if (modalWrap.style.display === 'grid') closeModal();
-    else exitEditMode();
-  }
-});
-document.addEventListener('pointerdown', () => { if (editMode) resetEditTimer(); });
-
-const searchForm = document.getElementById('searchForm');
-const qInput = document.getElementById('q');
-
-function isLikelyUrl(value) {
-  if (!value) return false;
-  const v = value.trim();
-  if (/^https?:\/\//i.test(v)) return true;
-  return /^([a-z0-9-]+\.)+[a-z]{2,}(?:[\/?#].*)?$/i.test(v)
-    || /^(\d{1,3}\.){3}\d{1,3}(?:[:\/?#].*)?$/.test(v)
-    || /^localhost(?:[:\/?#].*)?$/i.test(v);
-}
-
-searchForm.addEventListener('submit', async e => {
-  e.preventDefault();
-  const raw = qInput.value.trim();
-  if (!raw) return;
-
-  if (isLikelyUrl(raw)) {
-    const target = normUrl(raw);
-    try {
-      const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), 3000);
-      await fetch(target, { mode: 'no-cors', method: 'GET', signal: ctrl.signal });
-      clearTimeout(timer);
-      location.href = target;
-    } catch {
-      location.href = `https://www.google.com/search?q=${encodeURIComponent(raw)}`;
-    }
-  } else {
-    location.href = `https://www.google.com/search?q=${encodeURIComponent(raw)}`;
-  }
-});
-
-(async () => {
-  await openDB();
-  await render();
-
-  // Restore the panel state. The saved timestamp is retained for diagnostics,
-  // but a hard reload must recreate the cross-origin iframe and therefore uses the network.
-  try {
-    newsLoadedAt = Number(await getSetting('newsLastLoadedAt', 0)) || 0;
-    const wasOpen = await getSetting('newsPanelOpen', false);
-    if (wasOpen) newsLoadedAt = 0;
-    await setNewsOpen(Boolean(wasOpen), false);
-  } catch (error) {
-    console.error('Failed to load the news panel state', error);
-  }
-})();
-
-window.addEventListener('load', () => qInput.focus());
+function extractSiteName(url) { let value = String(url || '').trim(); if (!value) return ''; // Add a scheme so the value can be treated as a URL.
+if (!/^https?:\/\//i.test(value)) value = `https://${value}`; try { const parsed = new URL(value); let host = parsed.hostname .replace(/^www\./i, '') .replace(/\.$/, ''); const labels = host.split('.').filter(Boolean); if (!labels.length) return ''; // Remove country-code domains and common TLDs/SLDs from the end.
+// Examples: example.com -> example / example.co.jp -> example / example.ne.jp -> example
+const commonSuffixes = new Set([ 'com','net','ne','org','or','gov','go','edu','ac','mil','int','co', 'jp','io','ai','me','tv','cc','us','uk','de','fr','it','es','ca','au','nz','cn','kr','tw','hk','sg','in','br','mx','ru','ch','se','no','fi','dk','nl','be','at','pl','cz','gr','pt','ie','za', 'info','biz','name','mobi','app','dev','tech','site','online','store','cloud','xyz','club','pro','shop','blog','design','digital','live','news','world','space','website','services','solutions','systems','network' ]); while (labels.length > 1) { const tail = labels[labels.length - 1].toLowerCase(); if (commonSuffixes.has(tail) || /^[a-z]{2}$/.test(tail)) labels.pop(); else break; } const site = labels .map(label => label ? label.charAt(0).toUpperCase() + label.slice(1) : '') .join(''); return site; } catch { return ''; } }
+function hostTitle(url) { return extractSiteName(url); }
+function suggestedTitle(url) { return extractSiteName(url); }
+function faviconUrl(url) { try { const parsed = new URL(url); return `https://www.google.com/s2/favicons?domain=${parsed.hostname}&sz=64`; } catch { return ''; } }
+async function generateFolderKey(name) { const all = await getAll(); const used = new Set(all.filter(x => x.type === 'folder').map(x => x.folderKey)); for (let attempt = 0; attempt < 8; attempt += 1) { const random = new Uint8Array(24); crypto.getRandomValues(random); const seed = `${name}|${Date.now()}|${performance.now()}|${Array.from(random).join(',')}`; let key; if (crypto.subtle) { const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(seed)); key = Array.from(new Uint8Array(digest)).map(v => v.toString(16).padStart(2, '0')).join('').slice(0, 32); } else { key = Array.from(random).map(v => v.toString(16).padStart(2, '0')).join('').slice(0, 32); } if (!used.has(key)) return key; } throw new Error('folder-key-collision'); }
+async function addShortcut(url, title) { const normalized = normUrl(url); if (!normalized) throw new Error('invalid'); const parentFolder = currentFolderKey(); const all = await getAll(); if (all.some(x => x.type === 'shortcut' && x.parentFolder === parentFolder && normUrl(x.url) === normalized)) return null; const siblings = all.filter(x => x.parentFolder === parentFolder); const order = (siblings.reduce((max, x) => Math.max(max, x.order || 0), 0) || 0) + 1; const finalTitle = title && title.trim() ? title.trim() : suggestedTitle(normalized) || hostTitle(normalized); const { st, tx } = await txStore('readwrite'); st.add({ type: 'shortcut', parentFolder, url: normalized, title: finalTitle, order }); return new Promise(resolve => tx.oncomplete = () => resolve(true)); }
+async function addFolder(title) { const name = title.trim() || 'New folder'; const parentFolder = currentFolderKey(); const all = await getAll(); const siblings = all.filter(x => x.parentFolder === parentFolder); const order = (siblings.reduce((max, x) => Math.max(max, x.order || 0), 0) || 0) + 1; const folderKey = await generateFolderKey(name); const { st, tx } = await txStore('readwrite'); st.add({ type: 'folder', parentFolder, folderKey, title: name, order }); return new Promise(resolve => tx.oncomplete = () => resolve(folderKey)); }
+async function updateEntry(id, title, url = '') { const numericId = Number(id); const current = window._cache.get(numericId); if (!current) return false; const nextTitle = title.trim() || current.title; let updated = { ...current, title: nextTitle }; if (current.type === 'shortcut') { const normalized = normUrl(url); if (!normalized) throw new Error('invalid-url'); const all = await getAll(); const duplicate = all.some(item => item.id !== numericId && item.type === 'shortcut' && item.parentFolder === current.parentFolder && normUrl(item.url) === normalized ); if (duplicate) return null; updated = { ...updated, url: normalized }; } const { st, tx } = await txStore('readwrite'); st.put(updated); return new Promise(resolve => tx.oncomplete = () => resolve(true)); }
+async function removeEntry(id) { const all = await getAll(); const target = all.find(x => x.id === Number(id)); if (!target) return; const ids = new Set([target.id]); if (target.type === 'folder') { const folderQueue = [target.folderKey]; while (folderQueue.length) { const parent = folderQueue.shift(); for (const item of all.filter(x => x.parentFolder === parent)) { ids.add(item.id); if (item.type === 'folder') folderQueue.push(item.folderKey); } } } const { st, tx } = await txStore('readwrite'); ids.forEach(entryId => st.delete(entryId)); return new Promise(resolve => tx.oncomplete = () => resolve(true)); }
+async function saveOrder(ids) { const { st, tx } = await txStore('readwrite'); ids.forEach((id, i) => { const numericId = Number(id); const current = window._cache?.get(numericId); if (current) st.put({ ...current, order: i + 1 }); }); return new Promise(resolve => tx.oncomplete = () => resolve(true)); }
+const grid = document.getElementById('grid'); const modalWrap = document.getElementById('modalWrap'); const modalTitle = document.getElementById('modalTitle'); const nameInput = document.getElementById('nameInput'); const urlInput = document.getElementById('urlInput'); const urlRow = document.getElementById('urlRow'); const okBtn = document.getElementById('okBtn'); const cancelBtn = document.getElementById('cancelBtn'); const toastEl = document.getElementById('toast'); const folderBar = document.getElementById('folderBar'); const folderTitle = document.getElementById('folderTitle'); const backButton = document.getElementById('backButton'); const operationWrap = document.getElementById('operationWrap'); const operationCloseBtn = document.getElementById('operationCloseBtn'); const addShortcutAction = document.getElementById('addShortcutAction'); const addFolderAction = document.getElementById('addFolderAction'); const importAction = document.getElementById('importAction'); const exportAction = document.getElementById('exportAction'); const importFile = document.getElementById('importFile'); const searchAction = document.getElementById('searchAction'); const helpAction = document.getElementById('helpAction'); const helpWrap = document.getElementById('helpWrap'); const helpCloseBtn = document.getElementById('helpCloseBtn'); const shortcutSearchWrap = document.getElementById('shortcutSearchWrap'); const shortcutSearchType = document.getElementById('shortcutSearchType'); const shortcutSearchInput = document.getElementById('shortcutSearchInput'); const shortcutSearchButton = document.getElementById('shortcutSearchButton'); const shortcutSearchResults = document.getElementById('shortcutSearchResults'); const shortcutSearchHint = document.getElementById('shortcutSearchHint'); const searchCloseBtn = document.getElementById('searchCloseBtn'); const newsToggle = document.getElementById('newsToggle'); const newsToggleMark = document.getElementById('newsToggleMark'); const newsBody = document.getElementById('newsBody'); const newsFrameWrap = document.getElementById('newsFrameWrap'); const newsRefreshButton = document.getElementById('newsRefreshButton'); const NEWS_CACHE_MS = 5 * 60 * 1000; const NEWS_FRAME_SRC = 'https://rss.app/embed/v1/list/Rd2nDxAXJTMIB27W'; let newsFrame = null; let newsLoadedAt = 0; window.editMode = false; window.editingId = null; window.editTimer = null; window._cache = window._cache || new Map(); let draggingGhost = null; let draggingId = null; let dragPlaceholder = null; let dragStartY = 0; let draggingNode = null;
+function toast(message) { toastEl.textContent = message; toastEl.classList.add('show'); setTimeout(() => toastEl.classList.remove('show'), 1500); }
+function enterEditMode() { if (editMode) return; editMode = true; render(); toast('Edit mode'); resetEditTimer(); }
+function exitEditMode() { if (!editMode) return; editMode = false; clearTimeout(editTimer); render(); toast('Edit mode ended'); }
+function resetEditTimer() { clearTimeout(editTimer); editTimer = setTimeout(() => exitEditMode(), 8000); }
+function openModal(mode, item = null) { modalMode = mode; editingId = item?.id ?? null; nameWasEdited = Boolean(item); const isFolder = mode === 'folder'; const isEdit = Boolean(item); modalTitle.textContent = isEdit ? (isFolder ? 'Rename folder' : 'Edit shortcut') : (isFolder ? 'Add folder' : 'Add shortcut'); urlRow.hidden = isFolder; nameInput.value = item?.title || ''; urlInput.value = item?.url || ''; modalWrap.style.display = 'grid'; setTimeout(() => nameInput.focus(), 50); }
+function closeModal() { modalWrap.style.display = 'none'; editingId = null; modalMode = 'shortcut'; }
+function onDragMove(e) { if (!draggingGhost) return; e.preventDefault(); const dy = e.clientY - dragStartY; draggingGhost.style.transform = `translateY(${dy}px)`; const el = document.elementFromPoint(e.clientX, e.clientY); const tile = el && el.closest('.tile[data-id]'); if (tile === draggingGhost || tile === dragPlaceholder) return; if (tile && tile.parentElement === grid) { const rect = tile.getBoundingClientRect(); const before = (e.clientY - rect.top) < rect.height / 2; grid.insertBefore(dragPlaceholder, before ? tile : tile.nextSibling); } }
+async function onDragUp() { if (draggingGhost) { draggingGhost.remove(); draggingGhost = null; } if (draggingNode && dragPlaceholder) grid.insertBefore(draggingNode, dragPlaceholder); if (dragPlaceholder) { dragPlaceholder.remove(); dragPlaceholder = null; } const ids = [...grid.querySelectorAll('.tile[data-id]')].map(node => node.dataset.id); await saveOrder(ids); toast('Order saved'); draggingId = null; draggingNode = null; window.removeEventListener('pointermove', onDragMove); }
+async function renderFolderBar(all, folderKey) { if (folderKey === ROOT_FOLDER) { folderBar.hidden = true; document.title = 'Search'; return; } const folder = all.find(x => x.type === 'folder' && x.folderKey === folderKey); if (!folder) { const url = new URL(location.href); url.searchParams.delete('folder'); history.replaceState(null, '', url.href); folderBar.hidden = true; document.title = 'Search'; toast('The folder was not found, so you were returned to Home'); return ROOT_FOLDER; } folderBar.hidden = false; folderTitle.textContent = folder.title; document.title = `${folder.title} - Search`; backButton.onclick = () => { location.href = folderUrl(folder.parentFolder || ROOT_FOLDER); }; return folderKey; }
+function openOperationMenu() { operationWrap.style.display = 'grid'; }
+function closeOperationMenu() { operationWrap.style.display = 'none'; }
+function siteNameFromUrl(url) { return extractSiteName(url); }
+function normalizeSearchText(value) { return String(value || '') .normalize('NFKC') .toLocaleLowerCase('ja') .replace(/\s+/g, '') .replace(/[._\-/:?#&=]+/g, ''); }
+function levenshteinDistance(a, b) { if (a === b) return 0; if (!a.length) return b.length; if (!b.length) return a.length; const prev = Array.from({ length: b.length + 1 }, (_, i) => i); const curr = new Array(b.length + 1); for (let i = 1; i <= a.length; i++) { curr[0] = i; for (let j = 1; j <= b.length; j++) { const cost = a[i - 1] === b[j - 1] ? 0 : 1; curr[j] = Math.min(curr[j - 1] + 1, prev[j] + 1, prev[j - 1] + cost); } for (let j = 0; j <= b.length; j++) prev[j] = curr[j]; } return prev[b.length]; }
+function fuzzyScore(value, query) { const text = normalizeSearchText(value); const q = normalizeSearchText(query); if (!text || !q) return 0; if (text === q) return 1; if (text.includes(q)) return 0.96 - Math.min(0.2, (text.length - q.length) * 0.003); let qi = 0; for (const ch of text) { if (ch === q[qi]) qi++; if (qi === q.length) break; } const subsequenceScore = qi === q.length ? 0.72 * (q.length / text.length) + 0.18 : 0; const maxLen = Math.max(text.length, q.length); const distance = levenshteinDistance(text, q); const editScore = maxLen ? 1 - distance / maxLen : 0; const score = Math.max(subsequenceScore, editScore); const threshold = q.length <= 2 ? 0.8 : q.length <= 4 ? 0.58 : 0.48; return score >= threshold ? score : 0; }
+function collectSearchScope(all, startFolderKey) { const depthByFolder = new Map([[startFolderKey, 0]]); const queue = [startFolderKey]; while (queue.length) { const parentKey = queue.shift(); const nextDepth = (depthByFolder.get(parentKey) || 0) + 1; for (const item of all) { if (item.type !== 'folder') continue; if ((item.parentFolder || ROOT_FOLDER) !== parentKey) continue; if (depthByFolder.has(item.folderKey)) continue; depthByFolder.set(item.folderKey, nextDepth); queue.push(item.folderKey); } } return depthByFolder; }
+function folderPathMap(all, startFolderKey) { const paths = new Map([[startFolderKey, 'Current folder']]); const queue = [startFolderKey]; while (queue.length) { const parentKey = queue.shift(); const base = paths.get(parentKey) || 'Current folder'; const children = all.filter(item => item.type === 'folder' && (item.parentFolder || ROOT_FOLDER) === parentKey); for (const child of children) { if (paths.has(child.folderKey)) continue; paths.set(child.folderKey, `${base} / ${child.title}`); queue.push(child.folderKey); } } return paths; }
+async function searchRegisteredEntries() { const query = shortcutSearchInput.value.trim(); const type = shortcutSearchType.value; shortcutSearchResults.innerHTML = ''; if (!query) { shortcutSearchResults.innerHTML = '<div class="searchEmpty">Enter a search term.</div>'; shortcutSearchInput.focus(); return; } const all = await getAll(); const startFolderKey = currentFolderKey(); const depthByFolder = collectSearchScope(all, startFolderKey); const paths = folderPathMap(all, startFolderKey); const results = all.map(item => { const parentKey = item.parentFolder || ROOT_FOLDER; if (!depthByFolder.has(parentKey)) return null; let target = ''; if (type === 'name') { target = item.title || ''; } else { if (item.type !== 'shortcut') return null; if (type === 'url') target = item.url || ''; else if (type === 'site') target = siteNameFromUrl(item.url); else return null; } const score = fuzzyScore(target, query); return score > 0 ? { item, score } : null; }) .filter(Boolean).sort((a, b) => { const da = depthByFolder.get(a.item.parentFolder || ROOT_FOLDER) ?? Number.MAX_SAFE_INTEGER; const db = depthByFolder.get(b.item.parentFolder || ROOT_FOLDER) ?? Number.MAX_SAFE_INTEGER; return da - db || b.score - a.score || (a.item.order || 0) - (b.item.order || 0) || a.item.id - b.item.id; }); if (!results.length) { shortcutSearchResults.innerHTML = '<div class="searchEmpty">No matching items were found.</div>'; return; } const fragment = document.createDocumentFragment(); for (const { item, score } of results) { const button = document.createElement('button'); button.type = 'button'; button.className = 'searchResult'; const parentKey = item.parentFolder || ROOT_FOLDER; const depth = depthByFolder.get(parentKey) || 0; const locationLabel = depth === 0 ? 'Current folder' : (paths.get(parentKey) || `Descendant folder, depth ${depth}`); const meta = item.type === 'folder' ? `${locationLabel} · Folder` : `${locationLabel} ・ ${siteNameFromUrl(item.url)}`; const icon = item.type === 'folder' ? '📁' : `<img src="${escapeHtml(faviconUrl(item.url))}" alt="" onerror="this.style.display='none'">`; button.innerHTML = `<span class="searchResultIcon">${icon}</span><span class="searchResultBody"><span class="searchResultTitle">${escapeHtml(item.title)}</span><span class="searchResultMeta">${escapeHtml(meta)}</span></span>`; button.title = `Match: ${Math.round(score * 100)}%`; button.addEventListener('click', () => { if (item.type === 'folder') location.href = folderUrl(item.folderKey); else location.href = item.url; }); fragment.appendChild(button); } shortcutSearchResults.appendChild(fragment); }
+function openShortcutSearch() { closeOperationMenu(); shortcutSearchResults.innerHTML = '<div class="searchEmpty">Choose a search method and enter a search term.</div>'; shortcutSearchWrap.style.display = 'grid'; setTimeout(() => shortcutSearchInput.focus(), 50); }
+function closeShortcutSearch() { shortcutSearchWrap.style.display = 'none'; }
+function openHelp() { closeOperationMenu(); helpWrap.style.display = 'grid'; }
+function closeHelp() { helpWrap.style.display = 'none'; }
+function createOperationTile() { const tile = document.createElement('div'); tile.className = 'tile operations'; tile.innerHTML = '<div class="dot" aria-hidden="true">☰</div><div class="cap">Actions</div>'; tile.addEventListener('click', openOperationMenu); tile.addEventListener('pointerdown', () => { }); return tile; }
+async function render() { const all = await getAll(); let folderKey = currentFolderKey(); const resolved = await renderFolderBar(all, folderKey); if (resolved === ROOT_FOLDER && folderKey !== ROOT_FOLDER) folderKey = ROOT_FOLDER; const items = all .filter(x => (x.parentFolder || ROOT_FOLDER) === folderKey) .sort((a, b) => (a.order || 0) - (b.order || 0) || a.id - b.id); window._cache.clear(); items.forEach(x => window._cache.set(x.id, x)); document.body.classList.toggle('edit', editMode); grid.innerHTML = ''; // Add and import/export actions are grouped under “Actions”.
+grid.append(createOperationTile()); items.forEach(item => { const tile = document.createElement('div'); tile.className = item.type === 'folder' ? 'tile folder' : 'tile'; tile.dataset.id = item.id; const icon = item.type === 'folder' ? '📁' : (faviconUrl(item.url) ? `<img src="${faviconUrl(item.url)}" alt="" onerror="this.style.display='none'">` : (item.title || hostTitle(item.url)).charAt(0).toUpperCase()); tile.innerHTML = `<div class="dot" title="${escapeHtml(item.title)}">${icon}</div><div class="cap">${escapeHtml(item.title)}</div>`; const dot = tile.querySelector('.dot'); dot.addEventListener('click', () => { if (editMode) return; location.href = item.type === 'folder' ? folderUrl(item.folderKey) : item.url; }); let longPressTimer = null; tile.addEventListener('pointerdown', () => { if (editMode) return; longPressTimer = setTimeout(() => enterEditMode(), 500); }); tile.addEventListener('pointerup', () => clearTimeout(longPressTimer)); tile.addEventListener('pointerleave', () => clearTimeout(longPressTimer)); tile.addEventListener('contextmenu', (e) => { e.preventDefault(); enterEditMode(); }); if (editMode) { const buttons = document.createElement('div'); buttons.className = 'btnmini'; const rename = document.createElement('button'); rename.className = 'rename'; rename.type = 'button'; rename.textContent = '✎'; rename.setAttribute('aria-label', 'Rename'); rename.onclick = () => openModal(item.type === 'folder' ? 'folder' : 'shortcut', item); const remove = document.createElement('button'); remove.className = 'remove'; remove.type = 'button'; remove.textContent = '×'; remove.setAttribute('aria-label', 'Delete'); remove.onclick = async () => { if (item.type === 'folder') { const ok = confirm(`Delete “${item.title}” and everything inside it?`); if (!ok) return; } await removeEntry(item.id); await render(); toast(item.type === 'folder' ? 'Folder deleted' : 'Deleted'); }; buttons.append(rename, remove); tile.appendChild(buttons); tile.addEventListener('pointerdown', (e) => { if (e.target.closest('.btnmini')) return; draggingId = tile.dataset.id; dragStartY = e.clientY; dragPlaceholder = document.createElement('div'); dragPlaceholder.className = 'placeholder'; dragPlaceholder.style.width = `${tile.offsetWidth}px`; dragPlaceholder.style.height = `${tile.offsetHeight}px`; grid.insertBefore(dragPlaceholder, tile); draggingNode = tile; grid.removeChild(tile); const rect = dragPlaceholder.getBoundingClientRect(); draggingGhost = draggingNode.cloneNode(true); draggingGhost.classList.add('ghost'); Object.assign(draggingGhost.style, { position: 'fixed', left: rect.left + 'px', top: rect.top + 'px', width: rect.width + 'px', zIndex: 999, pointerEvents: 'none' }); document.body.appendChild(draggingGhost); window.addEventListener('pointermove', onDragMove, { passive: false }); window.addEventListener('pointerup', onDragUp, { once: true }); }); } grid.appendChild(tile); }); }
+function escapeHtml(value) { return String(value ?? '').replace(/[&<>'"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }) [ch]); }
+async function exportData() { const all = await getAll(); const payload = { format: 'meadow-shortcuts', version: 1, exportedAt: new Date().toISOString(), entries: all.map(({ id, ...entry }) => entry) }; const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); const stamp = new Date().toISOString().replace(/[:.]/g, '-'); a.href = url; a.download = `meadow-shortcuts-${stamp}.json`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 0); toast('Export complete'); }
+function validateImportEntries(entries) { if (!Array.isArray(entries)) throw new Error('invalid-entries'); const folderKeys = new Set([ROOT_FOLDER]); const normalized = entries.map((entry, index) => { if (!entry || (entry.type !== 'shortcut' && entry.type !== 'folder')) throw new Error('invalid-entry'); const title = String(entry.title || '').trim() || (entry.type === 'folder' ? 'New folder' : 'Untitled'); const parentFolder = String(entry.parentFolder || ROOT_FOLDER); const order = Number.isFinite(Number(entry.order)) ? Number(entry.order) : index + 1; if (entry.type === 'folder') { const folderKey = String(entry.folderKey || '').trim(); if (!/^[a-f0-9]{16,64}$/i.test(folderKey) || folderKeys.has(folderKey)) throw new Error('invalid-folder-key'); folderKeys.add(folderKey); return { type: 'folder', parentFolder, folderKey, title, order }; } const url = normUrl(String(entry.url || '')); if (!url) throw new Error('invalid-url'); return { type: 'shortcut', parentFolder, url, title, order }; }); for (const entry of normalized) { if (entry.parentFolder !== ROOT_FOLDER && !folderKeys.has(entry.parentFolder)) throw new Error('missing-parent'); } return normalized; }
+async function generateImportFolderKey(name, usedKeys) { for (let attempt = 0; attempt < 8; attempt += 1) { const random = new Uint8Array(24); crypto.getRandomValues(random); const seed = `${name}|${Date.now()}|${performance.now()}|${Array.from(random).join(',')}|${attempt}`; let key; if (crypto.subtle) { const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(seed)); key = Array.from(new Uint8Array(digest)).map(v => v.toString(16).padStart(2, '0')).join('').slice(0, 32); } else { key = Array.from(random).map(v => v.toString(16).padStart(2, '0')).join('').slice(0, 32); } if (!usedKeys.has(key)) { usedKeys.add(key); return key; } } throw new Error('folder-key-collision'); }
+async function parseBrowserBookmarks(text) { const doc = new DOMParser().parseFromString(text, 'text/html'); if (!doc.querySelector('a[href]') && !doc.querySelector('h3')) throw new Error('not-browser-bookmarks'); const entries = []; const usedKeys = new Set([ROOT_FOLDER]); const orderByParent = new Map(); let skipped = 0; const nextOrder = (parentFolder) => { const next = (orderByParent.get(parentFolder) || 0) + 1; orderByParent.set(parentFolder, next); return next; }; const directChild = (element, tagName) => Array.from(element.children).find(child => child.tagName === tagName) || null; const addBookmark = (anchor, parentFolder) => { const rawUrl = String(anchor.getAttribute('href') || '').trim(); // Do not import browser-internal pages or javascript: URLs for safety.
+if (!/^https?:\/\//i.test(rawUrl)) { skipped += 1; return; } const url = normUrl(rawUrl); if (!url) { skipped += 1; return; } const title = String(anchor.textContent || '').trim() || suggestedTitle(url) || hostTitle(url) || 'Untitled'; entries.push({ type: 'shortcut', parentFolder, url, title, order: nextOrder(parentFolder) }); }; const walk = async (container, parentFolder) => { const children = Array.from(container.children); let pendingFolderKey = null; for (let i = 0; i < children.length; i += 1) { const element = children[i]; const tag = element.tagName; if (tag === 'DT') { const heading = directChild(element, 'H3'); const anchor = directChild(element, 'A'); const nestedList = directChild(element, 'DL'); if (heading) { const title = String(heading.textContent || '').trim() || 'New folder'; const folderKey = await generateImportFolderKey(title, usedKeys); entries.push({ type: 'folder', parentFolder, folderKey, title, order: nextOrder(parentFolder) }); if (nestedList) { await walk(nestedList, folderKey); pendingFolderKey = null; } else { // In Netscape Bookmark format, the DL after a folder heading may be a sibling element.
+pendingFolderKey = folderKey; } continue; } if (anchor) { addBookmark(anchor, parentFolder); pendingFolderKey = null; continue; } if (nestedList) await walk(nestedList, pendingFolderKey || parentFolder); pendingFolderKey = null; continue; } if (tag === 'DL') { await walk(element, pendingFolderKey || parentFolder); pendingFolderKey = null; continue; } if (tag === 'P' && element.children.length) { await walk(element, pendingFolderKey || parentFolder); pendingFolderKey = null; } } }; const rootList = doc.querySelector('dl'); if (rootList) { await walk(rootList, ROOT_FOLDER); } else { // Provide minimal support for exports with slightly different structures.
+for (const anchor of doc.querySelectorAll('a[href]')) addBookmark(anchor, ROOT_FOLDER); } if (!entries.some(entry => entry.type === 'shortcut')) throw new Error('no-importable-bookmarks'); return { entries, skipped }; }
+async function replaceImportedEntries(entries) { const { st, tx } = await txStore('readwrite'); st.clear(); entries.forEach(entry => st.add(entry)); await new Promise((resolve, reject) => { tx.oncomplete = () => resolve(); tx.onerror = () => reject(tx.error); tx.onabort = () => reject(tx.error); }); const url = new URL(location.href); url.searchParams.delete('folder'); history.replaceState(null, '', url.href); closeOperationMenu(); await render(); }
+async function importData(file) { const text = await file.text(); // First, try to read it as JSON exported by this site.
+try { const parsed = JSON.parse(text); if (parsed?.format === 'meadow-shortcuts' && parsed?.version === 1) { const entries = validateImportEntries(parsed.entries); if (!confirm(`Replace the current saved items and import ${entries.length} entries?`)) return; await replaceImportedEntries(entries); toast('Import complete'); return; } } catch (error) { // If it is not JSON, try parsing it as browser bookmark HTML.
+} const browserData = await parseBrowserBookmarks(text); const shortcutCount = browserData.entries.filter(entry => entry.type === 'shortcut').length; const folderCount = browserData.entries.filter(entry => entry.type === 'folder').length; const skippedText = browserData.skipped ? `\n${browserData.skipped} unsupported URLs will be skipped.` : ''; if (!confirm(`The file was parsed as browser bookmarks.\nImport ${folderCount} folders and ${shortcutCount} bookmarks?\nThe current saved items will be replaced.${skippedText}`)) return; await replaceImportedEntries(browserData.entries); toast(browserData.skipped ? `Import complete (${browserData.skipped} skipped)` : 'Bookmarks imported'); }
+function createNewsLoading() { const loading = document.createElement('div'); loading.className = 'newsLoading'; loading.textContent = 'Loading news…'; return loading; }
+async function loadNews(force = false) { const now = Date.now(); // While this page remains open, keep the already loaded iframe for five minutes.
+// A cross-origin iframe cannot be serialized into IndexedDB, so a full page reload
+// still requires the external frame to be requested again.
+if (!force && newsFrame && now - newsLoadedAt < NEWS_CACHE_MS) return; if (newsFrame) newsFrame.remove(); newsFrameWrap.replaceChildren(createNewsLoading()); const frame = document.createElement('iframe'); frame.className = 'newsFrame'; frame.title = 'News feed'; frame.loading = 'eager'; frame.referrerPolicy = 'strict-origin-when-cross-origin'; // On refresh, add a fragment-only marker. It does not send a query parameter
+// to the embed endpoint, but guarantees a new iframe navigation in this page.
+frame.src = force ? `${NEWS_FRAME_SRC}#refresh-${now}` : NEWS_FRAME_SRC; frame.addEventListener('load', async () => { newsFrameWrap.querySelector('.newsLoading')?.remove(); newsLoadedAt = Date.now(); try { await setSetting('newsLastLoadedAt', newsLoadedAt); } catch (error) { console.error('Failed to save the news load time', error); } }, { once: true }); newsFrame = frame; newsFrameWrap.appendChild(frame); }
+async function setNewsOpen(open, persist = true) { const isOpen = Boolean(open); newsBody.hidden = !isOpen; newsToggle.setAttribute('aria-expanded', String(isOpen)); newsToggleMark.style.transform = isOpen ? 'rotate(180deg)' : ''; if (isOpen) { const expired = newsFrame && Date.now() - newsLoadedAt >= NEWS_CACHE_MS; await loadNews(Boolean(expired)); } if (persist) { try { await setSetting('newsPanelOpen', isOpen); } catch (error) { console.error('Failed to save the news panel state', error); } } }
+newsToggle.addEventListener('click', () => { setNewsOpen(newsBody.hidden); }); newsRefreshButton.addEventListener('click', () => { loadNews(true); }); addShortcutAction.onclick = () => { closeOperationMenu(); openModal('shortcut'); }; addFolderAction.onclick = () => { closeOperationMenu(); openModal('folder'); }; searchAction.onclick = openShortcutSearch; helpAction.onclick = openHelp; helpCloseBtn.onclick = closeHelp; helpWrap.onclick = e => { if (e.target === helpWrap) closeHelp(); }; shortcutSearchButton.onclick = searchRegisteredEntries; shortcutSearchInput.addEventListener('keydown', e => { if (e.key === 'Enter') searchRegisteredEntries(); }); shortcutSearchType.addEventListener('change', () => { const labels = { url: 'Fuzzy search URLs', site: 'Fuzzy search site names (case-insensitive)', name: 'Fuzzy search names' }; shortcutSearchInput.placeholder = labels[shortcutSearchType.value] || 'Enter a search term'; }); searchCloseBtn.onclick = closeShortcutSearch; shortcutSearchWrap.onclick = e => { if (e.target === shortcutSearchWrap) closeShortcutSearch(); }; exportAction.onclick = async () => { closeOperationMenu(); await exportData(); }; importAction.onclick = () => importFile.click(); operationCloseBtn.onclick = closeOperationMenu; operationWrap.onclick = e => { if (e.target === operationWrap) closeOperationMenu(); }; importFile.addEventListener('change', async () => { const file = importFile.files?.[0]; importFile.value = ''; if (!file) return; try { await importData(file); } catch (error) { console.error(error); toast('Import failed'); } }); nameInput.addEventListener('input', () => { nameWasEdited = true; }); urlInput.addEventListener('input', () => { if (!nameWasEdited || !nameInput.value.trim()) { const title = suggestedTitle(urlInput.value); if (title) nameInput.value = title; } }); urlInput.addEventListener('blur', () => { if (!nameInput.value.trim()) nameInput.value = suggestedTitle(urlInput.value); }); okBtn.onclick = async () => { const name = nameInput.value.trim(); if (editingId) { const editedMode = modalMode; const url = urlInput.value.trim(); try { const updated = await updateEntry(editingId, name || 'Untitled', url); if (updated === null) { toast('This URL already exists in the folder'); return; } closeModal(); await render(); toast(editedMode === 'folder' ? 'Folder name updated' : 'Shortcut updated'); } catch { if (editedMode === 'shortcut') { toast('The URL is invalid'); urlInput.focus(); } else { toast('Update failed'); } } return; } if (modalMode === 'folder') { await addFolder(name); closeModal(); await render(); toast('Folder added'); return; } const url = urlInput.value.trim(); if (!url) { urlInput.focus(); return; } try { const added = await addShortcut(url, name); if (added === null) { toast('This URL already exists in the folder'); return; } closeModal(); await render(); toast('Shortcut added'); } catch { toast('Add failed'); } }; cancelBtn.onclick = () => closeModal(); modalWrap.onclick = e => { if (e.target === modalWrap) closeModal(); }; document.addEventListener('click', e => { if (!editMode) return; if (!e.target.closest('.tile') && !e.target.closest('.modalWrap')) exitEditMode(); }); document.addEventListener('keydown', e => { if (e.key === 'Escape') { if (shortcutSearchWrap.style.display === 'grid') closeShortcutSearch(); if (helpWrap.style.display === 'grid') closeHelp(); else if (operationWrap.style.display === 'grid') closeOperationMenu(); else if (modalWrap.style.display === 'grid') closeModal(); else exitEditMode(); } }); document.addEventListener('pointerdown', () => { if (editMode) resetEditTimer(); }); const searchForm = document.getElementById('searchForm'); const qInput = document.getElementById('q');
+function isLikelyUrl(value) { if (!value) return false; const v = value.trim(); if (/^https?:\/\//i.test(v)) return true; return /^([a-z0-9-]+\.)+[a-z]{2,}(?:[\/?#].*)?$/i.test(v) || /^(\d{1,3}\.){3}\d{1,3}(?:[:\/?#].*)?$/.test(v) || /^localhost(?:[:\/?#].*)?$/i.test(v); }
+searchForm.addEventListener('submit', async e => { e.preventDefault(); const raw = qInput.value.trim(); if (!raw) return; if (isLikelyUrl(raw)) { const target = normUrl(raw); try { const ctrl = new AbortController(); const timer = setTimeout(() => ctrl.abort(), 3000); await fetch(target, { mode: 'no-cors', method: 'GET', signal: ctrl.signal }); clearTimeout(timer); location.href = target; } catch { location.href = `https://www.google.com/search?q=${encodeURIComponent(raw)}`; } } else { location.href = `https://www.google.com/search?q=${encodeURIComponent(raw)}`; } }); (async () => { await openDB(); await render(); // Restore the panel state. The saved timestamp is retained for diagnostics,
+// but a hard reload must recreate the cross-origin iframe and therefore uses the network.
+try { newsLoadedAt = Number(await getSetting('newsLastLoadedAt', 0)) || 0; const wasOpen = await getSetting('newsPanelOpen', false); if (wasOpen) newsLoadedAt = 0; await setNewsOpen(Boolean(wasOpen), false); } catch (error) { console.error('Failed to load the news panel state', error); } }) (); window.addEventListener('load', () => qInput.focus());
 </script>
 </body>
 </html>
