@@ -769,7 +769,7 @@ let nameWasEdited = false;
 function openDB() {
   if (!dbPromise) {
     dbPromise = new Promise((resolve, reject) => {
-      const request = indexedDB.open(DB_NAME, 2);
+      const request = indexedDB.open(DB_NAME, 3);
       request.onupgradeneeded = (event) => {
         const db = event.target.result;
         let store;
