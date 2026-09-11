@@ -1,54 +1,38 @@
+<script>
 (() => {
   try {
-    const query = location.search;
     const now = Date.now();
     const cacheLimit = 5 * 60 * 1000;
+    const storageKey = 'html_cache_bust_time';
+    const cacheParam = '_cb';
 
-    const queryParts = query
-      ? query.slice(1).split('&').filter(Boolean)
-      : [];
+    const lastTime = Number(sessionStorage.getItem(storageKey)) || 0;
 
-    const isDateNowValue = value => /^\d{13}$/.test(value);
+    const url = new URL(location.href);
+    const currentCacheValue = url.searchParams.get(cacheParam);
 
-    const dateNowParts = queryParts.filter(isDateNowValue);
-    const latestDateNow = dateNowParts.at(-1);
+    // 5分以上経過している場合だけキャッシュバスト
+    if (now - lastTime >= cacheLimit) {
+      sessionStorage.setItem(storageKey, String(now));
 
-    const otherParts = queryParts.filter(
-      part => !isDateNowValue(part)
-    );
+      url.searchParams.set(cacheParam, String(now));
 
-    const hasDateNow = latestDateNow !== undefined;
-    const isExpired =
-      hasDateNow &&
-      now - Number(latestDateNow) >= cacheLimit;
-
-    // クエリがない、またはDate.now()がない場合は必ず付与する
-    if (!hasDateNow || isExpired) {
-      const newQuery = [
-        ...otherParts,
-        String(now)
-      ].join('&');
-
-      location.replace(
-        location.pathname + '?' + newQuery + location.hash
-      );
-
+      location.replace(url.href);
       return;
     }
 
-    // Date.now()が5分以内なら遷移せず、Date.now()部分だけ削除する
-    const cleanedQuery = otherParts.length
-      ? '?' + otherParts.join('&')
-      : '';
+    // キャッシュバスト後はURLから _cb だけ削除
+    if (currentCacheValue !== null) {
+      url.searchParams.delete(cacheParam);
 
-    if (cleanedQuery !== query) {
       history.replaceState(
         history.state,
         '',
-        location.pathname + cleanedQuery + location.hash
+        url.pathname + url.search + url.hash
       );
     }
   } catch (error) {
     console.error(error);
   }
 })();
+</script>
