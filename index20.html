@@ -1218,19 +1218,40 @@ async function initApp() {
       };
     }
 
-    function readUrlHashPayload() {
+    function parseUrlPayloadPair(key, encoded) {
+      if (!key || !encoded || !/^[A-Za-z0-9_-]+$/.test(encoded)) return null;
+      if (key === LEGACY_URL_HASH_KEY) return { encoded: encoded, format: "gzip", encrypted: false };
+      const encrypted = key.startsWith("e");
+      const rawKey = encrypted ? key.slice(1) : key;
+      const definition = URL_COMPRESSION_FORMATS.find(function (item) { return item.hashKey === rawKey; });
+      return definition ? { encoded: encoded, format: definition.format, encrypted: encrypted } : null;
+    }
+
+    function readUrlSavePayload() {
+      // 新形式: 保存データはクエリ側へ置き、#key=... と競合させない。
+      // これにより短縮URLの末尾へ #key=... を付けても保存データを失わない。
+      const queryParts = new URLSearchParams(location.search);
+      for (const definition of URL_COMPRESSION_FORMATS) {
+        for (const key of [definition.hashKey, "e" + definition.hashKey]) {
+          const encoded = queryParts.get(key);
+          const payload = parseUrlPayloadPair(key, encoded);
+          if (payload) return payload;
+        }
+      }
+      const legacyQuery = queryParts.get(LEGACY_URL_HASH_KEY);
+      if (legacyQuery) {
+        const payload = parseUrlPayloadPair(LEGACY_URL_HASH_KEY, legacyQuery);
+        if (payload) return payload;
+      }
+
+      // 旧形式との互換: #edr=... または #edr=...#key=... も読み込む。
       const hashWithoutFragmentPassword = String(location.hash || "").split("#key=", 1)[0];
       const match = hashWithoutFragmentPassword.match(/^#([^=]+)=([A-Za-z0-9_-]+)$/);
-      if (!match) return null;
-      if (match[1] === LEGACY_URL_HASH_KEY) return { encoded: match[2], format: "gzip" };
-      const encrypted = match[1].startsWith("e");
-      const rawKey = encrypted ? match[1].slice(1) : match[1];
-      const definition = URL_COMPRESSION_FORMATS.find(function (item) { return item.hashKey === rawKey; });
-      return definition ? { encoded: match[2], format: definition.format, encrypted: encrypted } : null;
+      return match ? parseUrlPayloadPair(match[1], match[2]) : null;
     }
 
     async function readUrlSaveData() {
-      const payload = readUrlHashPayload();
+      const payload = readUrlSavePayload();
       if (!payload) return null;
       try {
         return await decodeUrlSaveData(payload.encoded, payload.format, payload.encrypted);
@@ -1242,7 +1263,8 @@ async function initApp() {
     }
 
     function buildUrlWithPayload(payload) {
-      return LONG_URL_BASE + "#" + payload.hashKey + "=" + payload.encoded;
+      // 保存データはクエリへ。パスワード共有用の #key=... を独立したフラグメントとして利用できる。
+      return LONG_URL_BASE + "?" + payload.hashKey + "=" + payload.encoded;
     }
 
     async function createSavedUrl(startMode) {
