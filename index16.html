@@ -9,6 +9,7 @@
 
 @layer base {
   * { box-sizing: border-box; }
+
   body {
     margin: 0;
     min-height: 100vh;
@@ -19,10 +20,15 @@
     background: #f5f5f5;
     color: #222;
   }
-  button, input { font: inherit; }
+
+  button,
+  input {
+    font: inherit;
+  }
 }
 
 @layer components {
+  /* メインカード */
   .card {
     width: min(100%, 480px);
     padding: 24px;
@@ -31,29 +37,42 @@
     background: #fff;
     box-shadow: 0 8px 30px rgb(0 0 0 / 8%);
   }
+
   h1 {
     margin: 0 0 10px;
     font-size: 1.35rem;
   }
+
   p {
     margin: 0 0 22px;
     line-height: 1.7;
     color: #555;
   }
+
+  .field {
+    margin-top: 16px;
+  }
+
+  .field:first-of-type {
+    margin-top: 0;
+  }
+
   label {
     display: block;
     margin-bottom: 8px;
     font-weight: 700;
   }
+
   input {
     width: 100%;
     padding: 12px 14px;
     border: 1px solid #bbb;
     border-radius: 10px;
   }
+
   button {
     width: 100%;
-    margin-top: 16px;
+    margin-top: 20px;
     padding: 13px 16px;
     border: 0;
     border-radius: 10px;
@@ -61,6 +80,7 @@
     color: #fff;
     cursor: pointer;
   }
+
   .status {
     min-height: 1.5em;
     margin-top: 10px;
@@ -71,7 +91,11 @@
 }
 
 @layer states {
-  button:active { transform: translateY(1px); }
+  /* 操作時の表示 */
+  button:active {
+    transform: translateY(1px);
+  }
+
   input:focus-visible,
   button:focus-visible {
     outline: 3px solid rgb(0 0 0 / 18%);
@@ -83,10 +107,43 @@
 <body>
 <main class="card">
   <h1>ダイレクトアタック文字メーカー</h1>
-  <p>重ねる文字の個数を指定して、掲示板用の文字列をクリップボードへコピーします。</p>
+  <p>重ねる文字の個数や連続数を指定して、掲示板用の文字列をクリップボードへコピーします。</p>
 
-  <label for="count">重ねる個数</label>
-  <input id="count" type="number" min="20" max="500" value="50" inputmode="numeric">
+  <div class="field">
+    <label for="count">上に伸びる数</label>
+    <input
+      id="count"
+      type="number"
+      min="20"
+      max="500"
+      value="50"
+      inputmode="numeric"
+    >
+  </div>
+
+  <div class="field">
+    <label for="continuousCount">連続数</label>
+    <input
+      id="continuousCount"
+      type="number"
+      min="1"
+      max="100"
+      value="1"
+      inputmode="numeric"
+    >
+  </div>
+
+  <div class="field">
+    <label for="downCount">下に伸びる数</label>
+    <input
+      id="downCount"
+      type="number"
+      min="0"
+      max="500"
+      value="0"
+      inputmode="numeric"
+    >
+  </div>
 
   <button id="copyButton" type="button">クリップボードにコピー</button>
   <div id="status" class="status" aria-live="polite"></div>
@@ -95,15 +152,72 @@
 <script>
 (() => {
   const countInput = document.getElementById("count");
+  const continuousCountInput = document.getElementById("continuousCount");
+  const downCountInput = document.getElementById("downCount");
   const copyButton = document.getElementById("copyButton");
   const status = document.getElementById("status");
 
+  const clampNumber = (input, min, max, fallback) => {
+    let value = Number(input.value);
+
+    if (!Number.isFinite(value)) {
+      value = fallback;
+    }
+
+    value = Math.max(min, Math.min(max, Math.round(value)));
+    input.value = value;
+
+    return value;
+  };
+
   const makeText = () => {
-    let count = Number(countInput.value);
-    if (!Number.isFinite(count)) count = 40;
-    count = Math.max(20, Math.min(500, Math.round(count)));
-    countInput.value = count;
-    return "つb" + "\u0352".repeat(count) + "ダイレクトアタックや！";
+    const count = clampNumber(countInput, 20, 500, 50);
+    const continuousCount = clampNumber(
+      continuousCountInput,
+      1,
+      100,
+      1
+    );
+    const downCount = clampNumber(
+      downCountInput,
+      0,
+      500,
+      0
+    );
+
+    const upperMark = "\u0352";
+
+    /*
+      U+0316:
+      COMBINING GRAVE ACCENT BELOW
+      少し下方向へ伸びやすい結合文字。
+    */
+    const lowerMark = "\u0316";
+
+    const stretchedO =
+      "o" +
+      upperMark.repeat(count) +
+      lowerMark.repeat(downCount);
+
+    /*
+      連続数3の場合:
+
+      o
+      + 伸びるo
+      + 伸びるo
+      + 伸びるo
+      + o
+
+      見た目上のベース文字は:
+      ooooo
+
+      2・3・4文字目から上下に伸びる。
+    */
+    return (
+      "o" +
+      stretchedO.repeat(continuousCount) +
+      "oダイレクトアタックや！"
+    );
   };
 
   copyButton.addEventListener("click", async () => {
@@ -117,10 +231,12 @@
       area.value = text;
       area.style.position = "fixed";
       area.style.opacity = "0";
+
       document.body.appendChild(area);
       area.select();
       document.execCommand("copy");
       area.remove();
+
       status.textContent = "コピーしました。";
     }
   });
