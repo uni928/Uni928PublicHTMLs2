@@ -687,6 +687,26 @@
     text-align: center;
   }
 
+  /* News refresh control: reload the external feed only when needed. */
+  .newsRefreshRow {
+    display: flex;
+    justify-content: flex-end;
+    padding: 0 0 10px;
+  }
+
+  .newsRefreshButton {
+    border: 1px solid rgba(62, 125, 77, .16);
+    border-radius: 999px;
+    padding: 7px 11px;
+    background: rgba(247, 251, 244, .96);
+    color: #395943;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  .newsRefreshButton:hover { background: #fff; }
+
 }
 
 @layer states {
@@ -772,6 +792,9 @@
           <span class="newsToggleMark" id="newsToggleMark" aria-hidden="true">▼</span>
         </button>
         <div class="newsBody" id="newsBody" hidden>
+          <div class="newsRefreshRow">
+            <button class="newsRefreshButton" id="newsRefreshButton" type="button">Refresh news</button>
+          </div>
           <div class="newsFrameWrap" id="newsFrameWrap">
             <div class="newsLoading" id="newsLoading">Loading news…</div>
           </div>
@@ -1173,8 +1196,11 @@ const newsToggle = document.getElementById('newsToggle');
 const newsToggleMark = document.getElementById('newsToggleMark');
 const newsBody = document.getElementById('newsBody');
 const newsFrameWrap = document.getElementById('newsFrameWrap');
-const newsLoading = document.getElementById('newsLoading');
-let newsLoaded = false;
+const newsRefreshButton = document.getElementById('newsRefreshButton');
+const NEWS_CACHE_MS = 5 * 60 * 1000;
+const NEWS_FRAME_SRC = 'https://rss.app/embed/v1/list/Rd2nDxAXJTMIB27W';
+let newsFrame = null;
+let newsLoadedAt = 0;
 
 window.editMode = false;
 window.editingId = null;
@@ -1799,18 +1825,41 @@ async function importData(file) {
   toast(browserData.skipped ? `Import complete (${browserData.skipped} skipped)` : 'Bookmarks imported');
 }
 
-function loadNewsOnce() {
-  if (newsLoaded) return;
-  newsLoaded = true;
+function createNewsLoading() {
+  const loading = document.createElement('div');
+  loading.className = 'newsLoading';
+  loading.textContent = 'Loading news…';
+  return loading;
+}
+
+async function loadNews(force = false) {
+  const now = Date.now();
+
+  // While this page remains open, keep the already loaded iframe for five minutes.
+  // A cross-origin iframe cannot be serialized into IndexedDB, so a full page reload
+  // still requires the external frame to be requested again.
+  if (!force && newsFrame && now - newsLoadedAt < NEWS_CACHE_MS) return;
+
+  if (newsFrame) newsFrame.remove();
+  newsFrameWrap.replaceChildren(createNewsLoading());
 
   const frame = document.createElement('iframe');
   frame.className = 'newsFrame';
   frame.title = 'News feed';
   frame.loading = 'eager';
   frame.referrerPolicy = 'strict-origin-when-cross-origin';
-  frame.src = 'https://rss.app/embed/v1/list/Rd2nDxAXJTMIB27W';
-  frame.addEventListener('load', () => newsLoading?.remove(), { once: true });
 
+  // On refresh, add a fragment-only marker. It does not send a query parameter
+  // to the embed endpoint, but guarantees a new iframe navigation in this page.
+  frame.src = force ? `${NEWS_FRAME_SRC}#refresh-${now}` : NEWS_FRAME_SRC;
+  frame.addEventListener('load', async () => {
+    newsFrameWrap.querySelector('.newsLoading')?.remove();
+    newsLoadedAt = Date.now();
+    try { await setSetting('newsLastLoadedAt', newsLoadedAt); }
+    catch (error) { console.error('Failed to save the news load time', error); }
+  }, { once: true });
+
+  newsFrame = frame;
   newsFrameWrap.appendChild(frame);
 }
 
@@ -1820,7 +1869,10 @@ async function setNewsOpen(open, persist = true) {
   newsToggle.setAttribute('aria-expanded', String(isOpen));
   newsToggleMark.style.transform = isOpen ? 'rotate(180deg)' : '';
 
-  if (isOpen) loadNewsOnce();
+  if (isOpen) {
+    const expired = newsFrame && Date.now() - newsLoadedAt >= NEWS_CACHE_MS;
+    await loadNews(Boolean(expired));
+  }
   if (persist) {
     try { await setSetting('newsPanelOpen', isOpen); }
     catch (error) { console.error('Failed to save the news panel state', error); }
@@ -1829,6 +1881,10 @@ async function setNewsOpen(open, persist = true) {
 
 newsToggle.addEventListener('click', () => {
   setNewsOpen(newsBody.hidden);
+});
+
+newsRefreshButton.addEventListener('click', () => {
+  loadNews(true);
 });
 
 addShortcutAction.onclick = () => { closeOperationMenu(); openModal('shortcut'); };
@@ -1977,9 +2033,12 @@ searchForm.addEventListener('submit', async e => {
   await openDB();
   await render();
 
-  // Open and load the news once at startup only if it was open previously.
+  // Restore the panel state. The saved timestamp is retained for diagnostics,
+  // but a hard reload must recreate the cross-origin iframe and therefore uses the network.
   try {
+    newsLoadedAt = Number(await getSetting('newsLastLoadedAt', 0)) || 0;
     const wasOpen = await getSetting('newsPanelOpen', false);
+    if (wasOpen) newsLoadedAt = 0;
     await setNewsOpen(Boolean(wasOpen), false);
   } catch (error) {
     console.error('Failed to load the news panel state', error);
