@@ -961,6 +961,7 @@ const DB_NAME = 'shortcut-db';
 const STORE = 'shortcuts';
 const SETTINGS_STORE = 'settings';
 const ROOT_FOLDER = 'root';
+const NEWS_CACHE_TTL = 5 * 60 * 1000;
 let dbPromise;
 let modalMode = 'shortcut';
 let nameWasEdited = false;
@@ -2000,6 +2001,10 @@ function insertNewsImage(link, imageUrl) {
   link.insertBefore(image, link.firstChild);
 }
 
+function newsImageCacheSettingKey(articleUrl) {
+  return `newsImageCache:${articleUrl}`;
+}
+
 async function fetchNewsPreviewImage(item) {
   const direct = newsImageUrl(item);
   if (direct) return direct;
@@ -2008,23 +2013,42 @@ async function fetchNewsPreviewImage(item) {
   if (!/^https?:\/\//i.test(articleUrl)) return '';
   if (newsPreviewImageCache.has(articleUrl)) return newsPreviewImageCache.get(articleUrl);
 
+  try {
+    const persistentCache = await getSetting(newsImageCacheSettingKey(articleUrl), null);
+    if (persistentCache && Number.isFinite(Number(persistentCache.savedAt)) && Date.now() - Number(persistentCache.savedAt) < NEWS_CACHE_TTL) {
+      const cachedImageUrl = String(persistentCache.imageUrl || '');
+      newsPreviewImageCache.set(articleUrl, cachedImageUrl);
+      return cachedImageUrl;
+    }
+  } catch (error) {
+    console.warn('ニュース画像キャッシュの読み込みに失敗しました', error);
+  }
+
   const task = (async () => {
+    let imageUrl = '';
     try {
       const params = new URLSearchParams({ url: articleUrl, prefer: 'og' });
       const response = await fetch(`https://api.linkmetadata.com/v1/metadata?${params.toString()}`, {
         method: 'GET',
         mode: 'cors'
       });
-      if (!response.ok) return '';
-      const metadata = await response.json();
-      const imageUrl = typeof metadata?.image === 'string'
-        ? metadata.image
-        : metadata?.image?.url;
-      return /^https?:\/\//i.test(String(imageUrl || '').trim()) ? String(imageUrl).trim() : '';
+      if (response.ok) {
+        const metadata = await response.json();
+        const candidate = typeof metadata?.image === 'string'
+          ? metadata.image
+          : metadata?.image?.url;
+        imageUrl = /^https?:\/\//i.test(String(candidate || '').trim()) ? String(candidate).trim() : '';
+      }
     } catch (error) {
       console.warn('ニュース画像メタデータの取得に失敗しました', error);
-      return '';
     }
+
+    try {
+      await setSetting(newsImageCacheSettingKey(articleUrl), { savedAt: Date.now(), imageUrl });
+    } catch (error) {
+      console.warn('ニュース画像キャッシュの保存に失敗しました', error);
+    }
+    return imageUrl;
   })();
 
   newsPreviewImageCache.set(articleUrl, task);
@@ -2095,9 +2119,43 @@ function renderNewsItems(items) {
   newsListWrap.replaceChildren(list);
 }
 
+function newsCacheSettingKey(categoryKey) {
+  return `newsCache:${categoryKey}`;
+}
+
+async function readPersistentNewsCache(categoryKey) {
+  try {
+    const cached = await getSetting(newsCacheSettingKey(categoryKey), null);
+    if (!cached || !Array.isArray(cached.items) || !Number.isFinite(Number(cached.savedAt))) return null;
+    return { items: cached.items, savedAt: Number(cached.savedAt) };
+  } catch (error) {
+    console.warn('ニュースキャッシュの読み込みに失敗しました', error);
+    return null;
+  }
+}
+
+async function writePersistentNewsCache(categoryKey, items) {
+  try {
+    await setSetting(newsCacheSettingKey(categoryKey), {
+      savedAt: Date.now(),
+      items
+    });
+  } catch (error) {
+    console.warn('ニュースキャッシュの保存に失敗しました', error);
+  }
+}
+
 async function fetchNewsCategory(categoryKey, force = false) {
   if (!force && newsCache.has(categoryKey)) return newsCache.get(categoryKey);
   if (!force && newsLoadingCategories.has(categoryKey)) return newsLoadingCategories.get(categoryKey);
+
+  if (!force) {
+    const persistentCache = await readPersistentNewsCache(categoryKey);
+    if (persistentCache && Date.now() - persistentCache.savedAt < NEWS_CACHE_TTL) {
+      newsCache.set(categoryKey, persistentCache.items);
+      return persistentCache.items;
+    }
+  }
 
   const category = getNewsCategory(categoryKey);
   const task = (async () => {
@@ -2108,6 +2166,7 @@ async function fetchNewsCategory(categoryKey, force = false) {
     if (data?.status !== 'ok' || !Array.isArray(data.items)) throw new Error(data?.message || 'news-invalid-response');
     const items = data.items.slice(0, 10);
     newsCache.set(categoryKey, items);
+    await writePersistentNewsCache(categoryKey, items);
     return items;
   })();
 
