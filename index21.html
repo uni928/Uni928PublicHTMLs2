@@ -38,22 +38,49 @@
 
 /* layout: 操作欄とプレビュー */
 @layer layout {
-  .app { width: min(1420px,100%); margin: 0 auto; padding: 28px 20px 48px; }
-  .hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin-bottom: 20px; }
-  .hero-copy { max-width: 760px; }
-  .eyebrow { margin: 0 0 8px; color: var(--accent); font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
-  .hero h1 { margin: 0; font-size: clamp(26px,4vw,42px); line-height: 1.14; letter-spacing: -.02em; }
-  .hero p { margin: 10px 0 0; color: var(--muted); font-size: 14px; line-height: 1.8; }
-  .workspace { display: grid; grid-template-columns: minmax(300px,380px) minmax(0,1fr); gap: 22px; align-items: start; }
-  .sidebar { position: sticky; top: 18px; display: grid; gap: 14px; }
-  .preview-shell { overflow-x: auto; padding: 2px 2px 34px; }
-  .pages { display: grid; gap: 24px; }
-  @media (max-width: 980px) {
-    .app { padding: 20px 14px 38px; }
-    .hero { align-items: flex-start; flex-direction: column; }
-    .workspace { grid-template-columns: 1fr; }
-    .sidebar { position: static; }
-    .preview-shell { margin-inline: -14px; padding-inline: 8px; }
+  .app { width: min(1200px,100%); margin: 0 auto; padding: 18px 24px 44px; }
+  .hero { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 14px; padding: 2px 0 4px; }
+  .hero-copy { min-width: 0; max-width: 720px; }
+  .eyebrow { margin: 0 0 4px; color: var(--accent); font-size: 10px; font-weight: 800; letter-spacing: .10em; text-transform: uppercase; }
+  .hero h1 { margin: 0; font-size: clamp(24px,2.8vw,32px); line-height: 1.16; letter-spacing: -.018em; }
+  .hero p { margin: 6px 0 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
+  /* PC: 操作要素を上段2列、資料を下段いっぱいに表示 */
+  .workspace { display: block; width: 100%; }
+  .sidebar {
+    position: static;
+    display: grid;
+    grid-template-columns: minmax(0,1fr) minmax(0,1fr);
+    gap: 16px;
+    width: 210mm;
+    max-width: 100%;
+    margin: 0 auto 26px;
+  }
+  .sidebar > section { min-width: 0; height: 100%; }
+  .preview-shell {
+    width: 100%;
+    min-width: 0;
+    overflow-x: visible;
+    padding: 2px 0 34px;
+  }
+  .pages {
+    display: grid;
+    justify-items: center;
+    width: 100%;
+    min-width: 0;
+    gap: 24px;
+  }
+  @media (min-width: 1200px) {
+    .app { padding-inline: 28px; }
+    .hero { padding-inline: 2px; }
+  }
+  @media (max-width: 899px) {
+    .app { padding: 16px 14px 38px; }
+    .hero { align-items: flex-start; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+    .hero h1 { font-size: clamp(23px,6vw,30px); }
+    .hero p { font-size: 12px; }
+    .sidebar { grid-template-columns: 1fr; margin-bottom: 20px; }
+    .preview-shell { margin-inline: -14px; width: calc(100% + 28px); padding-inline: 8px; overflow-x: auto; }
+    .pages { justify-items: start; width: max-content; min-width: 100%; }
   }
 }
 
@@ -141,7 +168,7 @@
   .empty-preview strong { display: block; margin-bottom: 7px; color: #667085; font-size: 14px; }
   .empty-preview span, .loading { font-size: 12px; line-height: 1.7; }
   .loading { font-weight: 700; }
-  @media (max-width: 980px) {
+  @media (max-width: 899px) {
     .paper-page { width: min(210mm,calc(100vw - 18px)); min-height: 0; padding: 14px; }
     .document-frame { min-height: 0; }
     .document-body { padding: 12px; }
