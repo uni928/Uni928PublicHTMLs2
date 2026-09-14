@@ -1,0 +1,555 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PDF・Word 資料プレビュー</title>
+<style>
+@layer base, layout, upload, controls, preview, states, print;
+
+/* base: 全体の基礎表示 */
+@layer base {
+  * { box-sizing: border-box; }
+  :root {
+    color-scheme: light;
+    --bg-a: #f7f7fb;
+    --bg-b: #eef1f7;
+    --paper: #fff;
+    --text: #182033;
+    --muted: #667085;
+    --subtle: #98a2b3;
+    --accent: #7567dc;
+    --shadow: 0 18px 50px rgba(40,49,78,.10);
+  }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans JP", "Yu Gothic UI", "Yu Gothic", Meiryo, sans-serif;
+    background:
+      radial-gradient(circle at 8% 4%, rgba(117,103,220,.07), transparent 30%),
+      radial-gradient(circle at 94% 8%, rgba(217,137,180,.08), transparent 28%),
+      linear-gradient(180deg, var(--bg-a), var(--bg-b));
+  }
+  button, input { font: inherit; }
+  button { cursor: pointer; }
+}
+
+/* layout: 操作欄とプレビュー */
+@layer layout {
+  .app { width: min(1420px,100%); margin: 0 auto; padding: 28px 20px 48px; }
+  .hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin-bottom: 20px; }
+  .hero-copy { max-width: 760px; }
+  .eyebrow { margin: 0 0 8px; color: var(--accent); font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+  .hero h1 { margin: 0; font-size: clamp(26px,4vw,42px); line-height: 1.14; letter-spacing: -.02em; }
+  .hero p { margin: 10px 0 0; color: var(--muted); font-size: 14px; line-height: 1.8; }
+  .workspace { display: grid; grid-template-columns: minmax(300px,380px) minmax(0,1fr); gap: 22px; align-items: start; }
+  .sidebar { position: sticky; top: 18px; display: grid; gap: 14px; }
+  .preview-shell { overflow-x: auto; padding: 2px 2px 34px; }
+  .pages { display: grid; gap: 24px; }
+  @media (max-width: 980px) {
+    .app { padding: 20px 14px 38px; }
+    .hero { align-items: flex-start; flex-direction: column; }
+    .workspace { grid-template-columns: 1fr; }
+    .sidebar { position: static; }
+    .preview-shell { margin-inline: -14px; padding-inline: 8px; }
+  }
+}
+
+/* upload: PDF・Word専用のドラッグ＆ドロップ */
+@layer upload {
+  .uni-photo-dropbox { padding: 20px; background: rgba(255,255,255,.97); border: 1px solid rgba(255,255,255,.9); border-radius: 24px; box-shadow: 0 8px 24px rgba(41,50,75,.07); }
+  .uni-photo-dropbox__zone { position: relative; display: grid; place-items: center; width: 100%; height: 220px; overflow: hidden; border: 1.5px dashed rgba(117,103,220,.28); border-radius: 22px; background: linear-gradient(180deg,rgba(255,255,255,.98),rgba(248,247,253,.98)); cursor: pointer; transition: border-color .18s ease,transform .18s ease,box-shadow .18s ease; }
+  .uni-photo-dropbox__zone:hover, .uni-photo-dropbox__zone.is-dragging { border-color: rgba(117,103,220,.58); box-shadow: 0 12px 28px rgba(117,103,220,.10); transform: translateY(-1px); }
+  .uni-photo-dropbox__inner { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 22px; text-align: center; pointer-events: none; }
+  .uni-photo-dropbox__icon { display: grid; place-items: center; width: 58px; height: 58px; border-radius: 19px; background: linear-gradient(135deg,rgba(117,103,220,.12),rgba(217,137,180,.16)); }
+  .uni-photo-dropbox__icon svg { width: 27px; height: 27px; stroke: #6e65ad; }
+  .uni-photo-dropbox__copy { display: grid; gap: 5px; text-align: center; }
+  .uni-photo-dropbox__title { color: #182033; font-size: 16px; font-weight: 800; line-height: 1.35; }
+  .uni-photo-dropbox__guide { color: #667085; font-size: 13px; font-weight: 600; line-height: 1.55; }
+  .uni-photo-dropbox__meta { color: #98a2b3; font-size: 11px; font-weight: 500; line-height: 1.4; }
+  .uni-photo-dropbox__input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+  .uni-photo-dropbox__selected { display: none; align-items: center; gap: 12px; padding: 14px; border: 1px solid rgba(110,145,210,.14); border-radius: 18px; background: linear-gradient(180deg,#fff,#fbfbfe); }
+  .uni-photo-dropbox__selected.is-visible { display: flex; }
+  .uni-photo-dropbox__selected-icon { display: grid; place-items: center; flex: 0 0 auto; width: 46px; height: 46px; border-radius: 15px; background: linear-gradient(135deg,rgba(117,103,220,.12),rgba(217,137,180,.14)); color: #655cb6; font-weight: 900; }
+  .uni-photo-dropbox__selected-copy { min-width: 0; flex: 1; }
+  .uni-photo-dropbox__selected-name { display: block; overflow: hidden; color: #182033; font-size: 13px; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
+  .uni-photo-dropbox__selected-meta { display: block; margin-top: 3px; color: #98a2b3; font-size: 11px; }
+  .uni-photo-dropbox__change { flex: 0 0 auto; padding: 8px 11px; border: 1px solid rgba(117,103,220,.16); border-radius: 999px; background: rgba(117,103,220,.07); color: #655cb6; font-size: 11px; font-weight: 800; }
+  @media (max-width: 540px) { .uni-photo-dropbox { padding: 16px; } .uni-photo-dropbox__zone { height: 190px; } }
+}
+
+/* controls: 操作ボタン */
+@layer controls {
+  .card { padding: 18px; border: 1px solid rgba(98,112,145,.12); border-radius: 22px; background: rgba(255,255,255,.92); box-shadow: 0 8px 24px rgba(41,50,75,.055); }
+  .card h2 { margin: 0; font-size: 15px; }
+  .card p { margin: 7px 0 0; color: var(--muted); font-size: 12px; line-height: 1.65; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .btn { min-height: 40px; padding: 9px 14px; border: 1px solid rgba(98,112,145,.16); border-radius: 12px; background: #fff; color: #344054; font-weight: 800; box-shadow: 0 3px 10px rgba(41,50,75,.04); }
+  .btn:hover { transform: translateY(-1px); }
+  .btn.primary { border-color: transparent; background: linear-gradient(135deg,#7567dc,#6156c8); color: #fff; box-shadow: 0 8px 18px rgba(117,103,220,.18); }
+  .hint { margin-top: 9px; color: var(--subtle); font-size: 11px; line-height: 1.55; }
+  .top-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+}
+
+/* preview: A4縦（210mm × 297mm）をそのまま画面上の基準にする */
+@layer preview {
+  .paper-page {
+    width: 210mm;
+    height: 297mm;
+    margin: 0 auto;
+    padding: 5mm;
+    overflow: hidden;
+    background: var(--paper);
+    border: 1px solid rgba(98,112,145,.10);
+    box-shadow: var(--shadow);
+  }
+  .document-frame {
+    width: 100%;
+    height: 287mm;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid rgba(117,103,220,.16);
+    border-radius: 20px;
+    background: #fff;
+    box-shadow: 0 10px 24px rgba(41,50,75,.055);
+  }
+  .document-body {
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+    display: grid;
+    place-items: center;
+    padding: 3mm;
+    overflow: hidden;
+    background: #fafbfc;
+  }
+  .page-footer { display: flex; flex: 0 0 auto; align-items: center; justify-content: space-between; gap: 16px; min-height: 10mm; padding: 1.5mm 6mm 2.5mm; color: #98a2b3; font-size: 10px; line-height: 1.5; }
+  .created-at, .page-info { margin: 0; }
+  .created-at { text-align: left; }
+  .page-info { margin-left: auto; text-align: right; white-space: nowrap; }
+  .pdf-canvas { display: block; width: 100%; height: auto; max-height: 258mm; object-fit: contain; border-radius: 10px; background: #fff; box-shadow: 0 4px 14px rgba(30,40,60,.06); }
+  .word-page-host { width: 100%; min-width: 0; display: grid; place-items: start center; overflow: hidden; }
+  .word-page-slice { position: relative; width: 100%; height: 264mm; overflow: hidden; }
+  .word-page-scale-box { position: absolute; top: 0; left: 50%; flex: 0 0 auto; max-width: none; max-height: none; overflow: visible; transform: translateX(-50%); }
+  .word-page-scale-box > section.docx { position: absolute !important; left: 0 !important; margin: 0 !important; box-shadow: none !important; transform-origin: top left !important; }
+  .word-page-host .docx-wrapper { padding: 0 !important; background: transparent !important; }
+  .empty-preview, .loading { display: grid; place-items: center; min-height: 230mm; padding: 34px; color: #98a2b3; text-align: center; }
+  .empty-preview strong { display: block; margin-bottom: 7px; color: #667085; font-size: 14px; }
+  .empty-preview span, .loading { font-size: 12px; line-height: 1.7; }
+  .loading { font-weight: 700; }
+  @media (max-width: 980px) {
+    .paper-page { width: min(210mm,calc(100vw - 18px)); min-height: 0; padding: 14px; }
+    .document-frame { min-height: 0; }
+    .document-body { padding: 12px; }
+    .page-footer { padding: 0 18px 18px; }
+    .empty-preview, .loading { min-height: 360px; }
+  }
+}
+
+/* states: 表示状態 */
+@layer states { .is-hidden { display: none; } }
+
+/* print: CSS上でもA4実寸を固定し、1パネルをA4 1ページにする */
+@layer print {
+  @page { size: A4 portrait; margin: 0; }
+  @media print {
+    html, body { width: 210mm; margin: 0; padding: 0; background: #fff; }
+    .hero, .sidebar { display: none; }
+    .app { width: 210mm; max-width: none; margin: 0; padding: 0; }
+    .workspace { display: block; width: 210mm; }
+    .preview-shell { width: 210mm; margin: 0; padding: 0; overflow: visible; }
+    .pages { display: block; width: 210mm; }
+    .paper-page {
+      display: block;
+      width: 210mm;
+      height: 297mm;
+      margin: 0;
+      padding: 5mm;
+      overflow: hidden;
+      border: 0;
+      box-shadow: none;
+      break-after: page;
+      page-break-after: always;
+    }
+    .paper-page:last-child { break-after: auto; page-break-after: auto; }
+    .document-frame { width: 200mm; height: 287mm; margin: 0; box-shadow: none; break-inside: avoid; page-break-inside: avoid; }
+    .document-body { width: 100%; min-width: 0; padding: 3mm; }
+  }
+}
+</style>
+<!-- Word(.docx) 展開用。docx-previewより先にJSZipを読み込む -->
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/docx-preview@0.3.6/dist/docx-preview.min.js"></script>
+</head>
+<body>
+<div class="app">
+  <header class="hero">
+    <div class="hero-copy">
+      <p class="eyebrow">PDF / Word Preview</p>
+      <h1>PDF・Word 資料プレビュー</h1>
+      <p>PDFまたはWord（.docx）を1つ読み込み、A4縦（210mm × 297mm）を基準に1ページごとの資料パネルへ整えます。</p>
+    </div>
+    <div class="top-actions">
+      <button class="btn" id="downloadBtn" type="button">HTMLで保存</button>
+      <button class="btn primary" id="printBtn" type="button">印刷 / PDF保存</button>
+    </div>
+  </header>
+
+  <main class="workspace">
+    <aside class="sidebar">
+      <section class="uni-photo-dropbox" id="dropbox">
+        <label class="uni-photo-dropbox__zone" id="dropzone">
+          <span class="uni-photo-dropbox__inner">
+            <span class="uni-photo-dropbox__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke-width="2">
+                <path d="M12 16V4"></path><path d="m7 9 5-5 5 5"></path><path d="M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"></path>
+              </svg>
+            </span>
+            <span class="uni-photo-dropbox__copy">
+              <span class="uni-photo-dropbox__title">PDF・Wordをアップロード</span>
+              <span class="uni-photo-dropbox__guide">クリックして選択、またはここへドラッグ</span>
+              <span class="uni-photo-dropbox__meta">PDF・Word（.docx）に対応 / 1ファイルのみ</span>
+            </span>
+          </span>
+          <input class="uni-photo-dropbox__input" id="fileInput" type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+        </label>
+        <div class="uni-photo-dropbox__selected" id="selectedFileBox">
+          <span class="uni-photo-dropbox__selected-icon" id="selectedFileIcon">DOC</span>
+          <span class="uni-photo-dropbox__selected-copy">
+            <span class="uni-photo-dropbox__selected-name" id="selectedFileName"></span>
+            <span class="uni-photo-dropbox__selected-meta">読み込み済みです。別のファイルを選ぶと置き換わります。</span>
+          </span>
+          <button class="uni-photo-dropbox__change" id="changeFileBtn" type="button">入れ替える</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>表示について</h2>
+        <p>PDF・Wordとも、文書のページ数に応じてパネルを作ります。印刷時は1パネルを1ページとして出力します。</p>
+        <div class="row">
+          <button class="btn" id="refreshDateBtn" type="button">資料印刷日時を現在時刻に更新</button>
+          <button class="btn" id="clearBtn" type="button">内容をクリア</button>
+        </div>
+        <div class="hint">Wordは .docx に対応します。古い .doc 形式は対象外です。</div>
+      </section>
+    </aside>
+
+    <div class="preview-shell">
+      <div class="pages" id="pages"></div>
+    </div>
+  </main>
+</div>
+
+<script type="module">
+import * as pdfjsLib from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.min.mjs';
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs';
+
+(() => {
+  'use strict';
+  const $ = selector => document.querySelector(selector);
+  const dropzone = $('#dropzone');
+  const fileInput = $('#fileInput');
+  const pages = $('#pages');
+  const selectedFileBox = $('#selectedFileBox');
+  const selectedFileName = $('#selectedFileName');
+  const selectedFileIcon = $('#selectedFileIcon');
+  let createdDate = new Date();
+
+  function formatDate(date) {
+    const y = date.getFullYear();
+    const m = date.getMonth() + 1;
+    const d = date.getDate();
+    const hh = String(date.getHours()).padStart(2,'0');
+    const mm = String(date.getMinutes()).padStart(2,'0');
+    return `資料印刷日時：${y}年${m}月${d}日 ${hh}:${mm}`;
+  }
+
+  function updateDates() {
+    document.querySelectorAll('[data-created-at]').forEach(el => { el.textContent = formatDate(createdDate); });
+  }
+
+  function createPage(kind, contentNode, pageNo = 1, totalPages = 1) {
+    const page = document.createElement('article');
+    page.className = `paper-page paper-page--${kind}`;
+    const frame = document.createElement('section');
+    frame.className = 'document-frame';
+    const body = document.createElement('div');
+    body.className = 'document-body';
+    body.append(contentNode);
+    const footer = document.createElement('footer');
+    footer.className = 'page-footer';
+    const date = document.createElement('p');
+    date.className = 'created-at';
+    date.dataset.createdAt = '';
+    const pageInfo = document.createElement('p');
+    pageInfo.className = 'page-info';
+    pageInfo.textContent = `${pageNo} / ${totalPages}ページ`;
+    footer.append(date,pageInfo);
+    frame.append(body,footer);
+    page.append(frame);
+    return page;
+  }
+
+  function clearPages() { pages.innerHTML = ''; }
+
+  function showEmpty() {
+    clearPages();
+    const wrap = document.createElement('div');
+    wrap.className = 'empty-preview';
+    wrap.innerHTML = '<div><strong>ここに資料が表示されます</strong><span>PDFまたはWord（.docx）を1個読み込んでください。</span></div>';
+    pages.append(createPage('empty',wrap));
+    updateDates();
+  }
+
+  function resetFileUI() {
+    selectedFileBox.classList.remove('is-visible');
+    dropzone.style.display = 'grid';
+    fileInput.value = '';
+  }
+
+  function clearDocument() { showEmpty(); resetFileUI(); }
+
+  function showSelectedFile(file,icon) {
+    selectedFileName.textContent = file.name || 'ファイル';
+    selectedFileIcon.textContent = icon;
+    selectedFileBox.classList.add('is-visible');
+    dropzone.style.display = 'none';
+  }
+
+  async function renderPdf(file) {
+    clearPages();
+    const loading = document.createElement('div');
+    loading.className = 'loading';
+    loading.textContent = 'PDFをページごとに読み込んでいます…';
+    pages.append(createPage('pdf',loading));
+    updateDates();
+
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const base = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/';
+    const loadingTask = pdfjsLib.getDocument({
+      data: bytes,
+      cMapUrl: base + 'cmaps/',
+      cMapPacked: true,
+      standardFontDataUrl: base + 'standard_fonts/',
+      wasmUrl: base + 'wasm/',
+      useSystemFonts: true,
+      disableFontFace: false,
+      isEvalSupported: true
+    });
+    const pdf = await loadingTask.promise;
+    clearPages();
+
+    for (let pageNo = 1; pageNo <= pdf.numPages; pageNo += 1) {
+      const pdfPage = await pdf.getPage(pageNo);
+      const baseViewport = pdfPage.getViewport({ scale: 1 });
+      const targetWidth = 1800;
+      const scale = Math.max(1.5,targetWidth / baseViewport.width);
+      const viewport = pdfPage.getViewport({ scale });
+      const canvas = document.createElement('canvas');
+      canvas.className = 'pdf-canvas';
+      canvas.width = Math.floor(viewport.width);
+      canvas.height = Math.floor(viewport.height);
+      canvas.setAttribute('aria-label',`PDF ${pageNo}ページ目`);
+      const ctx = canvas.getContext('2d',{ alpha:false, willReadFrequently:false });
+      ctx.save();
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.restore();
+      await pdfPage.render({
+        canvasContext: ctx,
+        viewport,
+        intent: 'display',
+        background: '#ffffff'
+      }).promise;
+      pages.append(createPage('pdf',canvas,pageNo,pdf.numPages));
+      pdfPage.cleanup();
+    }
+    updateDates();
+  }
+
+  async function renderWord(file) {
+    clearPages();
+    const loading = document.createElement('div');
+    loading.className = 'loading';
+    loading.textContent = 'Wordをページごとに読み込んでいます…';
+    pages.append(createPage('word',loading));
+    updateDates();
+
+    if (!window.JSZip || typeof window.JSZip.loadAsync !== 'function') {
+      throw new Error('Wordファイル展開用ライブラリ（JSZip）を読み込めませんでした。通信状態を確認して再読み込みしてください。');
+    }
+    if (!window.docx || typeof window.docx.renderAsync !== 'function') {
+      throw new Error('Word描画ライブラリ（docx-preview）を読み込めませんでした。通信状態を確認して再読み込みしてください。');
+    }
+
+    const buffer = await file.arrayBuffer();
+    const temp = document.createElement('div');
+    temp.style.position = 'fixed';
+    temp.style.left = '-100000px';
+    temp.style.top = '0';
+    temp.style.width = '1200px';
+    temp.style.visibility = 'hidden';
+    document.body.append(temp);
+
+    try {
+      await window.docx.renderAsync(buffer,temp,null,{
+        className: 'docx',
+        inWrapper: true,
+        ignoreWidth: false,
+        ignoreHeight: false,
+        ignoreFonts: false,
+        breakPages: true,
+        ignoreLastRenderedPageBreak: false,
+        experimental: true,
+        useBase64URL: true
+      });
+
+      const sections = [...temp.querySelectorAll('section.docx')];
+      clearPages();
+      if (!sections.length) throw new Error('Wordのページを取得できませんでした。');
+
+      // Wordは横幅だけを必要最小限に縮小し、A4の表示領域を超える高さは
+      // 次の資料パネルへ送る。長いWordを1ページへ押し込めず、内容も切り捨てない。
+      const MM_TO_PX = 96 / 25.4;
+      const WORD_MAX_WIDTH = 192 * MM_TO_PX;
+      const WORD_PAGE_HEIGHT = 264 * MM_TO_PX;
+      const slices = [];
+
+      sections.forEach((section,sectionIndex) => {
+        const rect = section.getBoundingClientRect();
+        const sourceWidth = Math.max(rect.width, section.offsetWidth, section.scrollWidth, 1);
+        const sourceHeight = Math.max(rect.height, section.offsetHeight, section.scrollHeight, 1);
+        const scale = Math.min(1, WORD_MAX_WIDTH / sourceWidth);
+        const scaledHeight = sourceHeight * scale;
+        const sliceCount = Math.max(1, Math.ceil(scaledHeight / WORD_PAGE_HEIGHT));
+
+        for (let sliceIndex = 0; sliceIndex < sliceCount; sliceIndex += 1) {
+          slices.push({ section, sectionIndex, sourceWidth, sourceHeight, scale, sliceIndex });
+        }
+      });
+
+      slices.forEach((item,pageIndex) => {
+        const { section, sourceWidth, sourceHeight, scale, sliceIndex } = item;
+        const offsetY = sliceIndex * WORD_PAGE_HEIGHT;
+
+        const host = document.createElement('div');
+        host.className = 'word-page-host';
+
+        const slice = document.createElement('div');
+        slice.className = 'word-page-slice';
+
+        const scaleBox = document.createElement('div');
+        scaleBox.className = 'word-page-scale-box';
+        scaleBox.style.width = `${sourceWidth * scale}px`;
+        scaleBox.style.height = `${sourceHeight * scale}px`;
+
+        const cloned = section.cloneNode(true);
+        cloned.setAttribute('aria-label',`Word ${pageIndex + 1}ページ目`);
+
+        // Word内の区切り線（ChatGPTの --- に相当）は、段落のインデント等に
+        // 引っ張られず、線そのものが中央に来るようにする。
+        cloned.querySelectorAll('hr').forEach((rule) => {
+          // 元のWord側で100%幅やインデントが付いていても、区切り線だけは
+          // 本文領域の中央に、左右ほぼ均等な余白を持つ長さで配置する。
+          rule.style.display = 'block';
+          rule.style.width = '88%';
+          rule.style.maxWidth = '88%';
+          rule.style.marginLeft = 'auto';
+          rule.style.marginRight = 'auto';
+          rule.style.boxSizing = 'border-box';
+          rule.style.alignSelf = 'center';
+          rule.style.float = 'none';
+        });
+
+        cloned.style.width = `${sourceWidth}px`;
+        cloned.style.minHeight = `${sourceHeight}px`;
+        cloned.style.height = 'auto';
+        cloned.style.top = `${-offsetY}px`;
+        cloned.style.transform = `scale(${scale})`;
+
+        scaleBox.append(cloned);
+        slice.append(scaleBox);
+        host.append(slice);
+        pages.append(createPage('word',host,pageIndex + 1,slices.length));
+      });
+      updateDates();
+    } finally {
+      temp.remove();
+    }
+  }
+
+  async function loadFile(file) {
+    if (!file) return;
+    const name = file.name || 'ファイル';
+    const isPDF = /\.pdf$/i.test(name) || file.type === 'application/pdf';
+    const isWord = /\.docx$/i.test(name) || file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    if (!isPDF && !isWord) {
+      alert('PDFまたはWord（.docx）のみ対応しています。');
+      return;
+    }
+
+    createdDate = new Date();
+    showSelectedFile(file,isPDF ? 'PDF' : 'DOCX');
+    try {
+      if (isPDF) await renderPdf(file);
+      else await renderWord(file);
+    } catch (error) {
+      console.error(error);
+      alert('ファイルの読み込みに失敗しました。\n' + (error?.message || ''));
+      showEmpty();
+    }
+  }
+
+  ['dragenter','dragover'].forEach(type => dropzone.addEventListener(type,event => {
+    event.preventDefault();
+    dropzone.classList.add('is-dragging');
+  }));
+  ['dragleave','drop'].forEach(type => dropzone.addEventListener(type,event => {
+    event.preventDefault();
+    dropzone.classList.remove('is-dragging');
+  }));
+  dropzone.addEventListener('drop',event => loadFile(event.dataTransfer.files[0]));
+  fileInput.addEventListener('change',() => loadFile(fileInput.files[0]));
+  $('#changeFileBtn').addEventListener('click',() => fileInput.click());
+  $('#refreshDateBtn').addEventListener('click',() => { createdDate = new Date(); updateDates(); });
+  $('#clearBtn').addEventListener('click',clearDocument);
+  $('#printBtn').addEventListener('click',() => window.print());
+
+  $('#downloadBtn').addEventListener('click',() => {
+    const clone = document.documentElement.cloneNode(true);
+    clone.querySelectorAll('.hero,.sidebar').forEach(el => el.remove());
+    clone.querySelectorAll('script').forEach(el => el.remove());
+    clone.querySelectorAll('canvas.pdf-canvas').forEach(canvas => {
+      const label = canvas.getAttribute('aria-label');
+      const original = [...document.querySelectorAll('canvas.pdf-canvas')].find(item => item.getAttribute('aria-label') === label);
+      if (!original) return;
+      const img = clone.ownerDocument.createElement('img');
+      img.className = 'pdf-canvas';
+      img.alt = label || 'PDFページ';
+      img.src = original.toDataURL('image/png');
+      canvas.replaceWith(img);
+    });
+    const app = clone.querySelector('.app');
+    const workspace = clone.querySelector('.workspace');
+    const preview = clone.querySelector('.preview-shell');
+    if (app) app.style.padding = '0';
+    if (workspace) workspace.style.display = 'block';
+    if (preview) preview.style.padding = '20px';
+    const html = '<!doctype html>\n' + clone.outerHTML;
+    const blob = new Blob([html],{ type:'text/html;charset=utf-8' });
+    const anchor = document.createElement('a');
+    anchor.href = URL.createObjectURL(blob);
+    anchor.download = 'PDF・Word資料プレビュー.html';
+    anchor.click();
+    setTimeout(() => URL.revokeObjectURL(anchor.href),1000);
+  });
+
+  showEmpty();
+})();
+</script>
+</body>
+</html>
