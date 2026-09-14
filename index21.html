@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>PDF・Word 資料プレビュー</title>
+<title>PDF・Word・PNG 資料プレビュー</title>
 <style>
 @layer base, layout, upload, controls, preview, states, print;
 
@@ -158,7 +158,8 @@
   .created-at, .page-info { margin: 0; }
   .created-at { text-align: left; }
   .page-info { margin-left: auto; text-align: right; white-space: nowrap; }
-  .pdf-canvas { display: block; width: 100%; height: auto; max-height: 258mm; object-fit: contain; border-radius: 10px; background: #fff; box-shadow: 0 4px 14px rgba(30,40,60,.06); }
+  .pdf-canvas, .png-canvas { display: block; width: 100%; height: auto; max-height: 258mm; object-fit: contain; border-radius: 10px; background: #fff; box-shadow: 0 4px 14px rgba(30,40,60,.06); }
+  .png-canvas { max-height: none; }
   .word-page-host { width: 100%; min-width: 0; display: grid; place-items: start center; overflow: hidden; }
   .word-page-slice { position: relative; width: 100%; height: 264mm; overflow: hidden; }
   .word-page-scale-box { position: absolute; top: 0; left: 50%; flex: 0 0 auto; max-width: none; max-height: none; overflow: visible; transform: translateX(-50%); }
@@ -216,9 +217,9 @@
 <div class="app">
   <header class="hero">
     <div class="hero-copy">
-      <p class="eyebrow">PDF / Word Preview</p>
-      <h1>PDF・Word 資料プレビュー</h1>
-      <p>PDFまたはWord（.docx）を1つ読み込み、A4縦（210mm × 297mm）を基準に1ページごとの資料パネルへ整えます。</p>
+      <p class="eyebrow">PDF / Word / PNG Preview</p>
+      <h1>PDF・Word・PNG 資料プレビュー</h1>
+      <p>PDF・Word（.docx）に加え、スクリーンショット印刷用としてPNGを1つ読み込めます。PNGはA4縦の表示範囲ごとに分割します。</p>
     </div>
     <div class="top-actions">
       <button class="btn" id="downloadBtn" type="button">HTMLで保存</button>
@@ -237,12 +238,12 @@
               </svg>
             </span>
             <span class="uni-photo-dropbox__copy">
-              <span class="uni-photo-dropbox__title">PDF・Wordをアップロード</span>
+              <span class="uni-photo-dropbox__title">PDF・Word・PNGをアップロード</span>
               <span class="uni-photo-dropbox__guide">クリックして選択、またはここへドラッグ</span>
-              <span class="uni-photo-dropbox__meta">PDF・Word（.docx）に対応 / 1ファイルのみ</span>
+              <span class="uni-photo-dropbox__meta">PDF・Word（.docx）・PNGに対応 / 1ファイルのみ</span>
             </span>
           </span>
-          <input class="uni-photo-dropbox__input" id="fileInput" type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+          <input class="uni-photo-dropbox__input" id="fileInput" type="file" accept=".pdf,.docx,.png,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/png">
         </label>
         <div class="uni-photo-dropbox__selected" id="selectedFileBox">
           <span class="uni-photo-dropbox__selected-icon" id="selectedFileIcon">DOC</span>
@@ -256,12 +257,12 @@
 
       <section class="card">
         <h2>表示について</h2>
-        <p>PDF・Wordとも、文書のページ数に応じてパネルを作ります。印刷時は1パネルを1ページとして出力します。</p>
+        <p>PDF・Wordは文書のページ数に応じてパネルを作ります。PNGはスクリーンショット印刷用としてA4表示範囲ごとに分割し、印刷時は1パネルを1ページとして出力します。</p>
         <div class="row">
           <button class="btn" id="refreshDateBtn" type="button">資料印刷日時を現在時刻に更新</button>
           <button class="btn" id="clearBtn" type="button">内容をクリア</button>
         </div>
-        <div class="hint">Wordは .docx に対応します。古い .doc 形式は対象外です。</div>
+        <div class="hint">Wordは .docx に対応します。PNGは縦長スクリーンショット向けで、次ページは前ページ末尾から80px重ねて表示します。</div>
       </section>
     </aside>
 
@@ -327,7 +328,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dis
     clearPages();
     const wrap = document.createElement('div');
     wrap.className = 'empty-preview';
-    wrap.innerHTML = '<div><strong>ここに資料が表示されます</strong><span>PDFまたはWord（.docx）を1個読み込んでください。</span></div>';
+    wrap.innerHTML = '<div><strong>ここに資料が表示されます</strong><span>PDF、Word（.docx）、またはPNGを1個読み込んでください。</span></div>';
     pages.append(createPage('empty',wrap));
     updateDates();
   }
@@ -395,6 +396,71 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dis
       pages.append(createPage('pdf',canvas,pageNo,pdf.numPages));
       pdfPage.cleanup();
     }
+    updateDates();
+  }
+
+  async function renderPng(file) {
+    clearPages();
+    const loading = document.createElement('div');
+    loading.className = 'loading';
+    loading.textContent = 'PNGを印刷用ページに分割しています…';
+    pages.append(createPage('png',loading));
+    updateDates();
+
+    const dataUrl = await new Promise((resolve,reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(reader.error || new Error('PNGの読み込みに失敗しました。'));
+      reader.readAsDataURL(file);
+    });
+    const image = await new Promise((resolve,reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error('PNG画像を展開できませんでした。'));
+      img.src = dataUrl;
+    });
+
+    // PNGはスクリーンショット印刷専用。
+    // A4内のPDF表示領域と同じ横幅へ縮小し、表示できる高さごとに縦分割する。
+    // 次ページは前ページ末尾から80pxだけ戻して開始する。
+    const MM_TO_PX = 96 / 25.4;
+    const PNG_MAX_WIDTH = 188 * MM_TO_PX;
+    const PNG_PAGE_HEIGHT = 258 * MM_TO_PX;
+    const OVERLAP_PX = 80;
+    const LAST_PAGE_CUTOFF_PX = 120;
+    const scale = Math.min(1, PNG_MAX_WIDTH / Math.max(image.naturalWidth,1));
+    const scaledWidth = Math.max(1, Math.round(image.naturalWidth * scale));
+    const scaledHeight = Math.max(1, Math.round(image.naturalHeight * scale));
+    const step = Math.max(1, Math.floor(PNG_PAGE_HEIGHT - OVERLAP_PX));
+    const starts = [];
+
+    for (let startY = 0; startY < scaledHeight; startY += step) {
+      const remaining = scaledHeight - startY;
+      if (startY > 0 && remaining <= LAST_PAGE_CUTOFF_PX) break;
+      starts.push(startY);
+      if (remaining <= PNG_PAGE_HEIGHT) break;
+    }
+
+    clearPages();
+    starts.forEach((startY,pageIndex) => {
+      const sliceHeight = Math.min(Math.floor(PNG_PAGE_HEIGHT), scaledHeight - startY);
+      const canvas = document.createElement('canvas');
+      canvas.className = 'png-canvas';
+      canvas.width = scaledWidth;
+      canvas.height = Math.max(1,sliceHeight);
+      canvas.setAttribute('aria-label',`PNG ${pageIndex + 1}ページ目`);
+      const ctx = canvas.getContext('2d',{ alpha:false });
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.drawImage(
+        image,
+        0, startY / scale,
+        image.naturalWidth, sliceHeight / scale,
+        0, 0,
+        scaledWidth, sliceHeight
+      );
+      pages.append(createPage('png',canvas,pageIndex + 1,starts.length));
+    });
     updateDates();
   }
 
@@ -514,16 +580,18 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dis
     const name = file.name || 'ファイル';
     const isPDF = /\.pdf$/i.test(name) || file.type === 'application/pdf';
     const isWord = /\.docx$/i.test(name) || file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-    if (!isPDF && !isWord) {
-      alert('PDFまたはWord（.docx）のみ対応しています。');
+    const isPNG = /\.png$/i.test(name) || file.type === 'image/png';
+    if (!isPDF && !isWord && !isPNG) {
+      alert('PDF、Word（.docx）、PNGのみ対応しています。');
       return;
     }
 
     createdDate = new Date();
-    showSelectedFile(file,isPDF ? 'PDF' : 'DOCX');
+    showSelectedFile(file,isPDF ? 'PDF' : isWord ? 'DOCX' : 'PNG');
     try {
       if (isPDF) await renderPdf(file);
-      else await renderWord(file);
+      else if (isWord) await renderWord(file);
+      else await renderPng(file);
     } catch (error) {
       console.error(error);
       alert('ファイルの読み込みに失敗しました。\n' + (error?.message || ''));
@@ -550,13 +618,14 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dis
     const clone = document.documentElement.cloneNode(true);
     clone.querySelectorAll('.hero,.sidebar').forEach(el => el.remove());
     clone.querySelectorAll('script').forEach(el => el.remove());
-    clone.querySelectorAll('canvas.pdf-canvas').forEach(canvas => {
+    clone.querySelectorAll('canvas.pdf-canvas,canvas.png-canvas').forEach(canvas => {
       const label = canvas.getAttribute('aria-label');
-      const original = [...document.querySelectorAll('canvas.pdf-canvas')].find(item => item.getAttribute('aria-label') === label);
+      const selector = canvas.classList.contains('png-canvas') ? 'canvas.png-canvas' : 'canvas.pdf-canvas';
+      const original = [...document.querySelectorAll(selector)].find(item => item.getAttribute('aria-label') === label);
       if (!original) return;
       const img = clone.ownerDocument.createElement('img');
-      img.className = 'pdf-canvas';
-      img.alt = label || 'PDFページ';
+      img.className = canvas.className;
+      img.alt = label || '資料ページ';
       img.src = original.toDataURL('image/png');
       canvas.replaceWith(img);
     });
@@ -570,7 +639,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dis
     const blob = new Blob([html],{ type:'text/html;charset=utf-8' });
     const anchor = document.createElement('a');
     anchor.href = URL.createObjectURL(blob);
-    anchor.download = 'PDF・Word資料プレビュー.html';
+    anchor.download = 'PDF・Word・PNG資料プレビュー.html';
     anchor.click();
     setTimeout(() => URL.revokeObjectURL(anchor.href),1000);
   });
