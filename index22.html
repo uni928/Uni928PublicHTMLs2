@@ -1,0 +1,1293 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="アプリの種類や機能を選ぶと、デバッグ時に確認すべき項目をMarkdown表として表示・保存できます。">
+  <title>デバッグ時にやるべきこと</title>
+  <style>
+    @layer reset, base, components, utilities;
+
+    @layer reset {
+      /* reset: レイアウト計算とフォーム要素の初期差をそろえる。 */
+      *, *::before, *::after { box-sizing: border-box; }
+      html { min-width: 320px; }
+      body, h1, h2, h3, p, ul, ol, pre { margin: 0; }
+      button, input { font: inherit; }
+      button { border: 0; }
+    }
+
+    @layer base {
+      /* base: 明るく落ち着いた作業画面の基本色と文字組みを定義する。 */
+      :root {
+        color-scheme: light;
+        --ink: #172033;
+        --muted: #667085;
+        --subtle: #f4f6fa;
+        --line: #e4e8f0;
+        --panel: #ffffff;
+        --accent: #315efb;
+        --accent-dark: #2448c7;
+        --accent-soft: #eef2ff;
+        --green: #13795b;
+        --shadow: 0 18px 50px rgba(32, 48, 91, .09);
+      }
+      body {
+        min-height: 100vh;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at 12% 0%, rgba(49, 94, 251, .08), transparent 28rem),
+          #f7f8fb;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans JP", sans-serif;
+        line-height: 1.7;
+      }
+      button, input { color: inherit; }
+      button { cursor: pointer; }
+      button:focus-visible, input:focus-visible, summary:focus-visible {
+        outline: 3px solid rgba(49, 94, 251, .28);
+        outline-offset: 2px;
+      }
+      ::selection { color: #fff; background: var(--accent); }
+    }
+
+    @layer components {
+      /* components: アプリ本体、選択カード、Markdownプレビューの見た目を定義する。 */
+      .app-shell {
+        width: min(1440px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 44px 0 64px;
+      }
+      .hero {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 24px;
+        margin-bottom: 26px;
+      }
+      .eyebrow {
+        margin-bottom: 10px;
+        color: var(--accent);
+        font-size: .75rem;
+        font-weight: 800;
+        letter-spacing: .14em;
+      }
+      h1 {
+        font-size: clamp(1.75rem, 3.2vw, 2.8rem);
+        letter-spacing: -.04em;
+        line-height: 1.2;
+      }
+      .hero-description {
+        max-width: 690px;
+        margin-top: 12px;
+        color: var(--muted);
+        font-size: .96rem;
+      }
+      .hero-mark {
+        display: grid;
+        flex: 0 0 auto;
+        place-items: center;
+        width: 82px;
+        height: 82px;
+        padding: 0;
+        border: 1px solid #dbe2f5;
+        border-radius: 24px;
+        color: var(--accent);
+        background: linear-gradient(145deg, #fff, #eef2ff);
+        box-shadow: 0 12px 28px rgba(49, 94, 251, .12);
+        font-size: 2.4rem;
+        font-weight: 800;
+        line-height: 1;
+        transition: border-color .18s ease, background .18s ease, transform .18s ease;
+      }
+      .hero-mark:hover { border-color: #b8c6f6; background: #e9eeff; transform: translateY(-2px); }
+      .workspace {
+        display: grid;
+        grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+        align-items: start;
+        gap: 20px;
+      }
+      .workspace.selection-hidden { grid-template-columns: minmax(0, 1fr); }
+      .panel {
+        border: 1px solid var(--line);
+        border-radius: 22px;
+        background: var(--panel);
+        box-shadow: var(--shadow);
+      }
+      .controls-panel {
+        position: sticky;
+        top: 18px;
+        padding: 22px;
+      }
+      .panel-top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 18px;
+      }
+      .section-kicker {
+        margin-bottom: 3px;
+        color: var(--accent);
+        font-size: .72rem;
+        font-weight: 800;
+        letter-spacing: .1em;
+      }
+      h2 {
+        font-size: 1.17rem;
+        letter-spacing: -.02em;
+        line-height: 1.35;
+      }
+      .section-note {
+        margin-top: 7px;
+        color: var(--muted);
+        font-size: .83rem;
+        line-height: 1.6;
+      }
+      .text-button {
+        padding: 5px 0;
+        color: var(--accent);
+        background: transparent;
+        font-size: .78rem;
+        font-weight: 750;
+        white-space: nowrap;
+      }
+      .text-button:hover { color: var(--accent-dark); }
+      .category-list { display: grid; gap: 9px; }
+      .category-card {
+        display: grid;
+        grid-template-columns: 42px minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 11px;
+        min-height: 64px;
+        padding: 10px 12px;
+        border: 1px solid var(--line);
+        border-radius: 15px;
+        background: #fff;
+        cursor: pointer;
+        transition: border-color .18s ease, background .18s ease, transform .18s ease;
+      }
+      .category-card:hover { border-color: #b8c6f6; transform: translateY(-1px); }
+      .category-card[role="button"]:focus-visible { outline: 3px solid rgba(49, 94, 251, .28); outline-offset: 2px; }
+      .category-card.is-on {
+        border-color: #b9c7fb;
+        background: var(--accent-soft);
+      }
+      .switch {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        width: 38px;
+        height: 22px;
+        padding: 3px;
+        border-radius: 999px;
+        background: #cbd2df;
+        transition: background .18s ease;
+      }
+      .switch::after {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: #fff;
+        box-shadow: 0 1px 4px rgba(23, 32, 51, .2);
+        content: "";
+        transition: transform .18s ease;
+      }
+      .category-card input:checked + .switch { background: var(--accent); }
+      .category-card input:checked + .switch::after { transform: translateX(16px); }
+      .switch-control {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        width: 38px;
+        height: 22px;
+        cursor: pointer;
+      }
+      .category-card input { position: absolute; inline-size: 1px; block-size: 1px; opacity: 0; }
+      .category-info { min-width: 0; }
+      .category-title {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        font-size: .9rem;
+        font-weight: 780;
+        line-height: 1.35;
+      }
+      .category-state {
+        color: var(--muted);
+        font-size: .68rem;
+        font-weight: 700;
+        letter-spacing: .04em;
+      }
+      .category-card.is-on .category-state { color: var(--accent); }
+      .category-description {
+        overflow: hidden;
+        margin-top: 2px;
+        color: var(--muted);
+        font-size: .75rem;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .eye-button {
+        display: inline-grid;
+        align-self: stretch;
+        place-items: center;
+        width: 42px;
+        min-height: 36px;
+        height: auto;
+        border: 1px solid #cbd6fa;
+        border-radius: 10px;
+        color: var(--accent);
+        background: #fff;
+        transition: border-color .18s ease, background .18s ease, transform .18s ease;
+      }
+      .eye-button:hover { border-color: var(--accent); background: #eef2ff; transform: translateY(-1px); }
+      .eye-icon {
+        position: relative;
+        display: block;
+        width: 18px;
+        height: 12px;
+        border: 1.8px solid currentColor;
+        border-radius: 90% / 80%;
+        transform: rotate(0deg);
+      }
+      .eye-icon::after {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: currentColor;
+        content: "";
+        transform: translate(-50%, -50%);
+      }
+      .helper-box {
+        margin-top: 17px;
+        padding: 12px 13px;
+        border-radius: 13px;
+        color: #536079;
+        background: #f8f9fc;
+        font-size: .75rem;
+        line-height: 1.6;
+      }
+      .preview-panel { min-width: 0; padding: 22px; }
+      .preview-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 18px;
+        margin-bottom: 18px;
+      }
+      .preview-summary {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px;
+        margin-top: 8px;
+      }
+      .summary-chip {
+        display: inline-flex;
+        align-items: center;
+        min-height: 25px;
+        padding: 2px 9px;
+        border: 1px solid #dfe4ed;
+        border-radius: 999px;
+        color: #596579;
+        background: #fbfcfe;
+        font-size: .72rem;
+        font-weight: 720;
+      }
+      .summary-chip strong { margin-right: 4px; color: var(--ink); }
+      .action-row {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 8px;
+      }
+      .action-button {
+        min-height: 39px;
+        padding: 8px 13px;
+        border: 1px solid #dfe4ed;
+        border-radius: 11px;
+        color: #344054;
+        background: #fff;
+        font-size: .77rem;
+        font-weight: 760;
+        transition: background .18s ease, border-color .18s ease, transform .18s ease;
+      }
+      .action-button:hover { border-color: #bbc8f2; background: #f8faff; transform: translateY(-1px); }
+      .action-button.primary {
+        border-color: var(--accent);
+        color: #fff;
+        background: var(--accent);
+        box-shadow: 0 8px 16px rgba(49, 94, 251, .18);
+      }
+      .action-button.primary:hover { border-color: var(--accent-dark); background: var(--accent-dark); }
+      .action-button:disabled { cursor: wait; opacity: .58; transform: none; }
+      .action-caption {
+        margin: -3px 0 17px;
+        color: var(--muted);
+        font-size: .76rem;
+        text-align: right;
+      }
+      .preview-frame {
+        min-height: 300px;
+        padding: clamp(18px, 3vw, 32px);
+        border: 1px solid #e4e8f0;
+        border-radius: 18px;
+        background: #fff;
+      }
+      .empty-state {
+        display: grid;
+        min-height: 260px;
+        place-items: center;
+        color: var(--muted);
+        font-size: .9rem;
+        text-align: center;
+      }
+      .markdown-content { color: #283348; }
+      .markdown-content h2 {
+        padding-bottom: 8px;
+        border-bottom: 1px solid #e9ecf2;
+        margin: 28px 0 13px;
+        color: #182338;
+        font-size: 1.2rem;
+      }
+      .markdown-content h2:first-child { margin-top: 0; }
+      .markdown-content p { margin: 11px 0; }
+      .markdown-content table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 0 0 26px;
+        font-size: .86rem;
+      }
+      .markdown-content th,
+      .markdown-content td {
+        padding: 11px 12px;
+        border: 1px solid #dfe4ed;
+        vertical-align: top;
+        text-align: left;
+      }
+      .markdown-content th {
+        color: #24345f;
+        background: #f0f3ff;
+        font-size: .77rem;
+        font-weight: 800;
+        white-space: nowrap;
+      }
+      .markdown-content td:first-child,
+      .markdown-content th:first-child { width: 65px; text-align: center; }
+      .markdown-content td:last-child,
+      .markdown-content th:last-child { width: 125px; }
+      .markdown-content tr:nth-child(even) td { background: #fcfdff; }
+      .check-cell { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; min-height: 22px; }
+      .check-cell input { width: 17px; height: 17px; accent-color: var(--accent); cursor: pointer; }
+      .source-details {
+        margin-top: 15px;
+        border-top: 1px solid #edf0f5;
+        padding-top: 14px;
+      }
+      .source-details summary {
+        color: #536079;
+        cursor: pointer;
+        font-size: .78rem;
+        font-weight: 750;
+      }
+      .source-details pre {
+        overflow: auto;
+        max-height: 380px;
+        margin-top: 11px;
+        padding: 15px;
+        border: 1px solid #e4e8f0;
+        border-radius: 12px;
+        color: #35445e;
+        background: #f8f9fc;
+        font: .73rem/1.7 ui-monospace, SFMono-Regular, Consolas, monospace;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+      .status {
+        min-height: 24px;
+        margin-top: 10px;
+        color: var(--green);
+        font-size: .78rem;
+      }
+      .status.is-error { color: #c0392b; }
+      .footer-note {
+        margin-top: 18px;
+        color: var(--muted);
+        font-size: .74rem;
+        text-align: center;
+      }
+      .selection-hidden .controls-panel { display: none; }
+      .viewer-mode .hero-mark { display: none; }
+      .viewer-mode .action-button:not(#editViewerButton) { display: none; }
+    }
+
+    @layer utilities {
+      /* utilities: 狭い画面向けの配置調整をまとめる。 */
+      .hidden { display: none; }
+      @media (max-width: 920px) {
+        .workspace { grid-template-columns: 1fr; }
+        .controls-panel { position: static; }
+      }
+      @media (max-width: 620px) {
+        .app-shell { width: min(100% - 20px, 1440px); padding: 24px 0 40px; }
+        .hero { align-items: flex-start; }
+        .hero-mark { width: 58px; height: 58px; border-radius: 18px; font-size: 1.55rem; }
+        .hero-description { font-size: .84rem; }
+        .controls-panel, .preview-panel { padding: 15px; border-radius: 17px; }
+        .preview-header { display: block; }
+        .action-row { justify-content: flex-start; margin-top: 15px; }
+        .action-caption { text-align: left; }
+        .preview-frame { padding: 13px; }
+        .markdown-content { overflow-x: auto; }
+        .markdown-content table { min-width: 680px; }
+        .markdown-content h2 { margin-top: 22px; }
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app-shell">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">DEBUG CHECKLIST</p>
+        <h1>デバッグ時にやるべきこと</h1>
+        <p class="hero-description">アプリの種類や機能をONにすると、必要な確認表が追加されます。表はMarkdownで生成し、画面では読みやすい表に変換して表示します。</p>
+      </div>
+      <button id="selectionToggleButton" class="hero-mark" type="button" aria-expanded="true" aria-controls="controlsPanel" aria-label="アプリの種類・機能を非表示にする">＋</button>
+    </header>
+
+    <div class="workspace">
+      <section id="controlsPanel" class="panel controls-panel" aria-labelledby="selectionTitle">
+        <div class="panel-top">
+          <div>
+            <p class="section-kicker">STEP 1</p>
+            <h2 id="selectionTitle">アプリの種類・機能</h2>
+            <p class="section-note">ONの項目に対応した確認表を出力します。</p>
+          </div>
+          <button id="toggleAllButton" class="text-button" type="button">すべてON</button>
+        </div>
+        <div id="categoryList" class="category-list"></div>
+        <div class="helper-box">最初は「共通」だけでも使えます。複数の機能をONにすると、表が上から順番に追加されます。ON/OFF・確認済み状態・このパネルの開閉はIndexedDBへリアルタイム保存します。</div>
+      </section>
+
+      <section class="panel preview-panel" aria-labelledby="previewTitle">
+        <div class="preview-header">
+          <div>
+            <p class="section-kicker">STEP 2</p>
+            <h2 id="previewTitle">生成された確認表</h2>
+            <div id="previewSummary" class="preview-summary" aria-live="polite"></div>
+          </div>
+          <div class="action-row">
+            <button id="editViewerButton" class="action-button hidden" type="button">再編集</button>
+            <button id="copyMarkdownButton" class="action-button" type="button">Markdownをコピー</button>
+            <button id="exportButton" class="action-button" type="button">エクスポート</button>
+            <button id="importButton" class="action-button" type="button">インポート</button>
+            <button id="saveViewerButton" class="action-button primary" type="button">閲覧用サイトとして保存</button>
+            <input id="importFileInput" type="file" accept=".html,text/html" hidden>
+          </div>
+        </div>
+        <p class="action-caption">エクスポートと閲覧用サイト保存は、圧縮データを含むURLへ移動する小さなHTMLを作成します。HTMLを開くとこのサイトで状態が復元されます。</p>
+        <div id="previewFrame" class="preview-frame">
+          <div id="previewContent" class="markdown-content"></div>
+        </div>
+        <details class="source-details">
+          <summary>生成されたMarkdownを確認する</summary>
+          <pre id="markdownSource"></pre>
+        </details>
+        <p id="status" class="status" role="status" aria-live="polite"></p>
+      </section>
+    </div>
+
+    <p class="footer-note">保存したHTMLは、サイトへ移動してフラグメント内の状態を復元します。閲覧用サイトでは「再編集」から編集画面に戻れます。</p>
+  </main>
+
+  <script>
+    const categories = [
+      {
+        id: "common",
+        title: "共通",
+        description: "どのアプリでも最初に確認",
+        initial: true,
+        rows: [
+          ["初期表示", "ページを開いた直後に、必要な要素が表示されるか確認する。", "表示崩れ・不要なローディングがない"],
+          ["再読み込み", "入力・選択・表示状態が想定どおり初期化または復元されるか確認する。", "F5と再訪問で結果が仕様どおり"],
+          ["空の状態", "入力なし・データなしの状態で操作する。", "案内が表示され、エラーで止まらない"],
+          ["不正な入力", "空白、極端に長い文字、記号、想定外の形式を入力する。", "画面が壊れず、分かりやすく拒否される"],
+          ["連打・二重実行", "送信・保存・生成などを短時間に複数回押す。", "二重登録や処理の競合が起きない"],
+          ["戻る・進む", "ブラウザの戻る・進む、画面の再訪問を行う。", "状態やURLが不自然にならない"],
+          ["画面幅", "スマートフォン幅、タブレット幅、広いデスクトップ幅で確認する。", "横スクロールや重なりがない"],
+          ["コンソール", "開発者ツールのConsoleを確認する。", "未処理のエラーや大量の警告がない"]
+        ]
+      },
+      {
+        id: "input",
+        title: "入力・フォーム",
+        description: "入力欄や選択UIがある場合",
+        rows: [
+          ["入力値の保持", "別の欄へ移動した後も入力値が意図せず消えないか確認する。", "フォーカス移動で値が変わらない"],
+          ["貼り付け", "通常文字、改行、長文をクリップボードから貼り付ける。", "改行や特殊文字が適切に扱われる"],
+          ["IME入力", "日本語入力中にEnterや候補確定を行う。", "送信や確定が誤発火しない"],
+          ["文字数制限", "上限付近と上限超過の文字を入力する。", "表示と実際の制限が一致する"],
+          ["選択状態", "チェック、ラジオ、プルダウンを変更して再操作する。", "選択内容が処理に反映される"],
+          ["キーボード操作", "Tab、Shift+Tab、Enter、Spaceだけで操作する。", "フォーカス順と操作結果が自然"]
+        ]
+      },
+      {
+        id: "ai",
+        title: "AI・API連携",
+        description: "外部APIや生成処理がある場合",
+        rows: [
+          ["正常応答", "代表的な入力でAPIを実行し、応答が最後まで表示されるか確認する。", "途中欠落・重複・表示崩れがない"],
+          ["空の応答", "APIが空文字や想定外のJSONを返す状況を確認する。", "画面が止まらず、再試行できる"],
+          ["通信エラー", "オフライン、タイムアウト、サーバーエラーを想定する。", "原因と次の操作が分かる"],
+          ["レート制限", "短時間に連続実行して429相当の応答を確認する。", "適切な待機・再試行・停止が行われる"],
+          ["ストリーム表示", "生成途中に画面を操作し、完了後の表示も確認する。", "途中表示と完了処理が競合しない"],
+          ["入力の送信範囲", "内部記憶や履歴など、送信前に内容を確認する。", "意図しない情報を送信しない"],
+          ["失敗後の復帰", "一度失敗した後に同じ処理を再実行する。", "古いエラー表示や二重結果が残らない"]
+        ]
+      },
+      {
+        id: "chat",
+        title: "会話・メッセージ",
+        description: "チャットや返信生成がある場合",
+        rows: [
+          ["1通目", "履歴がない状態で1通目の入力・生成・送信を確認する。", "1通目専用の表示や判定が正しい"],
+          ["2通目以降", "相手と自分のメッセージを複数ラリー入力する。", "順番・話者・現在位置が崩れない"],
+          ["長文・改行", "長いメッセージや複数行メッセージを入力する。", "改行除去や表示が仕様どおり"],
+          ["コピー", "生成結果や修正文をコピーし、貼り付け先で確認する。", "余計な記号や別の文が混ざらない"],
+          ["候補の選択", "複数候補から選択して、次の画面・入力欄へ進む。", "選択結果が正しいラリーに反映される"],
+          ["同じ操作の再実行", "同じ候補・同じフェーズを再度選択する。", "必要な再判定だけが行われる"],
+          ["センシティブな内容", "拒否・困惑・短文などの相手メッセージを入力する。", "無理な提案や不自然な返答にならない"]
+        ]
+      },
+      {
+        id: "storage",
+        title: "IndexedDB・ローカル保存",
+        description: "ブラウザ内に状態を保存する場合",
+        rows: [
+          ["初回保存", "データがない状態で保存を行い、再読み込みする。", "保存後に同じデータを復元できる"],
+          ["更新保存", "同じキーのデータを変更して保存する。", "古い値が意図せず残らない"],
+          ["重複保存", "同じ内容を複数回保存する。", "仕様にない重複レコードが増えない"],
+          ["削除・全消去", "削除後に再読み込みし、一覧や件数を確認する。", "対象だけが消え、他のデータは残る"],
+          ["破損・不正データ", "保存データが空・古い形式・壊れた状態を想定する。", "初期化や案内で安全に復帰する"],
+          ["複数タブ", "同じサイトを2タブで開いて保存・更新する。", "競合時に表示が破綻しない"]
+        ]
+      },
+      {
+        id: "file",
+        title: "ファイル入出力",
+        description: "読み込み・書き出し・zipがある場合",
+        rows: [
+          ["読み込み", "正しい拡張子の小さなファイルを読み込む。", "内容・文字コード・改行が正しい"],
+          ["大きなファイル", "サイズの大きいファイルを読み込む。", "固まり方や上限案内が想定どおり"],
+          ["拡張子違い", "対応外の拡張子や名前のないファイルを選ぶ。", "処理せず、理由を表示する"],
+          ["ドラッグ＆ドロップ", "ファイルをドロップ領域の内外へ落とす。", "意図しないブラウザ遷移がない"],
+          ["保存後に開く", "書き出したHTML・JSON・zipを実際に開く。", "別の場所でも破損せず使える"],
+          ["同名ファイル", "同じ名前で複数回保存する。", "上書き・置換の扱いが仕様どおり"]
+        ]
+      },
+      {
+        id: "image",
+        title: "画像・メディア",
+        description: "画像表示・変換・添付がある場合",
+        rows: [
+          ["通常画像", "小さなPNG・JPEG・WebPを表示・処理する。", "縦横比・向き・画質が正しい"],
+          ["大きな画像", "高解像度または縦長の画像を処理する。", "画面が極端に広がらない"],
+          ["透過画像", "透明部分のある画像を確認する。", "背景や保存結果が意図どおり"],
+          ["複数画像", "複数枚を追加・並べ替え・削除する。", "順番と対象が一致する"],
+          ["画像なし", "画像を追加せずに保存・実行する。", "空の状態が安全に扱われる"],
+          ["メモリ負荷", "連続して画像を追加・削除する。", "不要なプレビューやURLが残り続けない"]
+        ]
+      },
+      {
+        id: "auth",
+        title: "ログイン・認証",
+        description: "パスワードやログインがある場合",
+        rows: [
+          ["正しい認証情報", "正しいパスワードやキーでログインする。", "目的のデータだけが表示される"],
+          ["誤った認証情報", "誤った値、空欄、前後空白を試す。", "復号やログインに失敗し、再試行できる"],
+          ["自動ログイン", "URLや保存済み情報がある状態で開く。", "意図した場合だけ自動入力される"],
+          ["認証情報の保存", "保存成功・キャンセル・再訪問を確認する。", "保存条件と保存先が仕様どおり"],
+          ["ログアウト相当", "別ユーザーの情報が残らない状態を確認する。", "前のユーザーのデータを表示しない"],
+          ["URL共有", "認証情報を含むURLを履歴・コピー・共有で確認する。", "意図しない漏えいがない"]
+        ]
+      },
+      {
+        id: "billing",
+        title: "課金・サブスク",
+        description: "有料機能や利用回数制限がある場合",
+        rows: [
+          ["無料状態", "無料ユーザーで利用回数・対象機能を確認する。", "制限値と案内が一致する"],
+          ["有料状態", "有料ユーザーで制限解除や機能表示を確認する。", "購入状態が正しく反映される"],
+          ["日付切り替え", "日次・月次の境界を想定して利用数を確認する。", "リセット時刻が仕様どおり"],
+          ["購入中・失敗", "購入処理中、キャンセル、失敗を想定する。", "二重課金扱いや誤解を招く表示がない"],
+          ["復元", "再インストールや別端末相当の復元操作を確認する。", "購入済み状態を復元できる"],
+          ["上限到達", "利用上限の直前と到達後に実行する。", "1回超過して処理されない"]
+        ]
+      },
+      {
+        id: "webview",
+        title: "スマホ・WebView",
+        description: "スマホアプリ内やWebViewで使う場合",
+        rows: [
+          ["縦・横回転", "端末の向きを切り替えて表示・入力を確認する。", "入力やスクロール位置が不自然に消えない"],
+          ["ソフトキーボード", "入力欄をタップしてキーボード表示中に操作する。", "ボタンや入力欄が隠れない"],
+          ["戻る操作", "端末の戻るボタンやジェスチャーを使う。", "アプリ終了・パネル終了が適切"],
+          ["スリープ復帰", "画面を閉じてから復帰し、処理中の状態を確認する。", "重複実行や白画面にならない"],
+          ["低速端末", "連続操作や長文で反応速度を確認する。", "操作不能に見える時間が長すぎない"],
+          ["リンク・外部遷移", "外部リンクやファイル保存を端末で確認する。", "戻る方法と遷移先が明確"]
+        ]
+      },
+      {
+        id: "network",
+        title: "通信・キャッシュ",
+        description: "公開ページや外部通信がある場合",
+        rows: [
+          ["初回アクセス", "初めて開く端末・ブラウザでアクセスする。", "最新版のファイルと設定が取得される"],
+          ["再アクセス", "更新後に同じURLを再訪問する。", "古いHTML・CSS・JavaScriptが残らない"],
+          ["低速・切断", "通信を遅くする、または途中で切断する。", "待機表示と失敗後の復帰がある"],
+          ["APIキー未設定", "設定値がない環境で実行する。", "キーを画面に出さず、原因を案内する"],
+          ["CORS・権限", "異なる環境やローカルHTMLから実行する。", "制限時に空白画面で終わらない"],
+          ["古いタブ", "更新前に開いたタブで処理を続ける。", "バージョン違いの混在が安全に扱われる"]
+        ]
+      },
+      {
+        id: "publish",
+        title: "公開前の最終確認",
+        description: "公開・共有する前に確認",
+        rows: [
+          ["秘密情報", "HTML・JavaScript・Markdown・URLを検索する。", "APIキー、パスワード、個人情報が含まれない"],
+          ["不要コード", "使っていないボタン・処理・デバッグ出力を確認する。", "利用者に不要な機能が残っていない"],
+          ["保存ファイル", "保存した閲覧用HTMLを別フォルダから開く。", "元ページに依存せず表示できる"],
+          ["代表操作", "初回表示から主要操作まで一通り行う。", "公開前の版で再現性がある"],
+          ["エラー表示", "失敗時の文言を利用者目線で読む。", "原因・次の操作・問い合わせ先が分かる"],
+          ["スマホ実機", "実際のスマートフォンで主要画面を確認する。", "タップ領域・文字切れ・スクロールが問題ない"],
+          ["バックアップ", "公開前のHTMLや設定を別名で保存する。", "直前版へ戻せる"]
+        ]
+      }
+    ];
+
+    const state = {
+      selected: new Set(categories.filter(category => category.initial).map(category => category.id)),
+      checked: new Set(),
+      selectionPanelOpen: true
+    };
+
+    const DATABASE_NAME = "debug-checklist-table-db";
+    const DATABASE_VERSION = 1;
+    const STATE_STORE_NAME = "app-state";
+    const STATE_KEY = "current";
+    let databasePromise = null;
+    let stateSaveChain = Promise.resolve();
+
+    const categoryList = document.getElementById("categoryList");
+    const workspace = document.querySelector(".workspace");
+    const controlsPanel = document.getElementById("controlsPanel");
+    const previewContent = document.getElementById("previewContent");
+    const previewSummary = document.getElementById("previewSummary");
+    const markdownSource = document.getElementById("markdownSource");
+    const status = document.getElementById("status");
+    const toggleAllButton = document.getElementById("toggleAllButton");
+    const copyMarkdownButton = document.getElementById("copyMarkdownButton");
+    const editViewerButton = document.getElementById("editViewerButton");
+    const exportButton = document.getElementById("exportButton");
+    const importButton = document.getElementById("importButton");
+    const importFileInput = document.getElementById("importFileInput");
+    const saveViewerButton = document.getElementById("saveViewerButton");
+    const selectionToggleButton = document.getElementById("selectionToggleButton");
+    let appMode = "editor";
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function splitTableRow(line) {
+      let row = String(line).trim();
+      if (row.startsWith("|")) row = row.slice(1);
+      if (row.endsWith("|")) row = row.slice(0, -1);
+      const cells = [];
+      let cell = "";
+      let escaped = false;
+      for (const character of row) {
+        if (character === "|" && !escaped) {
+          cells.push(cell.trim());
+          cell = "";
+          continue;
+        }
+        if (character === "\\" && !escaped) {
+          escaped = true;
+          cell += character;
+          continue;
+        }
+        escaped = false;
+        cell += character;
+      }
+      cells.push(cell.trim());
+      return cells;
+    }
+
+    function isTableDivider(cells) {
+      return cells.length > 0 && cells.every(cell => /^:?-{3,}:?$/.test(cell.trim()));
+    }
+
+    function renderInlineMarkdown(value, checkKey, interactive) {
+      const check = String(value).trim().match(/^\[( |x|X)\]$/);
+      if (check) {
+        const checked = check[1].toLowerCase() === "x";
+        const checkedAttribute = checked ? " checked" : "";
+        const disabledAttribute = interactive ? "" : " disabled";
+        return '<label class="check-cell"><input class="md-check" type="checkbox" data-check-key="' + escapeHtml(checkKey) + '" aria-label="確認済みにする"' + checkedAttribute + disabledAttribute + '></label>';
+      }
+      let html = escapeHtml(value);
+      html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
+      html = html.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+      html = html.replace(/\n/g, "<br>");
+      return html;
+    }
+
+    function renderMarkdown(markdown, options = {}) {
+      const interactive = options.interactive !== false;
+      const checkKeys = options.checkKeys || [];
+      const sectionIds = options.sectionIds || [];
+      const lines = String(markdown || "").replace(/\r\n?/g, "\n").split("\n");
+      let html = "";
+      let checkIndex = 0;
+      let sectionIndex = 0;
+      let index = 0;
+      while (index < lines.length) {
+        const line = lines[index];
+        if (!line.trim()) {
+          index += 1;
+          continue;
+        }
+        const heading = line.match(/^##\s+(.+?)\s*$/);
+        if (heading) {
+          const sectionId = sectionIds[sectionIndex] ? ' id="preview-section-' + escapeHtml(sectionIds[sectionIndex]) + '"' : "";
+          html += "<h2" + sectionId + ">" + renderInlineMarkdown(heading[1], "", false) + "</h2>";
+          sectionIndex += 1;
+          index += 1;
+          continue;
+        }
+        if (line.trim().startsWith("|") && index + 1 < lines.length) {
+          const headerCells = splitTableRow(line);
+          const dividerCells = splitTableRow(lines[index + 1]);
+          if (isTableDivider(dividerCells)) {
+            html += "<table><thead><tr>";
+            headerCells.forEach(cell => { html += "<th>" + renderInlineMarkdown(cell, "", false) + "</th>"; });
+            html += "</tr></thead><tbody>";
+            index += 2;
+            while (index < lines.length && lines[index].trim().startsWith("|")) {
+              const cells = splitTableRow(lines[index]);
+              if (cells.length === 1 && !cells[0]) { index += 1; continue; }
+              html += "<tr>";
+              cells.forEach((cell, cellPosition) => {
+                if (cellPosition === 0 && /^\[( |x|X)\]$/.test(cell.trim())) {
+                  html += "<td>" + renderInlineMarkdown(cell.trim(), checkKeys[checkIndex] || String(checkIndex), interactive) + "</td>";
+                  checkIndex += 1;
+                } else {
+                  html += "<td>" + renderInlineMarkdown(cell, "", false) + "</td>";
+                }
+              });
+              html += "</tr>";
+              index += 1;
+            }
+            html += "</tbody></table>";
+            continue;
+          }
+        }
+        const paragraph = [];
+        while (index < lines.length && lines[index].trim() && !lines[index].trim().startsWith("|") && !/^##\s+/.test(lines[index])) {
+          paragraph.push(lines[index].trim());
+          index += 1;
+        }
+        if (paragraph.length) html += "<p>" + renderInlineMarkdown(paragraph.join("\n"), "", false) + "</p>";
+      }
+      return html;
+    }
+
+    function buildMarkdown() {
+      const selectedCategories = categories.filter(category => state.selected.has(category.id));
+      return selectedCategories.map(category => {
+        const rows = category.rows.map((row, rowIndex) => {
+          const checkKey = getCheckKey(category.id, rowIndex);
+          const mark = state.checked.has(checkKey) ? "[x]" : "[ ]";
+          return "| " + mark + " | " + row[0] + " | " + row[1] + " | " + row[2] + " |";
+        });
+        return [
+          "## " + category.title,
+          "",
+          "| 確認 | デバッグ項目 | 確認方法・期待結果 | 記録 |",
+          "| --- | --- | --- | --- |",
+          ...rows,
+          ""
+        ].join("\n");
+      }).join("\n").trim();
+    }
+
+    function getCheckKey(categoryId, rowIndex) {
+      return categoryId + ":" + rowIndex;
+    }
+
+    function renderCategoryList() {
+      categoryList.replaceChildren();
+      categories.forEach(category => {
+        const card = document.createElement("div");
+        card.className = "category-card" + (state.selected.has(category.id) ? " is-on" : "");
+        card.setAttribute("role", "button");
+        card.setAttribute("tabindex", "0");
+        card.setAttribute("aria-label", category.title + "を" + (state.selected.has(category.id) ? "OFF" : "ON"));
+        card.setAttribute("aria-pressed", String(state.selected.has(category.id)));
+        const switchLabel = document.createElement("label");
+        switchLabel.className = "switch-control";
+        const input = document.createElement("input");
+        input.type = "checkbox";
+        input.checked = state.selected.has(category.id);
+        input.setAttribute("aria-label", category.title + "を" + (input.checked ? "OFF" : "ON"));
+        const setCategoryState = enabled => {
+          if (enabled) state.selected.add(category.id);
+          else state.selected.delete(category.id);
+          renderAll();
+          saveStateInRealTime();
+          if (enabled) requestAnimationFrame(() => scrollToCategory(category.id));
+        };
+        input.addEventListener("change", () => {
+          setCategoryState(input.checked);
+        });
+        switchLabel.addEventListener("click", event => {
+          event.stopPropagation();
+        });
+        card.addEventListener("click", event => {
+          if (event.target.closest(".switch-control") || event.target.closest(".eye-button")) return;
+          setCategoryState(!state.selected.has(category.id));
+        });
+        card.addEventListener("keydown", event => {
+          if (event.target !== card || (event.key !== "Enter" && event.key !== " ")) return;
+          event.preventDefault();
+          setCategoryState(!state.selected.has(category.id));
+        });
+        const switchMark = document.createElement("span");
+        switchMark.className = "switch";
+        switchLabel.append(input, switchMark);
+        const info = document.createElement("span");
+        info.className = "category-info";
+        info.innerHTML = '<span class="category-title">' + escapeHtml(category.title) + '<span class="category-state">' + (input.checked ? "ON" : "OFF") + '</span></span><span class="category-description">' + escapeHtml(category.description) + '</span>';
+        card.append(switchLabel, info);
+        if (input.checked) {
+          const eyeButton = document.createElement("button");
+          eyeButton.type = "button";
+          eyeButton.className = "eye-button";
+          eyeButton.setAttribute("aria-label", category.title + "の確認表へスクロール");
+          eyeButton.title = category.title + "の確認表へスクロール";
+          eyeButton.innerHTML = '<span class="eye-icon" aria-hidden="true"></span>';
+          eyeButton.addEventListener("click", event => {
+            event.preventDefault();
+            event.stopPropagation();
+            scrollToCategory(category.id);
+          });
+          card.appendChild(eyeButton);
+        }
+        categoryList.appendChild(card);
+      });
+      toggleAllButton.textContent = state.selected.size === categories.length ? "すべてOFF" : "すべてON";
+    }
+
+    function updateSummary() {
+      const selected = categories.filter(category => state.selected.has(category.id));
+      const rowCount = selected.reduce((total, category) => total + category.rows.length, 0);
+      previewSummary.innerHTML = '<span class="summary-chip"><strong>' + selected.length + '</strong>表を表示中</span><span class="summary-chip"><strong>' + rowCount + '</strong>項目</span>';
+    }
+
+    function setStatus(message, isError = false) {
+      status.textContent = message;
+      status.classList.toggle("is-error", isError);
+    }
+
+    function openChecklistDatabase() {
+      if (databasePromise) return databasePromise;
+      if (!window.indexedDB) return Promise.reject(new Error("IndexedDBを利用できません。"));
+      databasePromise = new Promise((resolve, reject) => {
+        const request = window.indexedDB.open(DATABASE_NAME, DATABASE_VERSION);
+        request.onupgradeneeded = () => {
+          const database = request.result;
+          if (!database.objectStoreNames.contains(STATE_STORE_NAME)) database.createObjectStore(STATE_STORE_NAME);
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error || new Error("IndexedDBを開けませんでした。"));
+      });
+      return databasePromise;
+    }
+
+    function makeStateSnapshot() {
+      return {
+        v: 1,
+        selected: Array.from(state.selected),
+        checked: Array.from(state.checked),
+        selectionPanelOpen: state.selectionPanelOpen,
+        savedAt: Date.now()
+      };
+    }
+
+    async function writeStateSnapshot(snapshot) {
+      const database = await openChecklistDatabase();
+      await new Promise((resolve, reject) => {
+        const transaction = database.transaction(STATE_STORE_NAME, "readwrite");
+        transaction.objectStore(STATE_STORE_NAME).put(snapshot, STATE_KEY);
+        transaction.oncomplete = resolve;
+        transaction.onerror = () => reject(transaction.error || new Error("IndexedDBへの保存に失敗しました。"));
+        transaction.onabort = () => reject(transaction.error || new Error("IndexedDBへの保存が中断されました。"));
+      });
+    }
+
+    async function readStateSnapshot() {
+      const database = await openChecklistDatabase();
+      return new Promise((resolve, reject) => {
+        const transaction = database.transaction(STATE_STORE_NAME, "readonly");
+        const request = transaction.objectStore(STATE_STORE_NAME).get(STATE_KEY);
+        request.onsuccess = () => resolve(request.result || null);
+        request.onerror = () => reject(request.error || new Error("IndexedDBから読み込めませんでした。"));
+      });
+    }
+
+    function saveStateInRealTime() {
+      const snapshot = makeStateSnapshot();
+      stateSaveChain = stateSaveChain
+        .then(() => writeStateSnapshot(snapshot))
+        .catch(error => {
+          console.warn("IndexedDBへのリアルタイム保存に失敗しました。", error);
+          setStatus("IndexedDBへ保存できませんでした。", true);
+        });
+    }
+
+    function updateSelectionPanel() {
+      const viewerMode = appMode === "viewer";
+      workspace.classList.toggle("selection-hidden", viewerMode || !state.selectionPanelOpen);
+      document.body.classList.toggle("viewer-mode", viewerMode);
+      editViewerButton.classList.toggle("hidden", !viewerMode);
+      selectionToggleButton.textContent = state.selectionPanelOpen ? "＋" : "−";
+      selectionToggleButton.setAttribute("aria-expanded", String(state.selectionPanelOpen));
+      selectionToggleButton.setAttribute("aria-label", state.selectionPanelOpen ? "アプリの種類・機能を非表示にする" : "アプリの種類・機能を表示する");
+      controlsPanel.setAttribute("aria-hidden", String(viewerMode || !state.selectionPanelOpen));
+    }
+
+    function scrollToCategory(categoryId) {
+      const heading = document.getElementById("preview-section-" + categoryId);
+      if (!heading) return;
+      heading.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    function renderAll() {
+      const markdown = buildMarkdown();
+      updateSummary();
+      markdownSource.textContent = markdown || "（ONになっている項目がありません）";
+      if (!markdown) {
+        previewContent.innerHTML = '<div class="empty-state">左側のスイッチをONにすると<br>デバッグ確認表が表示されます。</div>';
+      } else {
+        const checkKeys = categories
+          .filter(category => state.selected.has(category.id))
+          .flatMap(category => category.rows.map((row, rowIndex) => getCheckKey(category.id, rowIndex)));
+        const sectionIds = categories.filter(category => state.selected.has(category.id)).map(category => category.id);
+        previewContent.innerHTML = renderMarkdown(markdown, { checkKeys, sectionIds });
+      }
+      renderCategoryList();
+      updateSelectionPanel();
+      setStatus("");
+    }
+
+    async function copyMarkdown() {
+      const markdown = buildMarkdown();
+      if (!markdown) {
+        setStatus("少なくとも1つの項目をONにしてください。", true);
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(markdown);
+        setStatus("Markdownをクリップボードへコピーしました。");
+      } catch (error) {
+        setStatus("Markdownのコピーに失敗しました。生成されたMarkdown欄から手動でコピーしてください。", true);
+      }
+    }
+
+    const FRAGMENT_COMPRESSION_FORMATS = [
+      { format: "brotli", key: "br" },
+      { format: "deflate-raw", key: "dr" },
+      { format: "gzip", key: "gz" }
+    ];
+    const FRAGMENT_RAW_FORMAT = { format: "base64", key: "b64" };
+
+    function bytesToBase64Url(bytes) {
+      let binary = "";
+      const chunkSize = 0x8000;
+      for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+        const chunk = bytes.subarray(offset, offset + chunkSize);
+        for (let index = 0; index < chunk.length; index += 1) binary += String.fromCharCode(chunk[index]);
+      }
+      return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+    }
+
+    function base64UrlToBytes(value) {
+      const base64 = String(value).replace(/-/g, "+").replace(/_/g, "/");
+      const padded = base64 + "=".repeat((4 - base64.length % 4) % 4);
+      const binary = atob(padded);
+      const bytes = new Uint8Array(binary.length);
+      for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+      return bytes;
+    }
+
+    async function compressFragmentData(bytes, format) {
+      const stream = new Blob([bytes]).stream().pipeThrough(new CompressionStream(format));
+      return new Uint8Array(await new Response(stream).arrayBuffer());
+    }
+
+    async function decompressFragmentData(bytes, format) {
+      const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream(format));
+      return new Uint8Array(await new Response(stream).arrayBuffer());
+    }
+
+    function makeFragmentExportData(mode) {
+      const snapshot = makeStateSnapshot();
+      return {
+        v: 2,
+        selected: snapshot.selected,
+        checked: snapshot.checked,
+        selectionPanelOpen: snapshot.selectionPanelOpen,
+        m: mode === "viewer" ? "viewer" : "editor"
+      };
+    }
+
+    async function makeBestFragmentPayload(mode) {
+      const bytes = new TextEncoder().encode(JSON.stringify(makeFragmentExportData(mode)));
+      const candidates = [];
+      if (("CompressionStream" in window) && ("DecompressionStream" in window)) {
+        for (const definition of FRAGMENT_COMPRESSION_FORMATS) {
+          try {
+            new DecompressionStream(definition.format);
+            const compressed = await compressFragmentData(bytes, definition.format);
+            const restored = await decompressFragmentData(compressed, definition.format);
+            if (sameByteArray(bytes, restored)) candidates.push({ key: definition.key, format: definition.format, encoded: bytesToBase64Url(compressed) });
+          } catch (error) {
+            // このブラウザで使えない圧縮形式は候補から除外する。
+          }
+        }
+      }
+      if (!candidates.length) return { key: FRAGMENT_RAW_FORMAT.key, format: FRAGMENT_RAW_FORMAT.format, encoded: bytesToBase64Url(bytes) };
+      candidates.sort((a, b) => (a.key.length + a.encoded.length) - (b.key.length + b.encoded.length));
+      return candidates[0];
+    }
+
+    function sameByteArray(a, b) {
+      if (a.length !== b.length) return false;
+      for (let index = 0; index < a.length; index += 1) if (a[index] !== b[index]) return false;
+      return true;
+    }
+
+    function getCurrentRestoreBaseUrl() {
+      const url = new URL(location.href);
+      url.search = "";
+      url.hash = "";
+      return url.href;
+    }
+
+    function buildFragmentUrl(payload) {
+      return getCurrentRestoreBaseUrl() + "#" + payload.key + "=" + payload.encoded;
+    }
+
+    function makeRedirectHtml(targetUrl) {
+      const hashIndex = targetUrl.indexOf("#");
+      const baseUrl = hashIndex >= 0 ? targetUrl.slice(0, hashIndex) : targetUrl;
+      const fragment = hashIndex >= 0 ? targetUrl.slice(hashIndex) : "";
+      return '<!doctype html><meta charset="utf-8"><script>location.replace(' + JSON.stringify(baseUrl + "?") + '+Date.now()+' + JSON.stringify(fragment) + ')<\/script>';
+    }
+
+    function makeFragmentFileName(mode) {
+      return mode === "viewer" ? "デバッグ時にやるべきこと_閲覧用サイト.html" : "デバッグ時にやるべきこと_エクスポート.html";
+    }
+
+    async function exportAsRedirectHtml(mode) {
+      if (!buildMarkdown()) {
+        setStatus("少なくとも1つの項目をONにしてください。", true);
+        return;
+      }
+      const button = mode === "viewer" ? saveViewerButton : exportButton;
+      const originalText = button.textContent;
+      try {
+        button.disabled = true;
+        button.textContent = "容量削減中…";
+        const payload = await makeBestFragmentPayload(mode);
+        const html = makeRedirectHtml(buildFragmentUrl(payload));
+        const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+        const objectUrl = URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        anchor.href = objectUrl;
+        anchor.download = makeFragmentFileName(mode);
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+        const label = mode === "viewer" ? "閲覧用サイト" : "エクスポートHTML";
+        setStatus(label + "を保存しました。圧縮形式：" + payload.format + "、フラグメントを含む保存HTML：約" + new TextEncoder().encode(html).length.toLocaleString("ja-JP") + " bytes");
+      } catch (error) {
+        setStatus(error && error.message ? error.message : "HTMLの保存に失敗しました。", true);
+      } finally {
+        button.disabled = false;
+        button.textContent = originalText;
+      }
+    }
+
+    function extractRedirectUrl(html) {
+      const text = String(html);
+      const dynamicMatch = text.match(new RegExp(String.raw`location\.replace\(("(?:[^"\\]|\\.)*")\+Date\.now\(\)\+("(?:[^"\\]|\\.)*")\)`));
+      if (dynamicMatch) {
+        try { return JSON.parse(dynamicMatch[1]) + "0" + JSON.parse(dynamicMatch[2]); } catch (error) {}
+      }
+      const directMatch = text.match(new RegExp(String.raw`location\.replace\(("(?:[^"\\]|\\.)*")\)`));
+      if (directMatch) {
+        try { return JSON.parse(directMatch[1]); } catch (error) {}
+      }
+      throw new Error("エクスポートHTMLの移動先を取得できませんでした。");
+    }
+
+    async function decodeFragmentUrl(url) {
+      const parsed = new URL(url);
+      const match = parsed.hash.match(/^#([^=]+)=([A-Za-z0-9_-]+)$/);
+      if (!match) throw new Error("保存データの形式が正しくありません。");
+      const definition = FRAGMENT_COMPRESSION_FORMATS.find(item => item.key === match[1]);
+      const restored = definition ? await decompressFragmentData(base64UrlToBytes(match[2]), definition.format) : match[1] === FRAGMENT_RAW_FORMAT.key ? base64UrlToBytes(match[2]) : null;
+      if (!restored) throw new Error("対応していない圧縮形式です。");
+      const data = JSON.parse(new TextDecoder().decode(restored));
+      if (!data || data.v !== 2 || !Array.isArray(data.selected) || !Array.isArray(data.checked)) throw new Error("保存データが正しくありません。");
+      return data;
+    }
+
+    function normalizeFragmentState(data) {
+      const validCategoryIds = new Set(categories.map(category => category.id));
+      return {
+        selected: new Set(data.selected.filter(id => validCategoryIds.has(id))),
+        checked: new Set(data.checked.filter(key => typeof key === "string")),
+        selectionPanelOpen: data.selectionPanelOpen !== false
+      };
+    }
+
+    function applyFragmentState(data) {
+      const normalized = normalizeFragmentState(data);
+      state.selected = normalized.selected;
+      state.checked = normalized.checked;
+      state.selectionPanelOpen = normalized.selectionPanelOpen;
+    }
+
+    function clearSaveFragment() {
+      try {
+        const url = new URL(location.href);
+        url.hash = "";
+        if (/^\?\d{13}$/.test(url.search)) url.search = "";
+        history.replaceState(history.state, "", url.pathname + url.search + url.hash);
+      } catch (error) {
+        // 履歴を書き換えられない環境でも、復元処理は継続する。
+      }
+    }
+
+    async function importHtml(file) {
+      if (!file) return;
+      try {
+        const html = await file.text();
+        const targetUrl = extractRedirectUrl(html);
+        const exportedData = await decodeFragmentUrl(targetUrl);
+        let storedData = null;
+        try { storedData = await readStateSnapshot(); } catch (error) {}
+        let usedStoredData = false;
+        if (storedData && storedData.v === 1) {
+          applyFragmentState(storedData);
+          usedStoredData = true;
+          appMode = exportedData.m === "viewer" ? "viewer" : "editor";
+        } else {
+          applyFragmentState(exportedData);
+          appMode = exportedData.m === "viewer" ? "viewer" : "editor";
+        }
+        renderAll();
+        saveStateInRealTime();
+        setStatus("HTMLから状態を読み込みました。" + (usedStoredData ? "IndexedDBの保存内容を優先しました。" : "") + (appMode === "viewer" ? "再編集ボタンで編集画面に戻れます。" : ""));
+      } catch (error) {
+        setStatus(error && error.message ? error.message : "HTMLを読み込めませんでした。", true);
+      } finally {
+        importFileInput.value = "";
+      }
+    }
+
+    async function initializeFromUrlOrIndexedDB() {
+      let exportedData = null;
+      let storedData = null;
+      if (/^#([^=]+)=([A-Za-z0-9_-]+)$/.test(location.hash)) {
+        try { exportedData = await decodeFragmentUrl(location.href); } catch (error) { setStatus(error.message || "URL内の保存データを読み込めませんでした。", true); }
+      }
+      try { storedData = await readStateSnapshot(); } catch (error) {}
+      if (storedData && storedData.v !== 1) storedData = null;
+      if (exportedData && storedData) {
+        applyFragmentState(storedData);
+        appMode = exportedData.m === "viewer" ? "viewer" : "editor";
+        clearSaveFragment();
+        renderAll();
+        saveStateInRealTime();
+        return;
+      }
+      if (exportedData) {
+        applyFragmentState(exportedData);
+        appMode = exportedData.m === "viewer" ? "viewer" : "editor";
+        clearSaveFragment();
+        renderAll();
+        saveStateInRealTime();
+        return;
+      }
+      if (storedData) {
+        applyFragmentState(storedData);
+        appMode = "editor";
+        renderAll();
+        return;
+      }
+      saveStateInRealTime();
+    }
+
+    toggleAllButton.addEventListener("click", () => {
+      const shouldTurnOn = state.selected.size !== categories.length;
+      state.selected = new Set(shouldTurnOn ? categories.map(category => category.id) : []);
+      renderAll();
+      saveStateInRealTime();
+      if (shouldTurnOn) requestAnimationFrame(() => scrollToCategory(categories[0].id));
+    });
+    selectionToggleButton.addEventListener("click", () => {
+      state.selectionPanelOpen = !state.selectionPanelOpen;
+      updateSelectionPanel();
+      saveStateInRealTime();
+    });
+    copyMarkdownButton.addEventListener("click", copyMarkdown);
+    exportButton.addEventListener("click", () => exportAsRedirectHtml("editor"));
+    importButton.addEventListener("click", () => importFileInput.click());
+    importFileInput.addEventListener("change", () => importHtml(importFileInput.files && importFileInput.files[0]));
+    saveViewerButton.addEventListener("click", () => exportAsRedirectHtml("viewer"));
+    editViewerButton.addEventListener("click", () => {
+      appMode = "editor";
+      state.selectionPanelOpen = true;
+      renderAll();
+      saveStateInRealTime();
+      setStatus("再編集モードに切り替えました。");
+    });
+    previewContent.addEventListener("change", event => {
+      const input = event.target.closest(".md-check");
+      if (!input) return;
+      const key = input.dataset.checkKey;
+      if (input.checked) state.checked.add(key);
+      else state.checked.delete(key);
+      renderAll();
+      saveStateInRealTime();
+    });
+
+    renderAll();
+    initializeFromUrlOrIndexedDB();
+  </script>
+</body>
+</html>
