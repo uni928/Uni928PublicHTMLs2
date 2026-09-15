@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>画像を高画質のまま拡大</title>
+<title>画像を高画質化して指定倍率に変換</title>
 <style>
 @layer reset, base, layout, components, responsive;
 
@@ -278,8 +278,8 @@
 <body>
 <main class="page">
   <section class="intro">
-    <h1>画像を高画質で拡大</h1>
-    <p>画像を入れて倍率を選ぶと、段階的拡大・高品質補間・輪郭補正・局所コントラスト補正を自動で組み合わせて高画質化します。処理した画像はPNGで保存できます。</p>
+    <h1>画像を高画質化して指定倍率に変換</h1>
+    <p>画像を入れて倍率を選ぶと、高品質補間・輪郭補正・局所コントラスト補正を自動で組み合わせて高画質化します。1.0倍では画像サイズを変えずに補正し、処理した画像はPNGで保存できます。</p>
   </section>
 
   <div class="uni-photo-dropbox">
@@ -309,8 +309,9 @@
   </div>
 
   <div class="scale-panel">
-    <label class="scale-panel__label" for="scaleSelect">拡大倍率</label>
+    <label class="scale-panel__label" for="scaleSelect">出力倍率</label>
     <select class="scale-panel__select" id="scaleSelect">
+      <option value="1">1.0x（元のサイズ）</option>
       <option value="1.2">1.2x</option>
       <option value="1.3">1.3x</option>
       <option value="1.5">1.5x</option>
@@ -330,7 +331,7 @@
     </select>
   </div>
 
-  <p class="quality-note">倍率が高いほど複数段階に分けて拡大し、輪郭のぼやけを抑える補正を自動で加えます。ノイズキャンセルは強くするほど細部が滑らかになります。</p>
+  <p class="quality-note">1.0倍では縦横のサイズを維持したまま補正します。倍率が高い場合は複数段階に分けて拡大し、輪郭のぼやけを抑える補正を自動で加えます。ノイズキャンセルは強くするほど細部が滑らかになります。</p>
 
   <div class="actions">
     <button class="download" type="button" disabled>高画質化した画像をダウンロード</button>
@@ -363,9 +364,11 @@
     }
   };
 
+  const formatScale = (scale) => String(scale) === '1' ? '1.0' : String(scale);
+
   const makeFileName = (name, scale) => {
     const base = name.replace(/\.[^.]+$/, '') || 'image';
-    return `${base}_${scale}x.png`;
+    return `${base}_${formatScale(scale)}x.png`;
   };
 
   const makeCanvas = (width, height) => {
@@ -540,7 +543,7 @@
         resultUrl = URL.createObjectURL(blob);
         download.disabled = false;
         const noiseLabel = noiseSelect.options[noiseSelect.selectedIndex].text;
-        status.textContent = `${width} × ${height} → ${outWidth} × ${outHeight} px（${scale}x・ノイズ ${noiseLabel}）`;
+        status.textContent = `${width} × ${height} → ${outWidth} × ${outHeight} px（${formatScale(scale)}x・ノイズ ${noiseLabel}）`;
       }, 'image/png');
     };
 
