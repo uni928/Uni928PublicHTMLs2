@@ -1,0 +1,18 @@
+<script>
+const D='index23-site-cache',V=1,S='site-content',K='index23-content-v1',B='./index23Body.html';
+if(!('indexedDB'in window))location.replace(B);
+else{
+ const r=indexedDB.open(D,V);
+ r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(S))r.result.createObjectStore(S)};
+ r.onerror=()=>location.replace(B);
+ r.onsuccess=()=>{
+  const d=r.result,q=d.transaction(S).objectStore(S).get(K);
+  q.onerror=()=>{d.close();location.replace(B)};
+  q.onsuccess=()=>{
+   const h=q.result?.html;d.close();
+   if(h){document.open();document.write(h);document.close()}
+   else location.replace(B);
+  };
+ };
+}
+</script>
