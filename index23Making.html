@@ -27,8 +27,8 @@
   .panel { padding: 1.25rem; background: #fff; border: 1px solid #e5e7ef; border-radius: 1.25rem; box-shadow: 0 10px 28px rgba(41,50,75,.07); }
   .field { display: grid; gap: .45rem; margin-bottom: 1rem; }
   .field label { font-weight: 750; }
-  .field input[type="text"] { width: 100%; padding: .8rem .9rem; border: 1px solid #cfd5e2; border-radius: .7rem; outline: 0; }
-  .field input[type="text"]:focus { border-color: #7567dc; box-shadow: 0 0 0 3px rgba(117,103,220,.13); }
+  .field input[type="text"], .field input[type="number"] { width: 100%; padding: .8rem .9rem; border: 1px solid #cfd5e2; border-radius: .7rem; outline: 0; }
+  .field input[type="text"]:focus, .field input[type="number"]:focus { border-color: #7567dc; box-shadow: 0 0 0 3px rgba(117,103,220,.13); }
   .help { margin: 0; color: #667085; font-size: .86rem; }
   .uni-photo-dropbox { padding: 20px; background: rgba(255,255,255,.97); border: 1px solid rgba(255,255,255,.9); border-radius: 24px; box-shadow: 0 8px 24px rgba(41,50,75,.07); }
   .uni-photo-dropbox__zone { position: relative; display: grid; place-items: center; width: 100%; height: 220px; overflow: hidden; border: 1.5px dashed rgba(117,103,220,.28); border-radius: 22px; background: linear-gradient(180deg,rgba(255,255,255,.98),rgba(248,247,253,.98)); cursor: pointer; transition: border-color .18s ease,transform .18s ease,box-shadow .18s ease; }
@@ -60,12 +60,17 @@
 <body>
 <main class="page">
   <h1>IndexedDB軽量ページ作成ツール</h1>
-  <p class="intro">HTMLを選ぶと、IndexedDBから復元する2ファイルを作成します。</p>
+  <p class="intro">HTMLを選ぶと、IndexedDBから復元する2ファイルと元ファイルを含む3ファイルを作成します。</p>
   <section class="panel">
     <div class="field">
       <label for="fileName">ファイル名</label>
       <input id="fileName" type="text" value="index.html" autocomplete="off" spellcheck="false">
       <p class="help">拡張子は自動調整されます。例：index.html → index.html / indexBody.html</p>
+    </div>
+    <div class="field">
+      <label for="version">バージョン</label>
+      <input id="version" type="number" value="1" min="1" step="1" inputmode="numeric">
+      <p class="help">IndexedDBに保存するバージョン番号です。古い番号の保存内容は生成時に削除します。</p>
     </div>
     <div class="uni-photo-dropbox">
       <label class="uni-photo-dropbox__zone" id="dropZone">
@@ -86,7 +91,7 @@
       <p id="fileNameView" class="file-name">ファイルはまだ選択されていません。</p>
     </div>
     <div class="actions">
-      <button id="downloadButton" class="primary" type="button" disabled>2ファイルをZIPでダウンロード</button>
+      <button id="downloadButton" class="primary" type="button" disabled>3ファイルをZIPでダウンロード</button>
       <button id="clearButton" class="secondary" type="button">クリア</button>
     </div>
     <p id="status" role="status" aria-live="polite"></p>
@@ -97,6 +102,7 @@
   const input = document.querySelector('#htmlInput');
   const zone = document.querySelector('#dropZone');
   const fileName = document.querySelector('#fileName');
+  const versionInput = document.querySelector('#version');
   const fileNameView = document.querySelector('#fileNameView');
   const downloadButton = document.querySelector('#downloadButton');
   const clearButton = document.querySelector('#clearButton');
@@ -115,26 +121,39 @@
     return btoa(binary);
   };
 
-  const readFile = file => new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(bytesToBase64(new Uint8Array(reader.result)));
-    reader.onerror = () => reject(reader.error || new Error('読み込みに失敗しました'));
-    reader.readAsArrayBuffer(file);
-  });
+  const readFile = async file => {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    return { encoded: bytesToBase64(bytes), bytes };
+  };
+
+  const getVersion = () => {
+    const value = Number.parseInt(versionInput.value, 10);
+    if (!Number.isInteger(value) || value < 1) throw new Error('バージョンは1以上の整数で入力してください');
+    versionInput.value = String(value);
+    return value;
+  };
+
+  const sourceEntryName = file => {
+    const originalName = (file?.name || 'source.html').replace(/\\/g, '/').split('/').pop() || 'source.html';
+    const safeName = originalName.replace(/[<>:"|?*\x00-\x1f]/g, '_');
+    return `source/${safeName}`;
+  };
 
   const esc = value => value.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\r/g, '\\r').replace(/\n/g, '\\n');
 
-  const makeIndex = name => `<script>
-const D='${esc(name)}',S='pages',K='${esc(name)}-content-v1',B='./${esc(name)}Body.html';
+  const makeIndex = (name, version) => `<script>
+const version=${version},D='${esc(name)}',S='pages',K=D+'-content-v'+version,B='./${esc(name)}Body.html';
 if(!('indexedDB'in window))location.replace(B);
 else{const r=indexedDB.open(D,1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(S))r.result.createObjectStore(S)};r.onerror=()=>location.replace(B);r.onsuccess=()=>{const d=r.result,q=d.transaction(S).objectStore(S).get(K);q.onerror=()=>{d.close();location.replace(B)};q.onsuccess=()=>{const h=q.result?.html;d.close();h?(document.open(),document.write(h),document.close()):location.replace(B)}}}
 <\/script>\n`;
 
-  const makeBody = (name, encoded) => `<script>
-const D='${esc(name)}',S='pages',K='${esc(name)}-content-v1',B='./${esc(name)}.html',E='${encoded}';
+  const makeBody = (name, version, encoded) => `<script>
+const version=${version};
+const clearOldVersions=()=>new Promise((ok,no)=>{const r=indexedDB.open('${esc(name)}',1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains('pages'))r.result.createObjectStore('pages')};r.onerror=()=>no(r.error);r.onsuccess=()=>{const d=r.result,t=d.transaction('pages','readwrite'),s=t.objectStore('pages');for(let i=1;i<version;i++)s.delete('${esc(name)}-content-v'+i);t.oncomplete=()=>{d.close();ok()};t.onerror=()=>{d.close();no(t.error)}}});
+const D='${esc(name)}',S='pages',K=D+'-content-v'+version,B='./${esc(name)}.html',E='${encoded}';
 const open=()=>new Promise((ok,no)=>{const r=indexedDB.open(D,1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(S))r.result.createObjectStore(S)};r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)});
 const decode=e=>new TextDecoder().decode(Uint8Array.from(atob(e),c=>c.charCodeAt(0)));
-open().then(d=>new Promise((ok,no)=>{const t=d.transaction(S,'readwrite');t.objectStore(S).put({html:decode(E),version:'v1',savedAt:new Date().toISOString()},K);t.oncomplete=ok;t.onerror=()=>no(t.error)})).then(()=>location.replace(B)).catch(e=>{console.error(e);document.body.textContent='保存に失敗しました。';});
+clearOldVersions().catch(e=>console.error(e)).then(()=>open()).then(d=>new Promise((ok,no)=>{const t=d.transaction(S,'readwrite');t.objectStore(S).put({html:decode(E),version:'v'+version,savedAt:new Date().toISOString()},K);t.oncomplete=()=>{d.close();ok()};t.onerror=()=>{d.close();no(t.error)}})).then(()=>location.replace(B)).catch(e=>{console.error(e);document.body.textContent='保存に失敗しました。';});
 <\/script>\n`;
   const onlyScript = value => /^<script>[\s\S]*<\/script>\n?$/.test(value);
 
@@ -151,10 +170,10 @@ open().then(d=>new Promise((ok,no)=>{const t=d.transaction(S,'readwrite');t.obje
   const u32 = (view, offset, value) => view.setUint32(offset, value, true);
 
   const makeZip = entries => {
-    const encoder = new TextEncoder(), chunks = [], central = [], offsets = [];
+    const encoder = new TextEncoder(), toBytes = data => typeof data === 'string' ? encoder.encode(data) : data instanceof Uint8Array ? data : new Uint8Array(data), chunks = [], central = [], offsets = [];
     let offset = 0;
     for (const entry of entries) {
-      const name = encoder.encode(entry.name), data = encoder.encode(entry.data), local = new ArrayBuffer(30 + name.length);
+      const name = encoder.encode(entry.name), data = toBytes(entry.data), local = new ArrayBuffer(30 + name.length);
       const view = new DataView(local);
       u32(view, 0, 0x04034b50); u16(view, 4, 20); u16(view, 6, 0x800); u16(view, 8, 0);
       u16(view, 10, 0); u16(view, 12, 0); u32(view, 14, crc32(data)); u32(view, 18, data.length);
@@ -185,16 +204,16 @@ open().then(d=>new Promise((ok,no)=>{const t=d.transaction(S,'readwrite');t.obje
   zone.addEventListener('drop', event => showFile(event.dataTransfer.files[0]));
   downloadButton.addEventListener('click', async () => {
     try {
-      const name = baseName(), encoded = await readFile(selectedFile);
-      const index = makeIndex(name), body = makeBody(name, encoded);
+      const name = baseName(), version = getVersion(), { encoded, bytes } = await readFile(selectedFile);
+      const index = makeIndex(name, version), body = makeBody(name, version, encoded);
       if (!onlyScript(index) || !onlyScript(body)) throw new Error('生成物がscriptタグだけではありません');
-      const zip = makeZip([{name: name + '.html', data: index}, {name: name + 'Body.html', data: body}]);
+      const zip = makeZip([{name: name + '.html', data: index}, {name: name + 'Body.html', data: body}, {name: sourceEntryName(selectedFile), data: bytes}]);
       const url = URL.createObjectURL(zip), link = document.createElement('a');
-      link.href = url; link.download = name + '-indexeddb.zip'; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
-      status.textContent = `${name}.html と ${name}Body.html をダウンロードしました。`;
+      link.href = url; link.download = name + '-indexeddb-ver' + version + '.zip'; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+      status.textContent = `${name}.html、${name}Body.html、${sourceEntryName(selectedFile)}をダウンロードしました。`;
     } catch (error) { console.error(error); status.textContent = 'ZIPの作成に失敗しました。'; }
   });
-  clearButton.addEventListener('click', () => { selectedFile = null; input.value = ''; fileName.value = 'index.html'; fileNameView.textContent = 'ファイルはまだ選択されていません。'; downloadButton.disabled = true; status.textContent = ''; });
+  clearButton.addEventListener('click', () => { selectedFile = null; input.value = ''; fileName.value = 'index.html'; versionInput.value = '1'; fileNameView.textContent = 'ファイルはまだ選択されていません。'; downloadButton.disabled = true; status.textContent = ''; });
 })();
 </script>
 </body>
