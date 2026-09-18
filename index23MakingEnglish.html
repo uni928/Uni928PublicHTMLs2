@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>IndexedDB Lightweight Page Builder</title>
+<title>IndexedDB Lightweight HTML Generator</title>
 <style>
 @layer base, components, utilities;
 
@@ -19,7 +19,7 @@
   button, input { font: inherit; }
 }
 
-/* components: Input, drop zone, and result display */
+/* components: Inputs, drop area, and result display */
 @layer components {
   .page { width: min(100% - 2rem, 48rem); margin: 0 auto; padding: 2rem 0 3rem; }
   h1 { margin: 0 0 .5rem; font-size: clamp(1.45rem, 4vw, 2rem); }
@@ -27,8 +27,8 @@
   .panel { padding: 1.25rem; background: #fff; border: 1px solid #e5e7ef; border-radius: 1.25rem; box-shadow: 0 10px 28px rgba(41,50,75,.07); }
   .field { display: grid; gap: .45rem; margin-bottom: 1rem; }
   .field label { font-weight: 750; }
-  .field input[type="text"] { width: 100%; padding: .8rem .9rem; border: 1px solid #cfd5e2; border-radius: .7rem; outline: 0; }
-  .field input[type="text"]:focus { border-color: #7567dc; box-shadow: 0 0 0 3px rgba(117,103,220,.13); }
+  .field input[type="text"], .field input[type="number"] { width: 100%; padding: .8rem .9rem; border: 1px solid #cfd5e2; border-radius: .7rem; outline: 0; }
+  .field input[type="text"]:focus, .field input[type="number"]:focus { border-color: #7567dc; box-shadow: 0 0 0 3px rgba(117,103,220,.13); }
   .help { margin: 0; color: #667085; font-size: .86rem; }
   .uni-photo-dropbox { padding: 20px; background: rgba(255,255,255,.97); border: 1px solid rgba(255,255,255,.9); border-radius: 24px; box-shadow: 0 8px 24px rgba(41,50,75,.07); }
   .uni-photo-dropbox__zone { position: relative; display: grid; place-items: center; width: 100%; height: 220px; overflow: hidden; border: 1.5px dashed rgba(117,103,220,.28); border-radius: 22px; background: linear-gradient(180deg,rgba(255,255,255,.98),rgba(248,247,253,.98)); cursor: pointer; transition: border-color .18s ease,transform .18s ease,box-shadow .18s ease; }
@@ -59,13 +59,18 @@
 </head>
 <body>
 <main class="page">
-  <h1>IndexedDB Lightweight Page Builder</h1>
-  <p class="intro">Select an HTML file to create two files that restore the page from IndexedDB.</p>
+  <h1>IndexedDB Lightweight HTML Generator</h1>
+  <p class="intro">Select an HTML file to create two IndexedDB restore files and include the original file as the third file.</p>
   <section class="panel">
     <div class="field">
       <label for="fileName">File name</label>
       <input id="fileName" type="text" value="index.html" autocomplete="off" spellcheck="false">
       <p class="help">The extension is adjusted automatically. Example: index.html → index.html / indexBody.html</p>
+    </div>
+    <div class="field">
+      <label for="version">Version</label>
+      <input id="version" type="number" value="1" min="1" step="1" inputmode="numeric">
+      <p class="help">The version number used for IndexedDB storage. Older versions are deleted when the files are generated.</p>
     </div>
     <div class="uni-photo-dropbox">
       <label class="uni-photo-dropbox__zone" id="dropZone">
@@ -83,10 +88,10 @@
         </span>
         <input id="htmlInput" class="uni-photo-dropbox__input" type="file" accept=".html,text/html">
       </label>
-      <p id="fileNameView" class="file-name">No file selected yet.</p>
+      <p id="fileNameView" class="file-name">No file selected.</p>
     </div>
     <div class="actions">
-      <button id="downloadButton" class="primary" type="button" disabled>Download two files as ZIP</button>
+      <button id="downloadButton" class="primary" type="button" disabled>Download 3 files as a ZIP</button>
       <button id="clearButton" class="secondary" type="button">Clear</button>
     </div>
     <p id="status" role="status" aria-live="polite"></p>
@@ -97,6 +102,7 @@
   const input = document.querySelector('#htmlInput');
   const zone = document.querySelector('#dropZone');
   const fileName = document.querySelector('#fileName');
+  const versionInput = document.querySelector('#version');
   const fileNameView = document.querySelector('#fileNameView');
   const downloadButton = document.querySelector('#downloadButton');
   const clearButton = document.querySelector('#clearButton');
@@ -115,26 +121,39 @@
     return btoa(binary);
   };
 
-  const readFile = file => new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(bytesToBase64(new Uint8Array(reader.result)));
-    reader.onerror = () => reject(reader.error || new Error('Failed to read the file'));
-    reader.readAsArrayBuffer(file);
-  });
+  const readFile = async file => {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    return { encoded: bytesToBase64(bytes), bytes };
+  };
+
+  const getVersion = () => {
+    const value = Number.parseInt(versionInput.value, 10);
+    if (!Number.isInteger(value) || value < 1) throw new Error('Enter a whole number of 1 or greater for the version');
+    versionInput.value = String(value);
+    return value;
+  };
+
+  const sourceEntryName = file => {
+    const originalName = (file?.name || 'source.html').replace(/\\/g, '/').split('/').pop() || 'source.html';
+    const safeName = originalName.replace(/[<>:"|?*\x00-\x1f]/g, '_');
+    return `source/${safeName}`;
+  };
 
   const esc = value => value.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\r/g, '\\r').replace(/\n/g, '\\n');
 
-  const makeIndex = name => `<script>
-const D='${esc(name)}',S='pages',K='${esc(name)}-content-v1',B='./${esc(name)}Body.html';
+  const makeIndex = (name, version) => `<script>
+const version=${version},D='${esc(name)}',S='pages',K=D+'-content-v'+version,B='./${esc(name)}Body.html';
 if(!('indexedDB'in window))location.replace(B);
 else{const r=indexedDB.open(D,1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(S))r.result.createObjectStore(S)};r.onerror=()=>location.replace(B);r.onsuccess=()=>{const d=r.result,q=d.transaction(S).objectStore(S).get(K);q.onerror=()=>{d.close();location.replace(B)};q.onsuccess=()=>{const h=q.result?.html;d.close();h?(document.open(),document.write(h),document.close()):location.replace(B)}}}
 <\/script>\n`;
 
-  const makeBody = (name, encoded) => `<script>
-const D='${esc(name)}',S='pages',K='${esc(name)}-content-v1',B='./${esc(name)}.html',E='${encoded}';
+  const makeBody = (name, version, encoded) => `<script>
+const version=${version};
+const clearOldVersions=()=>new Promise((ok,no)=>{const r=indexedDB.open('${esc(name)}',1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains('pages'))r.result.createObjectStore('pages')};r.onerror=()=>no(r.error);r.onsuccess=()=>{const d=r.result,t=d.transaction('pages','readwrite'),s=t.objectStore('pages');for(let i=1;i<version;i++)s.delete('${esc(name)}-content-v'+i);t.oncomplete=()=>{d.close();ok()};t.onerror=()=>{d.close();no(t.error)}}});
+const D='${esc(name)}',S='pages',K=D+'-content-v'+version,B='./${esc(name)}.html',E='${encoded}';
 const open=()=>new Promise((ok,no)=>{const r=indexedDB.open(D,1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(S))r.result.createObjectStore(S)};r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)});
 const decode=e=>new TextDecoder().decode(Uint8Array.from(atob(e),c=>c.charCodeAt(0)));
-open().then(d=>new Promise((ok,no)=>{const t=d.transaction(S,'readwrite');t.objectStore(S).put({html:decode(E),version:'v1',savedAt:new Date().toISOString()},K);t.oncomplete=ok;t.onerror=()=>no(t.error)})).then(()=>location.replace(B)).catch(e=>{console.error(e);document.body.textContent='Failed to save the page.';});
+clearOldVersions().catch(e=>console.error(e)).then(()=>open()).then(d=>new Promise((ok,no)=>{const t=d.transaction(S,'readwrite');t.objectStore(S).put({html:decode(E),version:'v'+version,savedAt:new Date().toISOString()},K);t.oncomplete=()=>{d.close();ok()};t.onerror=()=>{d.close();no(t.error)}})).then(()=>location.replace(B)).catch(e=>{console.error(e);document.body.textContent='Failed to save the page.';});
 <\/script>\n`;
   const onlyScript = value => /^<script>[\s\S]*<\/script>\n?$/.test(value);
 
@@ -151,10 +170,10 @@ open().then(d=>new Promise((ok,no)=>{const t=d.transaction(S,'readwrite');t.obje
   const u32 = (view, offset, value) => view.setUint32(offset, value, true);
 
   const makeZip = entries => {
-    const encoder = new TextEncoder(), chunks = [], central = [], offsets = [];
+    const encoder = new TextEncoder(), toBytes = data => typeof data === 'string' ? encoder.encode(data) : data instanceof Uint8Array ? data : new Uint8Array(data), chunks = [], central = [], offsets = [];
     let offset = 0;
     for (const entry of entries) {
-      const name = encoder.encode(entry.name), data = encoder.encode(entry.data), local = new ArrayBuffer(30 + name.length);
+      const name = encoder.encode(entry.name), data = toBytes(entry.data), local = new ArrayBuffer(30 + name.length);
       const view = new DataView(local);
       u32(view, 0, 0x04034b50); u16(view, 4, 20); u16(view, 6, 0x800); u16(view, 8, 0);
       u16(view, 10, 0); u16(view, 12, 0); u32(view, 14, crc32(data)); u32(view, 18, data.length);
@@ -176,7 +195,7 @@ open().then(d=>new Promise((ok,no)=>{const t=d.transaction(S,'readwrite');t.obje
     fileName.value = file.name;
     fileNameView.textContent = `Selected: ${file.name} (${file.size.toLocaleString()} bytes)`;
     downloadButton.disabled = false;
-    status.textContent = 'Ready. You can download the ZIP file.';
+    status.textContent = 'Ready. You can download the ZIP.';
   };
 
   input.addEventListener('change', () => showFile(input.files[0]));
@@ -185,16 +204,16 @@ open().then(d=>new Promise((ok,no)=>{const t=d.transaction(S,'readwrite');t.obje
   zone.addEventListener('drop', event => showFile(event.dataTransfer.files[0]));
   downloadButton.addEventListener('click', async () => {
     try {
-      const name = baseName(), encoded = await readFile(selectedFile);
-      const index = makeIndex(name), body = makeBody(name, encoded);
-      if (!onlyScript(index) || !onlyScript(body)) throw new Error('The generated files contain more than script tags');
-      const zip = makeZip([{name: name + '.html', data: index}, {name: name + 'Body.html', data: body}]);
+      const name = baseName(), version = getVersion(), { encoded, bytes } = await readFile(selectedFile);
+      const index = makeIndex(name, version), body = makeBody(name, version, encoded);
+      if (!onlyScript(index) || !onlyScript(body)) throw new Error('Generated files must contain only script tags');
+      const zip = makeZip([{name: name + '.html', data: index}, {name: name + 'Body.html', data: body}, {name: sourceEntryName(selectedFile), data: bytes}]);
       const url = URL.createObjectURL(zip), link = document.createElement('a');
-      link.href = url; link.download = name + '-indexeddb.zip'; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
-      status.textContent = `Downloaded ${name}.html and ${name}Body.html.`;
-    } catch (error) { console.error(error); status.textContent = 'Failed to create the ZIP file.'; }
+      link.href = url; link.download = name + '-indexeddb-ver' + version + '.zip'; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+      status.textContent = `Downloaded ${name}.html, ${name}Body.html, and ${sourceEntryName(selectedFile)}.`;
+    } catch (error) { console.error(error); status.textContent = 'Failed to create the ZIP.'; }
   });
-  clearButton.addEventListener('click', () => { selectedFile = null; input.value = ''; fileName.value = 'index.html'; fileNameView.textContent = 'No file selected yet.'; downloadButton.disabled = true; status.textContent = ''; });
+  clearButton.addEventListener('click', () => { selectedFile = null; input.value = ''; fileName.value = 'index.html'; versionInput.value = '1'; fileNameView.textContent = 'No file selected.'; downloadButton.disabled = true; status.textContent = ''; });
 })();
 </script>
 </body>
