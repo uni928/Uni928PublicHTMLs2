@@ -70,7 +70,7 @@
     <div class="field">
       <label for="version">Version</label>
       <input id="version" type="number" value="1" min="1" step="1" inputmode="numeric">
-      <p class="help">The version number used for IndexedDB storage. Older versions are deleted when the files are generated.</p>
+      <p class="help">This version number is inserted into <code>const version=1;</code> in both generated files. Older saved versions are deleted when the files are generated.</p>
     </div>
     <div class="uni-photo-dropbox">
       <label class="uni-photo-dropbox__zone" id="dropZone">
@@ -142,7 +142,8 @@
   const esc = value => value.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\r/g, '\\r').replace(/\n/g, '\\n');
 
   const makeIndex = (name, version) => `<script>
-const version=${version},D='${esc(name)}',S='pages',K=D+'-content-v'+version,B='./${esc(name)}Body.html';
+const version=${version};
+const D='${esc(name)}',S='pages',K=D+'-content-v'+version,B='./${esc(name)}Body.html';
 if(!('indexedDB'in window))location.replace(B);
 else{const r=indexedDB.open(D,1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(S))r.result.createObjectStore(S)};r.onerror=()=>location.replace(B);r.onsuccess=()=>{const d=r.result,q=d.transaction(S).objectStore(S).get(K);q.onerror=()=>{d.close();location.replace(B)};q.onsuccess=()=>{const h=q.result?.html;d.close();h?(document.open(),document.write(h),document.close()):location.replace(B)}}}
 <\/script>\n`;
