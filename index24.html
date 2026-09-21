@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="description" content="複数の社内サイトURLとBasic認証情報をフラグメント内に保持し、閲覧用・編集用のURLやHTMLを作成します。">
-<title>アクセス用サイト作成</title>
+<title>社内サイトアクセス</title>
 <style>
 @layer base,layout,components,responsive;
 @layer base{
@@ -71,12 +71,13 @@ function b64uToBytes(s){s=String(s).replace(/-/g,"+").replace(/_/g,"/");s+="=".r
 function encodeData(data){return bytesToB64u(new TextEncoder().encode(JSON.stringify(data)))}
 function decodeData(value){return sanitizeState(JSON.parse(new TextDecoder().decode(b64uToBytes(value))))}
 function showStatus(msg,error=false){status.textContent=msg;status.classList.toggle("error",error)}
-function collect(){state.title=pageTitle.value.trim()||"社内サイトアクセス";return state}
+function syncDocumentTitle(){document.title=state.title||"社内サイトアクセス"}
+function collect(){state.title=pageTitle.value.trim()||"社内サイトアクセス";syncDocumentTitle();return state}
 function escapeFilename(v){return(String(v||"社内サイトアクセス").replace(/[\\/:*?"<>|]/g,"_").replace(/\s+/g," ").trim().slice(0,60)||"社内サイトアクセス")+".html"}
 function normalizeTarget(raw){try{const u=new URL(String(raw).trim());if(!/^https?:$/.test(u.protocol))throw 0;return u}catch(e){return null}}
 function authUrl(site){const u=normalizeTarget(site.url);if(!u)return null;if(site.key||site.pass){u.username=site.key;u.password=site.pass}return u.href}
 function maskPass(v){return v?"•".repeat(Math.min(10,Math.max(4,v.length))):"未設定"}
-function renderEditor(){pageTitle.value=state.title;siteList.replaceChildren();if(!state.sites.length){const e=document.createElement("div");e.className="empty";e.textContent="サイトがありません。「サイトを追加」から登録してください。";siteList.append(e);return}state.sites.forEach((site,index)=>{
+function renderEditor(){syncDocumentTitle();pageTitle.value=state.title;siteList.replaceChildren();if(!state.sites.length){const e=document.createElement("div");e.className="empty";e.textContent="サイトがありません。「サイトを追加」から登録してください。";siteList.append(e);return}state.sites.forEach((site,index)=>{
 const card=document.createElement("section");card.className="site-card";card.dataset.id=site.id;
 const head=document.createElement("div");head.className="site-card-head";const h=document.createElement("h2");h.textContent=(index+1)+". "+(site.name||"名称未設定");const badge=document.createElement("span");badge.className="viewer-note";badge.textContent=site.doubleAuth?"2回認証対策 ON":"通常アクセス";head.append(h,badge);
 const fields=document.createElement("div");fields.className="site-fields";
@@ -104,9 +105,9 @@ function downloadMode(mode){const html=buildSelfHtml(mode),blob=new Blob([html],
 function readStartup(){const hash=location.hash.match(/^#access=([A-Za-z0-9_-]+)$/);if(hash){try{return decodeData(hash[1])}catch(e){console.error(e)}}const initial=$("initialPayload").textContent.trim();if(initial){try{return decodeData(initial)}catch(e){console.error(e)}}return sanitizeState({sites:[blankSite()]})}
 $("addSiteButton").addEventListener("click",()=>{state.sites.push(blankSite());renderEditor();setTimeout(()=>siteList.lastElementChild?.scrollIntoView({behavior:"smooth",block:"center"}),0)});
 $("previewButton").addEventListener("click",showViewer);$("editButton").addEventListener("click",showEditor);
-$("urlPanelButton").addEventListener("click",()=>$("urlPanel").classList.toggle("hidden"));$("openViewerUrlButton").addEventListener("click",openViewerUrl);$("savePanelButton").addEventListener("click",()=>$("savePanel").classList.toggle("hidden"));
+$("urlPanelButton").addEventListener("click",function(){copyModeUrl("viewer",this)});$("openViewerUrlButton").addEventListener("click",openViewerUrl);$("savePanelButton").addEventListener("click",()=>$("savePanel").classList.toggle("hidden"));
 $("copyViewerUrl").addEventListener("click",function(){copyModeUrl("viewer",this)});$("copyEditorUrl").addEventListener("click",function(){copyModeUrl("editor",this)});$("downloadViewer").addEventListener("click",()=>downloadMode("viewer"));$("downloadEditor").addEventListener("click",()=>downloadMode("editor"));
-pageTitle.addEventListener("input",()=>{state.title=pageTitle.value});
+pageTitle.addEventListener("input",()=>{state.title=pageTitle.value.trim()||"社内サイトアクセス";syncDocumentTitle()});
 state=readStartup();if(state.mode==="viewer")showViewer();else showEditor();
 })();
 </script>
