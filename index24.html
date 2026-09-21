@@ -72,7 +72,7 @@ function encodeData(data){return bytesToB64u(new TextEncoder().encode(JSON.strin
 function decodeData(value){return sanitizeState(JSON.parse(new TextDecoder().decode(b64uToBytes(value))))}
 function showStatus(msg,error=false){status.textContent=msg;status.classList.toggle("error",error)}
 function syncDocumentTitle(){document.title=state.title||"社内サイトアクセス"}
-function collect(){state.title=pageTitle.value.trim()||"社内サイトアクセス";syncDocumentTitle();return state}
+function collect(){if(!editorMode.classList.contains("hidden"))state.title=pageTitle.value.trim()||"社内サイトアクセス";syncDocumentTitle();return state}
 function escapeFilename(v){return(String(v||"社内サイトアクセス").replace(/[\\/:*?"<>|]/g,"_").replace(/\s+/g," ").trim().slice(0,60)||"社内サイトアクセス")+".html"}
 function normalizeTarget(raw){try{const u=new URL(String(raw).trim());if(!/^https?:$/.test(u.protocol))throw 0;return u}catch(e){return null}}
 function authUrl(site){const u=normalizeTarget(site.url);if(!u)return null;if(site.key||site.pass){u.username=site.key;u.password=site.pass}return u.href}
