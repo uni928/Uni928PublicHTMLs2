@@ -1,4 +1,5 @@
 <!doctype html>
+
 <html lang="ja">
 <head>
   <meta charset="utf-8" />
@@ -20,521 +21,363 @@
       --radius2: 14px;
       --accent: #2f6feb;
       --accent2: #7c3aed;
-      --accent-soft: rgba(47,111,235,.10);
-      --violet-soft: rgba(124,58,237,.10);
-      --surface-strong: rgba(255,255,255,.90);
     }
 
-    *{ box-sizing: border-box; }
-    body{
-      margin:0;
-      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", Meiryo, sans-serif;
-      color: var(--ink);
-      background:
-        radial-gradient(1200px 500px at 10% 0%, rgba(47,111,235,.14), transparent 55%),
-        radial-gradient(900px 500px at 90% 10%, rgba(124,58,237,.12), transparent 55%),
-        radial-gradient(900px 520px at 70% 90%, rgba(47,111,235,.10), transparent 60%),
-        var(--cream);
-      background-attachment: fixed;
-      min-height: 100vh;
-      overflow-x: hidden;
-    }
+*{ box-sizing: border-box; }
+body{
+  margin:0;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", Meiryo, sans-serif;
+  color: var(--ink);
+  background:
+    radial-gradient(1200px 500px at 10% 0%, rgba(47,111,235,.14), transparent 55%),
+    radial-gradient(900px 500px at 90% 10%, rgba(124,58,237,.12), transparent 55%),
+    radial-gradient(900px 520px at 70% 90%, rgba(47,111,235,.10), transparent 60%),
+    var(--cream);
+  min-height: 100vh;
+}
 
-    .wrap{
-      max-width: 1180px;
-      margin: 0 auto;
-      padding: 30px 20px 48px;
-    }
+.wrap{
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 28px 18px 42px;
+}
 
-    header{
-      position: relative;
-      isolation: isolate;
-      display:flex;
-      align-items:flex-end;
-      justify-content: space-between;
-      gap: 16px;
-      flex-wrap: wrap;
-      margin-bottom: 20px;
-      padding: 24px 26px;
-      border: 1px solid rgba(30,31,34,.10);
-      border-radius: 24px;
-      background: linear-gradient(135deg, rgba(255,255,255,.78), rgba(255,255,255,.46));
-      box-shadow: 0 16px 36px rgba(30,31,34,.10);
-      overflow: hidden;
-    }
+header{
+  display:flex;
+  align-items:flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
 
-    header::before{
-      content: "";
-      position: absolute;
-      width: 260px;
-      height: 260px;
-      top: -170px;
-      right: -70px;
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(124,58,237,.18), rgba(124,58,237,0) 70%);
-      pointer-events: none;
-      z-index: -1;
-    }
+.title{
+  display:flex;
+  flex-direction: column;
+  gap: 6px;
+}
 
-    .title{
-      display:flex;
-      flex-direction: column;
-      gap: 6px;
-    }
+h1{
+  margin:0;
+  font-size: clamp(22px, 2.4vw, 30px);
+  letter-spacing: .2px;
+  line-height: 1.15;
+}
+.subtitle{
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
 
-    h1{
-      margin:0;
-      font-size: clamp(22px, 2.4vw, 30px);
-      font-weight: 820;
-      letter-spacing: .2px;
-      line-height: 1.15;
-      background: linear-gradient(135deg, #1f4fa8, #6d28d9);
-      -webkit-background-clip: text;
-      background-clip: text;
-      color: transparent;
-    }
-    .subtitle{
-      color: var(--muted);
-      font-size: 13px;
-      line-height: 1.5;
-      max-width: 62em;
-    }
+.badge{
+  display:inline-flex;
+  align-items:center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(255,255,255,.80), rgba(255,255,255,.50));
+  box-shadow: var(--shadow2);
+  font-size: 12.5px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.dot{
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: radial-gradient(circle at 30% 30%, #fff, rgba(255,255,255,.1)), linear-gradient(135deg, var(--accent), var(--accent2));
+  box-shadow: 0 0 0 3px rgba(47,111,235,.12);
+  flex: 0 0 auto;
+}
 
-    .badge{
-      display:inline-flex;
-      align-items:center;
-      gap: 8px;
-      padding: 10px 13px;
-      border: 1px solid rgba(47,111,235,.18);
-      border-radius: 999px;
-      background: rgba(255,255,255,.64);
-      box-shadow: 0 8px 18px rgba(47,111,235,.08);
-      font-size: 12.5px;
-      color: var(--muted);
-      white-space: nowrap;
-    }
-    .dot{
-      width: 9px;
-      height: 9px;
-      border-radius: 999px;
-      background: radial-gradient(circle at 30% 30%, #fff, rgba(255,255,255,.1)), linear-gradient(135deg, var(--accent), var(--accent2));
-      box-shadow: 0 0 0 3px rgba(47,111,235,.12);
-      flex: 0 0 auto;
-    }
+.grid{
+  display:grid;
+  grid-template-columns: 380px 1fr;
+  gap: 16px;
+  align-items: start;
+}
 
-    .grid{
-      display:grid;
-      grid-template-columns: 380px 1fr;
-      gap: 16px;
-      align-items: start;
-    }
+@media (max-width: 980px){
+  .grid{ grid-template-columns: 1fr; }
+}
 
-    @media (max-width: 980px){
-      .grid{ grid-template-columns: 1fr; }
-    }
+.card{
+  background: linear-gradient(180deg, rgba(255,255,255,.80), rgba(255,255,255,.56));
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
 
-    .card{
-      background: linear-gradient(180deg, rgba(255,255,255,.80), rgba(255,255,255,.56));
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      overflow: hidden;
-      transition: box-shadow .18s ease, transform .18s ease;
-    }
+.card .head{
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid rgba(30,31,34,.08);
+  background: linear-gradient(180deg, rgba(255,255,255,.65), rgba(255,255,255,.20));
+}
 
-    .card:hover{
-      transform: translateY(-2px);
-      box-shadow: 0 16px 34px rgba(30,31,34,.14);
-    }
+.card .head .kicker{
+  font-size: 12px;
+  color: var(--muted);
+  letter-spacing: .2px;
+}
 
-    .card .head{
-      position: relative;
-      padding: 18px 18px 14px;
-      border-bottom: 1px solid rgba(30,31,34,.08);
-      background: linear-gradient(180deg, rgba(255,255,255,.65), rgba(255,255,255,.20));
-    }
+.card .head h2{
+  margin: 6px 0 0;
+  font-size: 16px;
+  letter-spacing: .2px;
+}
 
-    .card .head::before{
-      content: "";
-      position: absolute;
-      top: 0;
-      left: 18px;
-      width: 48px;
-      height: 3px;
-      border-radius: 0 0 999px 999px;
-      background: linear-gradient(90deg, var(--accent), var(--accent2));
-    }
+.card .body{
+  padding: 14px 16px 16px;
+}
 
-    .card .head .kicker{
-      font-size: 12px;
-      color: var(--muted);
-      font-weight: 750;
-      letter-spacing: .08em;
-      text-transform: uppercase;
-    }
+.form{
+  display:grid;
+  gap: 12px;
+}
 
-    .card .head h2{
-      margin: 6px 0 0;
-      font-size: 17px;
-      font-weight: 800;
-      letter-spacing: .2px;
-    }
+.field{
+  display:grid;
+  gap: 6px;
+}
 
-    .card .body{
-      padding: 16px 18px 18px;
-    }
+.labelrow{
+  display:flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
 
-    .form{
-      display:grid;
-      gap: 12px;
-    }
+label{
+  font-size: 12.5px;
+  color: var(--muted);
+}
 
-    .field{
-      display:grid;
-      gap: 6px;
-      padding: 10px 11px 11px;
-      border: 1px solid transparent;
-      border-radius: 15px;
-      background: rgba(255,255,255,.32);
-      transition: background .15s ease, border-color .15s ease, box-shadow .15s ease;
-    }
+.hint{
+  font-size: 12px;
+  color: var(--muted);
+  opacity: .95;
+}
 
-    .field:focus-within{
-      border-color: rgba(47,111,235,.20);
-      background: rgba(255,255,255,.64);
-      box-shadow: 0 8px 18px rgba(47,111,235,.07);
-    }
+.control{
+  display:flex;
+  gap: 10px;
+  align-items: center;
+}
 
-    .labelrow{
-      display:flex;
-      justify-content: space-between;
-      align-items: baseline;
-      gap: 8px;
-    }
+input[type="number"]{
+  width: 100%;
+  padding: 12px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(30,31,34,.16);
+  background: rgba(255,255,255,.82);
+  outline: none;
+  font-size: 14px;
+  color: var(--ink);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.9);
+  transition: border-color .15s ease, box-shadow .15s ease, transform .08s ease;
+}
+input[type="number"]:focus{
+  border-color: rgba(47,111,235,.55);
+  box-shadow: 0 0 0 4px rgba(47,111,235,.14), inset 0 1px 0 rgba(255,255,255,.9);
+}
 
-    label{
-      font-size: 12.5px;
-      color: var(--muted);
-      font-weight: 650;
-    }
+.actions{
+  display:flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
 
-    .hint{
-      padding: 3px 7px;
-      border: 1px solid rgba(30,31,34,.08);
-      border-radius: 999px;
-      background: rgba(255,255,255,.58);
-      font-size: 11px;
-      color: var(--muted);
-      opacity: .95;
-      white-space: nowrap;
-    }
+button{
+  appearance: none;
+  border: 0;
+  border-radius: 999px;
+  padding: 11px 14px;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: transform .08s ease, filter .15s ease, opacity .15s ease;
+  user-select: none;
+}
+button:active{ transform: translateY(1px); }
 
-    .control{
-      display:flex;
-      gap: 10px;
-      align-items: center;
-    }
+.btn-primary{
+  color: white;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  box-shadow: 0 10px 18px rgba(47,111,235,.18);
+}
+.btn-ghost{
+  color: var(--ink);
+  background: rgba(255,255,255,.65);
+  border: 1px solid rgba(30,31,34,.14);
+}
 
-    input[type="number"]{
-      width: 100%;
-      padding: 12px 12px;
-      border-radius: 14px;
-      border: 1px solid rgba(30,31,34,.16);
-      background: rgba(255,255,255,.82);
-      outline: none;
-      font-size: 14px;
-      color: var(--ink);
-      box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 3px 8px rgba(30,31,34,.03);
-      transition: border-color .15s ease, box-shadow .15s ease, transform .08s ease;
-    }
-    input[type="number"]:focus{
-      border-color: rgba(47,111,235,.55);
-      box-shadow: 0 0 0 4px rgba(47,111,235,.14), inset 0 1px 0 rgba(255,255,255,.9);
-    }
+.summary{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 14px;
+}
+@media (max-width: 520px){
+  .summary{ grid-template-columns: 1fr; }
+}
+.pill{
+  padding: 12px 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(30,31,34,.10);
+  background: rgba(255,255,255,.62);
+}
+.pill .t{
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+.pill .v{
+  font-size: 18px;
+  font-weight: 780;
+  letter-spacing: .2px;
+}
 
-    .actions{
-      display:flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-top: 5px;
-      padding-top: 13px;
-      border-top: 1px solid rgba(30,31,34,.08);
-    }
+.summary-line{
+  display: grid;
+  gap: 2px;
+}
 
-    button{
-      appearance: none;
-      border: 0;
-      border-radius: 999px;
-      padding: 11px 14px;
-      font-size: 13px;
-      font-weight: 650;
-      cursor: pointer;
-      transition: transform .08s ease, filter .15s ease, opacity .15s ease;
-      user-select: none;
-    }
-    button:hover{
-      filter: brightness(1.04);
-      transform: translateY(-1px);
-    }
-    button:active{ transform: translateY(1px); }
-    button:focus-visible{
-      outline: 3px solid rgba(47,111,235,.22);
-      outline-offset: 2px;
-    }
+.summary-line + .summary-line{
+  margin-top: 9px;
+  padding-top: 9px;
+  border-top: 1px solid rgba(30,31,34,.09);
+}
 
-    .btn-primary{
-      color: white;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      box-shadow: 0 10px 18px rgba(47,111,235,.18);
-    }
-    .btn-ghost{
-      color: var(--ink);
-      background: rgba(255,255,255,.65);
-      border: 1px solid rgba(30,31,34,.14);
-    }
+.summary-model{
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.3;
+  white-space: nowrap;
+}
 
-    .summary{
-      display:grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-top: 16px;
-    }
-    @media (max-width: 520px){
-      .summary{ grid-template-columns: 1fr; }
-    }
-    .pill{
-      position: relative;
-      min-width: 0;
-      padding: 15px 14px 14px;
-      border-radius: 17px;
-      border: 1px solid rgba(47,111,235,.13);
-      background: linear-gradient(145deg, rgba(255,255,255,.78), rgba(255,255,255,.50));
-      box-shadow: 0 8px 18px rgba(47,111,235,.06);
-      overflow: hidden;
-    }
+.tables{
+  display:grid;
+  gap: 16px;
+}
 
-    .pill::before{
-      content: "";
-      position: absolute;
-      inset: 0 0 auto;
-      height: 3px;
-      background: linear-gradient(90deg, var(--accent), var(--accent2));
-    }
-    .pill .t{
-      font-size: 12px;
-      color: var(--muted);
-      margin-bottom: 8px;
-      font-weight: 750;
-      letter-spacing: .04em;
-    }
-    .pill .v{
-      font-size: 18px;
-      font-weight: 780;
-      letter-spacing: .2px;
-      font-variant-numeric: tabular-nums;
-    }
+.tablewrap{
+  padding: 12px 12px 16px;
+}
 
-    .summary-line--primary{
-      margin: 0 -2px;
-      padding: 9px 10px 10px;
-      border-radius: 12px;
-      background: linear-gradient(135deg, rgba(47,111,235,.11), rgba(124,58,237,.08));
-    }
+.tabletitle{
+  display:flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 4px 10px;
+}
+.tabletitle h3{
+  margin:0;
+  font-size: 14px;
+  letter-spacing: .2px;
+}
+.tabletitle .meta{
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+}
 
-    .summary-line--primary .summary-model{
-      color: #31569c;
-      font-weight: 750;
-    }
+table{
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+  border: 1px solid rgba(30,31,34,.10);
+  border-radius: 16px;
+  background: rgba(255,255,255,.70);
+}
+thead th{
+  text-align: left;
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 700;
+  letter-spacing: .2px;
+  padding: 11px 12px;
+  background: linear-gradient(180deg, rgba(255,255,255,.75), rgba(255,255,255,.40));
+  border-bottom: 1px solid rgba(30,31,34,.08);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+tbody td{
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(30,31,34,.06);
+  vertical-align: top;
+  font-size: 13.5px;
+}
+tbody tr:last-child td{ border-bottom: 0; }
 
-    .summary-line--primary .v{
-      color: #214fba;
-      font-size: 20px;
-    }
+.mono{
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 12.5px;
+  color: rgba(30,31,34,.82);
+  line-height: 1.35;
+  word-break: break-word;
+}
 
-    .summary-line{
-      display: grid;
-      gap: 2px;
-    }
+.right{
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
 
-    .summary-line + .summary-line{
-      margin-top: 9px;
-      padding-top: 9px;
-      border-top: 1px solid rgba(30,31,34,.09);
-    }
+.model{
+  font-weight: 750;
+  letter-spacing: .2px;
+}
 
-    .summary-model{
-      font-size: 11px;
-      color: var(--muted);
-      line-height: 1.3;
-      white-space: nowrap;
-      font-weight: 650;
-    }
+.tag{
+  display:inline-flex;
+  align-items:center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid rgba(30,31,34,.12);
+  background: rgba(255,255,255,.55);
+  color: var(--muted);
+  margin-left: 8px;
+  vertical-align: middle;
+}
 
-    .tables{
-      display:grid;
-      gap: 16px;
-    }
+.footnote{
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
+  padding: 0 4px;
+}
 
-    .tablewrap{
-      padding: 14px 14px 18px;
-    }
+.toast{
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  padding: 10px 12px;
+  border-radius: 999px;
+  background: rgba(30,31,34,.88);
+  color: white;
+  font-size: 12.5px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .15s ease, transform .15s ease;
+  box-shadow: 0 10px 24px rgba(0,0,0,.20);
+}
+.toast.show{
+  opacity: 1;
+  transform: translateX(-50%) translateY(-2px);
+}
+}
 
-    .tabletitle{
-      display:flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      padding: 0 6px 12px;
-    }
-    .tabletitle h3{
-      margin:0;
-      font-size: 14px;
-      font-weight: 800;
-      letter-spacing: .2px;
-    }
-    .tabletitle .meta{
-      padding: 5px 8px;
-      border: 1px solid rgba(30,31,34,.08);
-      border-radius: 999px;
-      background: rgba(255,255,255,.54);
-      font-size: 12px;
-      color: var(--muted);
-      white-space: nowrap;
-    }
-
-    table{
-      width: 100%;
-      border-collapse: separate;
-      border-spacing: 0;
-      overflow: hidden;
-      border: 1px solid rgba(30,31,34,.10);
-      border-radius: 16px;
-      background: rgba(255,255,255,.70);
-      box-shadow: 0 6px 16px rgba(30,31,34,.04);
-    }
-    thead th{
-      text-align: left;
-      font-size: 12px;
-      color: var(--muted);
-      font-weight: 700;
-      letter-spacing: .2px;
-      padding: 11px 12px;
-      background: linear-gradient(180deg, rgba(255,255,255,.75), rgba(255,255,255,.40));
-      border-bottom: 1px solid rgba(30,31,34,.08);
-      position: sticky;
-      top: 0;
-      z-index: 1;
-      white-space: nowrap;
-    }
-    tbody td{
-      padding: 10px 12px;
-      border-bottom: 1px solid rgba(30,31,34,.06);
-      vertical-align: top;
-      font-size: 13.5px;
-    }
-    tbody tr:last-child td{ border-bottom: 0; }
-    tbody tr:nth-child(even) td{ background: rgba(47,111,235,.025); }
-    tbody tr:hover td{ background: rgba(47,111,235,.075); }
-
-    .mono{
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      font-size: 12.5px;
-      color: rgba(30,31,34,.82);
-      line-height: 1.35;
-      word-break: break-word;
-    }
-
-    .right{
-      text-align: right;
-      white-space: nowrap;
-      font-variant-numeric: tabular-nums;
-      font-weight: 700;
-    }
-
-    .model{
-      font-weight: 750;
-      letter-spacing: .2px;
-    }
-
-    .tag{
-      display:inline-flex;
-      align-items:center;
-      gap: 6px;
-      padding: 4px 8px;
-      border-radius: 999px;
-      font-size: 11px;
-      font-weight: 700;
-      border: 1px solid rgba(30,31,34,.12);
-      background: rgba(124,58,237,.08);
-      color: #6334aa;
-      margin-left: 8px;
-      vertical-align: middle;
-    }
-
-    .footnote{
-      margin-top: 10px;
-      color: var(--muted);
-      font-size: 12px;
-      line-height: 1.55;
-      padding: 0 4px;
-      border-left: 3px solid rgba(47,111,235,.20);
-      padding-left: 9px;
-    }
-
-    .toast{
-      position: fixed;
-      left: 50%;
-      bottom: 18px;
-      transform: translateX(-50%);
-      padding: 10px 12px;
-      border-radius: 999px;
-      background: rgba(30,31,34,.88);
-      color: white;
-      font-size: 12.5px;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity .15s ease, transform .15s ease;
-      box-shadow: 0 10px 24px rgba(0,0,0,.20);
-    }
-    .toast.show{
-      opacity: 1;
-      transform: translateX(-50%) translateY(-2px);
-    }
-
-    @media (max-width: 520px){
-      header{
-        align-items: flex-start;
-        padding: 21px 19px;
-      }
-      header .badge{
-        width: 100%;
-        justify-content: center;
-      }
-      .actions button{
-        flex: 1 1 calc(50% - 5px);
-      }
-      .actions .btn-primary{
-        flex-basis: 100%;
-      }
-      .tabletitle{
-        align-items: flex-start;
-        flex-direction: column;
-      }
-      .tabletitle .meta{
-        max-width: 100%;
-        white-space: normal;
-      }
-    }
-
-    @media (prefers-reduced-motion: reduce){
-      *, *::before, *::after{
-        scroll-behavior: auto;
-        transition-duration: .01ms;
-        animation-duration: .01ms;
-        animation-iteration-count: 1;
-      }
-    }
-    }
   </style>
 </head>
 
@@ -553,143 +396,147 @@
       </div>
     </header>
 
-    <div class="grid">
-      <!-- Left: inputs -->
-      <section class="card" aria-label="入力">
-        <div class="head">
-          <div class="kicker">Inputs</div>
-          <h2>想定パラメータ</h2>
-        </div>
-        <div class="body">
-          <form class="form" id="form" onsubmit="return false;">
-            <div class="field">
-              <div class="labelrow">
-                <label for="inTok">想定 input（<a href="https://platform.openai.com/tokenizer" target="_blank">tokens</a>）</label>
-                <span class="hint">例: 1500</span>
-              </div>
-              <input id="inTok" type="number" inputmode="numeric" min="0" step="1" value="1500" />
-            </div>
 
-            <div class="field">
-              <div class="labelrow">
-                <label for="outTok">想定 output（<a href="https://platform.openai.com/tokenizer" target="_blank">tokens</a>+Reasoning）</label>
-                <span class="hint">例: 900</span>
-              </div>
-              <input id="outTok" type="number" inputmode="numeric" min="0" step="1" value="900" />
-            </div>
-
-            <div class="field">
-              <div class="labelrow">
-                <label for="fx">1ドル何円（<a href="https://www.google.com/search?q=今1ドル何円" target="_blank">JPY / USD</a>）</label>
-                <span class="hint">例: 160</span>
-              </div>
-              <input id="fx" type="number" inputmode="decimal" min="0" step="0.1" value="164" />
-            </div>
-
-            <div class="field">
-              <div class="labelrow">
-                <label for="perDay">1日の想定実行回数（requests/day）</label>
-                <span class="hint">例: 1000</span>
-              </div>
-              <input id="perDay" type="number" inputmode="numeric" min="0" step="1" value="1000" />
-            </div>
-
-            <div class="actions">
-              <button class="btn-primary" id="btnCalc" type="button">再計算</button>
-              <button class="btn-ghost" id="btnCopy" type="button" title="表をTSVでコピー">表をコピー</button>
-<button class="btn-ghost" id="btnCopyUrl" type="button" title="現在の入力値で開けるURLをコピー">URLをコピー</button>
-              <button class="btn-ghost" id="btnReset" type="button" title="初期値に戻す">初期値に戻す</button>
-            </div>
-
-            <div class="summary" aria-label="サマリー">
-              <div class="pill">
-                <div class="t">1日あたり</div>
-                <div class="summary-line summary-line--primary">
-                  <div class="summary-model">gpt-5.6-luna Flex</div>
-                  <div class="v" id="sumLunaDay">—</div>
-                </div>
-                <div class="summary-line summary-line--primary">
-                  <div class="summary-model">gpt-5-nano Flex</div>
-                  <div class="v" id="sumDay">—</div>
-                </div>
-              </div>
-              <div class="pill">
-                <div class="t">1か月（30日）あたり</div>
-                <div class="summary-line">
-                  <div class="summary-model">gpt-5.6-luna Flex</div>
-                  <div class="v" id="sumLunaMonth">—</div>
-                </div>
-                <div class="summary-line">
-                  <div class="summary-model">gpt-5-nano Flex</div>
-                  <div class="v" id="sumMonth">—</div>
-                </div>
-              </div>
-            </div>
-          </form>
-        </div>
-      </section>
-
-      <!-- Right: tables -->
-      <section class="tables" aria-label="出力">
-        <div class="card">
-          <div class="head">
-            <div class="kicker">Table 1</div>
-            <h2>1リクエストあたりの料金</h2>
+<div class="grid">
+  <!-- Left: inputs -->
+  <section class="card" aria-label="入力">
+    <div class="head">
+      <div class="kicker">Inputs</div>
+      <h2>想定パラメータ</h2>
+    </div>
+    <div class="body">
+      <form class="form" id="form" onsubmit="return false;">
+        <div class="field">
+          <div class="labelrow">
+            <label for="inTok">想定 input（<a href="https://platform.openai.com/tokenizer" target="_blank">tokens</a>）</label>
+            <span class="hint">例: 1500</span>
           </div>
-          <div class="tablewrap">
-            <div class="tabletitle">
-              <h3>モデル別</h3>
-              <div class="meta" id="meta1">—</div>
+          <input id="inTok" type="number" inputmode="numeric" min="0" step="1" value="1500" />
+        </div>
+
+        <div class="field">
+          <div class="labelrow">
+            <label for="outTok">想定 output（<a href="https://platform.openai.com/tokenizer" target="_blank">tokens</a>+Reasoning）</label>
+            <span class="hint">例: 900</span>
+          </div>
+          <input id="outTok" type="number" inputmode="numeric" min="0" step="1" value="900" />
+        </div>
+
+        <div class="field">
+          <div class="labelrow">
+            <label for="fx">1ドル何円（<a href="https://www.google.com/search?q=今1ドル何円" target="_blank">JPY / USD</a>）</label>
+            <span class="hint">例: 160</span>
+          </div>
+          <input id="fx" type="number" inputmode="decimal" min="0" step="0.1" value="164" />
+        </div>
+
+        <div class="field">
+          <div class="labelrow">
+            <label for="perDay">1日の想定実行回数（requests/day）</label>
+            <span class="hint">例: 1000</span>
+          </div>
+          <input id="perDay" type="number" inputmode="numeric" min="0" step="1" value="1000" />
+        </div>
+
+        <div class="actions">
+          <button class="btn-primary" id="btnCalc" type="button">再計算</button>
+          <button class="btn-ghost" id="btnCopy" type="button" title="表をTSVでコピー">表をコピー</button>
+
+
+<button class="btn-ghost" id="btnCopyUrl" type="button" title="現在の入力値で開けるURLをコピー">URLをコピー</button> <button class="btn-ghost" id="btnReset" type="button" title="初期値に戻す">初期値に戻す</button> </div>
+
+
+        <div class="summary" aria-label="サマリー">
+          <div class="pill">
+            <div class="t">1日あたり</div>
+            <div class="summary-line">
+              <div class="summary-model">gpt-6-luna Flex</div>
+              <div class="v" id="sumLunaDay">—</div>
             </div>
-            <div style="overflow:auto; border-radius: 16px;">
-              <table>
-                <thead>
-                  <tr>
-                    <th style="min-width: 170px;">モデル</th>
-                    <th class="right" style="min-width: 140px;">1リクエストあたり</th>
-                    <th style="min-width: 520px;">計算式</th>
-                  </tr>
-                </thead>
-                <tbody id="tbodyPerReq"></tbody>
-              </table>
+            <div class="summary-line">
+              <div class="summary-model">gpt-5-nano Flex</div>
+              <div class="v" id="sumDay">—</div>
             </div>
-            <div class="footnote">
-              ※ tokens は <span class="mono">/ 1,000,000</span> で USD に換算 → 為替（円/ドル）で円換算しています。
+          </div>
+          <div class="pill">
+            <div class="t">1か月（30日）あたり</div>
+            <div class="summary-line">
+              <div class="summary-model">gpt-6-luna Flex</div>
+              <div class="v" id="sumLunaMonth">—</div>
+            </div>
+            <div class="summary-line">
+              <div class="summary-model">gpt-5-nano Flex</div>
+              <div class="v" id="sumMonth">—</div>
             </div>
           </div>
         </div>
+      </form>
+    </div>
+  </section>
 
-        <div class="card">
-          <div class="head">
-            <div class="kicker">Table 2</div>
-            <h2>1か月あたりの料金（30日）</h2>
-          </div>
-          <div class="tablewrap">
-            <div class="tabletitle">
-              <h3>モデル別</h3>
-              <div class="meta" id="meta2">—</div>
-            </div>
-            <div style="overflow:auto; border-radius: 16px;">
-              <table>
-                <thead>
-                  <tr>
-                    <th style="min-width: 170px;">モデル</th>
-                    <th class="right" style="min-width: 140px;">1か月あたり</th>
-                    <th style="min-width: 520px;">計算式</th>
-                  </tr>
-                </thead>
-                <tbody id="tbodyPerMonth"></tbody>
-              </table>
-            </div>
-            <div class="footnote">
-              ※ <span class="mono">1か月 = 1日あたり × 30</span> として計算しています。
-            </div>
-          </div>
+  <!-- Right: tables -->
+  <section class="tables" aria-label="出力">
+    <div class="card">
+      <div class="head">
+        <div class="kicker">Table 1</div>
+        <h2>1リクエストあたりの料金</h2>
+      </div>
+      <div class="tablewrap">
+        <div class="tabletitle">
+          <h3>モデル別</h3>
+          <div class="meta" id="meta1">—</div>
         </div>
-      </section>
+        <div style="overflow:auto; border-radius: 16px;">
+          <table>
+            <thead>
+              <tr>
+                <th style="min-width: 170px;">モデル</th>
+                <th class="right" style="min-width: 140px;">1リクエストあたり</th>
+                <th style="min-width: 520px;">計算式</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyPerReq"></tbody>
+          </table>
+        </div>
+        <div class="footnote">
+          ※ tokens は <span class="mono">/ 1,000,000</span> で USD に換算 → 為替（円/ドル）で円換算しています。
+        </div>
+      </div>
     </div>
 
-    <div class="toast" id="toast" role="status" aria-live="polite">コピーしました</div>
+    <div class="card">
+      <div class="head">
+        <div class="kicker">Table 2</div>
+        <h2>1か月あたりの料金（30日）</h2>
+      </div>
+      <div class="tablewrap">
+        <div class="tabletitle">
+          <h3>モデル別</h3>
+          <div class="meta" id="meta2">—</div>
+        </div>
+        <div style="overflow:auto; border-radius: 16px;">
+          <table>
+            <thead>
+              <tr>
+                <th style="min-width: 170px;">モデル</th>
+                <th class="right" style="min-width: 140px;">1か月あたり</th>
+                <th style="min-width: 520px;">計算式</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyPerMonth"></tbody>
+          </table>
+        </div>
+        <div class="footnote">
+          ※ <span class="mono">1か月 = 1日あたり × 30</span> として計算しています。
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite">コピーしました</div>
+
+
   </div>
 
   <script>
@@ -698,6 +545,7 @@
     const MODELS = [
       { name: "gpt-5-nano",   inRate: 0.05, outRate: 0.40 },
       { name: "gpt-4.1-nano", inRate: 0.10, outRate: 0.40 },
+      { name: "gpt-6-luna (<272K)",      inRate: 0.10, outRate: 0.50 },
       { name: "gpt-4o-mini",  inRate: 0.15, outRate: 0.60 },
       { name: "gpt-5.6-luna (<272K)",      inRate: 0.20, outRate: 1.20 },
       { name: "gpt-5.4-nano", inRate: 0.20, outRate: 1.25 },
@@ -715,6 +563,7 @@
     const FLEX = [
       { base: "gpt-5-nano", label: "gpt-5-nano Flex", factor: 0.5 },
       { base: "gpt-5.4-nano", label: "gpt-5.4-nano Flex", factor: 0.5 },
+      { base: "gpt-6-luna (<272K)",    label: "gpt-6-luna Flex",    factor: 0.5 },
       { base: "gpt-5.6-luna (<272K)",    label: "gpt-5.6-luna Flex",    factor: 0.5 },
       { base: "gpt-5-mini", label: "gpt-5-mini Flex", factor: 0.5 },
       { base: "gpt-5.4-mini", label: "gpt-5.4-mini Flex", factor: 0.5 },
@@ -849,7 +698,7 @@ const btnCopyUrl = $("btnCopyUrl");
       // → サマリーは “gpt-4o-mini” ではなく「gpt-5-nano」を基準に表示（例があるため）。
       //const baseForSummary = MODELS[0];
       const baseForSummary = { name: "gpt-5-nano Flex",   inRate: 0.025, outRate: 0.20 };
-      const lunaFlexForSummary = FLEX.find(x => x.label === "gpt-5.6-luna Flex");
+      const lunaFlexForSummary = FLEX.find(x => x.label === "gpt-6-luna Flex");
       const lunaBaseForSummary = MODELS.find(x => x.name === lunaFlexForSummary?.base);
 
       // Render base models
@@ -937,7 +786,7 @@ const btnCopyUrl = $("btnCopyUrl");
         tsvLines.push(["", r.model, tdFormula.textContent, perMonth].join("\t"));
       }
 
-      // Summary (gpt-5.6-luna Flexを上段、既存のgpt-5-nano Flexを下段に表示)
+      // Summary (gpt-6-luna Flexを上段、既存のgpt-5-nano Flexを下段に表示)
       const basePerReq = moneyPerRequestJPY(baseForSummary.inRate, baseForSummary.outRate, inT, outT, fxJ);
       const basePerDay = basePerReq * dayN;
       const basePerMonth = basePerDay * daysInMonth;
@@ -1017,9 +866,6 @@ const btnCopyUrl = $("btnCopyUrl");
 applyQueryParams();
     render(); // 初期値で即表示
   </script>
+
 </body>
 </html>
-
-
-
-
