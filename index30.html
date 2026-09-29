@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>高速表作成</title>
+<style>
+@layer base,layout,components,responsive;
+@layer base{
+/* 基本色と標準要素を定義。 */
+:root{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:#17212b;background:#f3f6f9;--line:#d6dde5;--blue:#1976d2;--muted:#64748b}*{box-sizing:border-box}body{margin:0}button,input,select,textarea{font:inherit}button{cursor:pointer}}
+@layer layout{
+/* 設定、入力、プレビューを順に配置。 */
+.app{width:min(1100px,calc(100% - 28px));margin:auto;padding:20px 0 40px}.panel{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px}.settings{display:flex;flex-wrap:wrap;align-items:end;gap:12px}.field{display:grid;gap:5px;font-size:13px;font-weight:650}.input-panel textarea{width:100%;min-height:180px;resize:vertical}.preview-wrap{overflow:auto;max-height:52vh}}
+@layer components{
+/* 設定欄、操作ボタン、表プレビューを追加。 */
+h1{font-size:24px;margin:0 0 5px}.intro{margin:0 0 14px;color:var(--muted);font-size:14px;line-height:1.65}.field select,.field input,.input-panel textarea{border:1px solid #bbc7d3;border-radius:6px;padding:8px;background:white}.field input[type=number]{width:110px}.field input[type=text]{width:130px}.field input:disabled{background:#f1f4f7;color:#8893a0}.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.actions button{border:0;border-radius:7px;padding:9px 13px;font-weight:700;background:#edf2f7;color:#253346}.actions .primary{background:var(--blue);color:white}.actions button:disabled{opacity:.55;cursor:wait}.count{font-size:13px;color:var(--muted);margin-left:auto;align-self:center}.preview-head{display:flex;align-items:center;gap:10px;margin-bottom:9px}.preview-head h2{font-size:18px;margin:0}.preview-table{border-collapse:collapse;table-layout:fixed;min-width:100%}.preview-table td,.preview-table th{border:1px solid #d8dee6;min-width:110px;height:28px;padding:4px 7px;text-align:left;white-space:pre-wrap;overflow-wrap:anywhere}.preview-table th{background:#eef2f6;color:#4b5866;text-align:center;width:42px;min-width:42px}.preview-table td{background:#fff}.status{font-size:13px;color:var(--muted);min-height:20px}.note{font-size:12px;color:var(--muted);line-height:1.6;margin-top:8px}}
+@layer responsive{
+/* モバイルでは操作欄を幅に合わせて折り返す。 */
+@media(max-width:640px){.app{width:calc(100% - 16px);padding-top:12px}.panel{padding:12px}.settings{align-items:stretch}.field{flex:1 1 145px}.field select,.field input{width:100%!important}.input-panel textarea{min-height:155px}.count{width:100%;margin:0}.actions button{flex:1 1 45%}}
+}
+</style>
+</head>
+<body><main class="app">
+<header><h1>高速表作成</h1><p class="intro">分割文字と1行あたりの個数を決めたら、入力欄に値を続けて入力します。Enterで分割文字を入力でき、表プレビューを見てから表入力サイトへ送れます。設定と入力内容はこのブラウザに自動保存されます。</p></header>
+<section class="panel settings" aria-label="分割設定">
+<label class="field">分割文字<select id="delimiter"><option value=",">カンマ ,</option><option value="\t">タブ</option><option value=";">セミコロン ;</option><option value=":">コロン :</option><option value=" ">半角スペース</option><option value="custom">その他の文字</option></select></label>
+<label class="field">その他の分割文字<input id="customDelimiter" type="text" maxlength="8" value="|" disabled></label>
+<label class="field">1行あたりの個数<input id="perRow" type="number" min="1" max="100" value="5"></label>
+<div class="note">初期設定はカンマ区切り・1行5個です。入力にカンマが含まれる場合は、設定した分割文字よりカンマを優先します。</div>
+</section>
+<section class="panel input-panel"><label class="field" for="inputData">入力欄</label><textarea id="inputData" spellcheck="false" placeholder="値を入力し、Enterで区切ります。例：りんご → Enter → みかん → Enter → ぶどう"></textarea><div class="actions"><button class="primary" id="openTable">表入力サイトで開く</button><button id="saveHtml">HTML保存（Ctrl+S）</button><span class="count" id="count">0個</span></div><div class="note">Enterを押すと、選択中の分割文字を入力します。貼り付けなどで入力データにカンマが含まれる場合はカンマで分割します。分割後は指定した個数ごとに次の行へ移ります。</div></section>
+<section class="panel"><div class="preview-head"><h2>表プレビュー</h2><span class="count" id="previewCount"></span></div><div class="preview-wrap" id="previewWrap"><span class="note">入力すると、ここに表として表示します。</span></div></section>
+<div class="status" id="status" aria-live="polite"></div>
+</main>
+<script>
+(()=>{'use strict';
+const TARGET='https://uni928.github.io/Uni928PublicHTMLs2/index29B.html';
+const input=document.querySelector('#inputData'),delimiter=document.querySelector('#delimiter'),custom=document.querySelector('#customDelimiter'),perRow=document.querySelector('#perRow'),preview=document.querySelector('#previewWrap'),count=document.querySelector('#count'),previewCount=document.querySelector('#previewCount'),status=document.querySelector('#status');
+let db=null,saveTimer=0,lastMatrix=[];
+function dbName(){let p=location.pathname||'高速表作成';let h=0;for(let i=0;i<p.length;i++)h=(Math.imul(h,31)+p.charCodeAt(i))|0;return'high-speed-table-'+Math.abs(h)}
+function openDb(){if(db)return Promise.resolve(db);if(!('indexedDB'in window))return Promise.reject(new Error('このブラウザではIndexedDBを利用できません。'));return new Promise((resolve,reject)=>{let r=indexedDB.open(dbName(),1);r.onupgradeneeded=()=>r.result.createObjectStore('state');r.onsuccess=()=>{db=r.result;resolve(db)};r.onerror=()=>reject(r.error||new Error('IndexedDBを開けませんでした。'))})}
+function settingSnapshot(){return{delimiter:delimiter.value,custom:custom.value,perRow:Math.max(1,Math.min(100,Number(perRow.value)||5)),text:input.value}}
+function save(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>openDb().then(d=>new Promise((resolve,reject)=>{let tx=d.transaction('state','readwrite');tx.objectStore('state').put(settingSnapshot(),'current');tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)})).then(()=>{status.textContent='設定と入力内容をIndexedDBに保存しました'}).catch(e=>{status.textContent='保存できません：'+e.message}),160)}
+function separator(){return delimiter.value==='custom'?(custom.value||'|'):delimiter.value}
+function parseInput(){let text=input.value;if(!text)return[];let sep=text.includes(',')?',':separator();if(!sep)return[text];let normalized=text.replace(/\r\n?/g,'\n').replace(/\n/g,sep);let parts=normalized.split(sep);let n=Math.max(1,Math.min(100,Number(perRow.value)||5)),rows=[];for(let i=0;i<parts.length;i+=n)rows.push(parts.slice(i,i+n));return rows}
+function render(){let matrix=parseInput();lastMatrix=matrix;let total=matrix.reduce((sum,row)=>sum+row.length,0);count.textContent=total.toLocaleString('ja-JP')+'個';previewCount.textContent=matrix.length?matrix.length+'行・'+total+'個':'';if(!matrix.length){preview.innerHTML='<span class="note">入力すると、ここに表として表示します。</span>';return}let table=document.createElement('table');table.className='preview-table';let body=document.createElement('tbody');matrix.forEach((row,r)=>{let tr=document.createElement('tr'),th=document.createElement('th');th.textContent=String(r+1);tr.append(th);row.forEach(value=>{let td=document.createElement('td');td.textContent=value;tr.append(td)});body.append(tr)});table.append(body);preview.replaceChildren(table)}
+function update(){render();save()}
+function applySettings(s){if(!s||typeof s!=='object')return;if([',','\t',';',':',' ','custom'].includes(s.delimiter))delimiter.value=s.delimiter;if(typeof s.custom==='string')custom.value=s.custom;if(Number.isFinite(Number(s.perRow)))perRow.value=String(Math.max(1,Math.min(100,Number(s.perRow))));if(typeof s.text==='string')input.value=s.text;custom.disabled=delimiter.value!=='custom';render()}
+async function restore(){try{let d=await openDb(),saved=await new Promise((resolve,reject)=>{let r=d.transaction('state','readonly').objectStore('state').get('current');r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)});if(saved){applySettings(saved);status.textContent='前回の設定と入力内容を復元しました'}}catch(e){status.textContent='ブラウザ保存を利用できません：'+e.message}}
+function bytesToB64url(bytes){let binary='';for(let i=0;i<bytes.length;i+=32768)binary+=String.fromCharCode(...bytes.subarray(i,i+32768));return btoa(binary).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/g,'')}
+async function bestPayload(state){let bytes=new TextEncoder().encode(JSON.stringify(state)),choices=[{key:'raw',bytes}];for(let x of [{key:'gz',fmt:'gzip'},{key:'dr',fmt:'deflate-raw'},{key:'br',fmt:'brotli'}])try{if(!window.CompressionStream||!window.DecompressionStream)continue;let packed=new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(new CompressionStream(x.fmt))).arrayBuffer()),round=new Uint8Array(await new Response(new Blob([packed]).stream().pipeThrough(new DecompressionStream(x.fmt))).arrayBuffer());if(round.length===bytes.length&&round.every((b,i)=>b===bytes[i]))choices.push({key:x.key,bytes:packed})}catch(e){}choices.sort((a,b)=>a.key.length+bytesToB64url(a.bytes).length-b.key.length-bytesToB64url(b.bytes).length);return choices[0]}
+async function makeTarget(){let state={v:1,data:lastMatrix,checks:{range:true,autosave:true,bulk:true}},packed=await bestPayload(state),url=new URL(TARGET);url.hash=packed.key+'='+bytesToB64url(packed.bytes);return url.href}
+function redirectHtml(url){return'<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>表データを読み込み中</title><p>表入力サイトを開いて、入力内容を読み込んでいます。</p><script>location.replace('+JSON.stringify(url)+')</scr'+'ipt>'}
+async function exportHtml(){try{let target=await makeTarget(),html=redirectHtml(target),blob=new Blob([html],{type:'text/html;charset=utf-8'}),u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download='高速表データ_'+new Date().toISOString().slice(0,10)+'.html';a.click();setTimeout(()=>URL.revokeObjectURL(u),1200);status.textContent='index29B.htmlで開くHTMLを保存しました'}catch(e){status.textContent='HTML保存に失敗しました：'+e.message}}
+async function openTable(){let tab=window.open('about:blank','_blank');if(!tab){status.textContent='新しいタブが開けませんでした。ポップアップを許可してください。';return}tab.opener=null;try{tab.location.replace(await makeTarget());status.textContent='表入力サイトを新しいタブで開きました'}catch(e){tab.close();status.textContent='表入力サイトを開けません：'+e.message}}
+input.addEventListener('input',update);delimiter.addEventListener('change',()=>{custom.disabled=delimiter.value!=='custom';update()});custom.addEventListener('input',update);perRow.addEventListener('input',update);
+input.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();let sep=separator();input.setRangeText(sep,input.selectionStart,input.selectionEnd,'end');update()}});
+document.querySelector('#openTable').addEventListener('click',openTable);document.querySelector('#saveHtml').addEventListener('click',exportHtml);document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();exportHtml()}});
+restore();render();
+})();
+</script></body></html>
