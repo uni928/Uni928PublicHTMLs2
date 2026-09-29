@@ -82,7 +82,7 @@
     </section>
     <section class="card">
       <h2 class="section-title">3. プロンプトを作成</h2>
-      <div class="actions"><button class="button" id="make" disabled>画像を圧縮して作成</button><button class="button secondary" id="copy" disabled>プロンプトをコピー</button></div>
+      <div class="actions"><button class="button" id="make" disabled>画像を圧縮して作成</button><button class="button secondary" id="makeDownload" disabled>画像を圧縮して作成（圧縮した画像をダウンロードする版）</button><button class="button secondary" id="copy" disabled>プロンプトをコピー</button></div>
       <p id="status" class="status" role="status" aria-live="polite"></p>
       <label for="output">生成されたプロンプト</label>
       <textarea id="output" readonly placeholder="画像を選び、「画像を圧縮して作成」を押してください。"></textarea>
@@ -138,7 +138,7 @@
   el('extra').addEventListener('input', saveSettings);
   function setImage(file) {
     if (!file || !file.type.startsWith('image/')) { el('status').textContent='画像ファイルを選択してください。'; return; }
-    sourceFile=file; el('make').disabled=false; el('copy').disabled=true; promptText=''; el('output').value='';
+    sourceFile=file; el('make').disabled=false; el('makeDownload').disabled=false; el('copy').disabled=true; promptText=''; el('output').value='';
     if(thumbUrl) URL.revokeObjectURL(thumbUrl); thumbUrl=URL.createObjectURL(file);
     el('thumb').src=thumbUrl; el('fileName').textContent=file.name; el('compression').textContent=`元画像 ${(file.size/1024).toFixed(0)} KB`; el('preview').hidden=false;
     el('status').textContent='画像を選択しました。用途を確認して作成してください。';
@@ -162,18 +162,27 @@
     }
     throw new Error('この画像は上限内に圧縮できませんでした。別の画像をお試しください。');
   }
-  el('make').addEventListener('click',async()=>{
-    if(!sourceFile)return;el('make').disabled=true;el('copy').disabled=true;el('status').textContent='WebPに変換して圧縮しています…';
+  async function createPrompt(downloadImage) {
+    if(!sourceFile)return;el('make').disabled=true;el('makeDownload').disabled=true;el('copy').disabled=true;el('status').textContent='WebPに変換して圧縮しています…';
     try {
       const c=await compress(sourceFile), selected=tasks.find(t=>t[0]===task.value), detail=el('detail').value;
       const detailText=detail==='structured'?'出力は見やすく整えてください。ただし、原文にない情報は加えないでください。':detail==='compact'?'文字起こしの後に、必要なら要点を短くまとめてください。原文の文字起こしと要約を区別してください。':'改行や配置は必要に応じて保ち、原文にない内容は加えず、読めない箇所は推測しないでください。';
       const extra=el('extra').value.trim();
-      promptText=`次の画像を確認し、指定した内容に対応してください。\n\n【依頼】\n${selected[2]}\n${detailText}${extra?`\n追加の希望：${extra}`:''}\n\n文字が判読できない箇所は、文脈だけで断定せず［判読不能］としてください。\n\n【画像】\ndata:image/webp;base64,${c.b64}`;
-      el('output').value=promptText;el('copy').disabled=false;el('status').textContent=`作成しました。Base64 ${c.b64.length.toLocaleString()} / ${MAX_B64.toLocaleString()}文字、WebP ${(c.bytes/1024).toFixed(1)} KB、${c.w}×${c.h}px、画質目安 ${Math.round(c.q*100)}%。`;
+      if(downloadImage) {
+        promptText=`添付画像を確認し、指定した内容に対応してください。\n\n【依頼】\n${selected[2]}\n${detailText}${extra?`\n追加の希望：${extra}`:''}\n\n文字が判読できない箇所は、文脈だけで断定せず［判読不能］としてください。`;
+        const blob=await canvasBlobFromBase64(c.b64);
+        const href=URL.createObjectURL(blob), a=document.createElement('a'); a.href=href; a.download=(sourceFile.name.replace(/\.[^.]+$/,'')||'image')+'.webp'; document.body.append(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(href),1000);
+      } else {
+        promptText=`次の画像を確認し、指定した内容に対応してください。\n\n【依頼】\n${selected[2]}\n${detailText}${extra?`\n追加の希望：${extra}`:''}\n\n文字が判読できない箇所は、文脈だけで断定せず［判読不能］としてください。\n\n【画像】\ndata:image/webp;base64,${c.b64}`;
+      }
+      el('output').value=promptText;el('copy').disabled=false;el('status').textContent=`${downloadImage?'圧縮画像をダウンロードし、添付用プロンプトを作成しました。':'作成しました。'} Base64 ${c.b64.length.toLocaleString()} / ${MAX_B64.toLocaleString()}文字、WebP ${(c.bytes/1024).toFixed(1)} KB、${c.w}×${c.h}px、画質目安 ${Math.round(c.q*100)}%。`;
       el('compression').textContent=`WebP ${(c.bytes/1024).toFixed(1)} KB・${c.w}×${c.h}px`;
     } catch(e) { el('status').textContent=e.message||'処理に失敗しました。'; }
-    finally { el('make').disabled=false; }
-  });
+    finally { el('make').disabled=false;el('makeDownload').disabled=false; }
+  }
+  function canvasBlobFromBase64(b64) { const bytes=Uint8Array.from(atob(b64),c=>c.charCodeAt(0)); return Promise.resolve(new Blob([bytes],{type:'image/webp'})); }
+  el('make').addEventListener('click',()=>createPrompt(false));
+  el('makeDownload').addEventListener('click',()=>createPrompt(true));
   el('copy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(promptText);el('status').textContent='プロンプトをコピーしました。';}catch(_){el('output').focus();el('output').select();el('status').textContent='自動コピーできませんでした。選択した内容をコピーしてください。';}});
 })();
 </script>
