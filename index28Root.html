@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="プロンプト管理サイトのタブ別データをまとめて管理します。">
+<title>プロンプト管理・外タブ切り替え</title>
+<style>
+@layer base,layout,components,responsive;
+@layer base{
+/* 基本色とフォームの共通設定。 */
+:root{color-scheme:light;--bg:#f3f6fb;--paper:#fff;--ink:#172033;--muted:#65728a;--line:#dce4ef;--blue:#315fe8;--blue-dark:#244bc1;--soft:#edf2ff;--green:#087f5b;--red:#b42318;--shadow:0 12px 34px rgba(25,42,76,.08)*{box-sizing:border-box}html{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink)}body{margin:0;min-height:100vh;background:linear-gradient(180deg,#fff 0,transparent 300px),var(--bg)}button,input{font:inherit}button{cursor:pointer}button:focus-visible,input:focus-visible{outline:3px solid #8da9ff;outline-offset:2px}
+}
+@layer layout{
+/* 見出し、追加フォーム、一覧、全体書き出しを配置。 */
+.shell{width:min(100% - 28px,900px);margin:auto;padding:24px 0 48px}.hero{margin-bottom:18px}.hero h1{margin:0;font-size:clamp(1.7rem,4vw,2.3rem)}.hero p{color:var(--muted);line-height:1.65}.add-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(130px,220px) auto;gap:8px}.list{display:grid;gap:10px;margin:18px 0}.export-row{display:flex;gap:8px;flex-wrap:wrap}
+}
+@layer components{
+/* サイトカードと共通ボタンの見た目。 */
+.panel,.site{border:1px solid var(--line);border-radius:16px;background:var(--paper);box-shadow:var(--shadow)}.panel{padding:16px;margin:14px 0}.panel h2{margin:0 0 12px;font-size:1.1rem}.site{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:13px}.site-name{font-weight:800;overflow-wrap:anywhere}.site-id{margin-top:4px;color:var(--muted);font-size:.86rem;overflow-wrap:anywhere}.site-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}.field{width:100%;min-height:42px;padding:0 11px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink)}.button{min-height:40px;padding:0 13px;border:1px solid var(--line);border-radius:11px;background:#fff;color:#34415a;font-weight:750}.button:hover{background:#f8faff}.primary{border-color:var(--blue);background:var(--blue);color:#fff}.primary:hover{background:var(--blue-dark)}.soft{border-color:transparent;background:var(--soft);color:#244bc1}.danger{color:var(--red)}.status{min-height:22px;color:var(--muted);font-size:.9rem}.status.good{color:var(--green);font-weight:700}.status.error{color:var(--red);font-weight:700}.note{padding:11px 13px;border-radius:10px;background:var(--soft);color:#2949a6;line-height:1.55;font-size:.9rem}.hidden{display:none!important}
+}
+@layer responsive{
+/* 狭い画面では入力欄とカード操作を縦に配置。 */
+@media(max-width:620px){.shell{width:min(100% - 16px,900px);padding-top:16px}.add-row{grid-template-columns:1fr}.site{grid-template-columns:1fr}.site-actions{justify-content:flex-start}.export-row .button{flex:1 1 100%}}
+}
+</style>
+</head>
+<body>
+<main class="shell">
+<header class="hero"><h1>プロンプト管理・外タブ切り替え</h1><p>プロンプト管理サイトの <code>tab=XXXX</code> ごとの保存先を登録し、切り替えます。別タブから移動してきた保存先は自動で一覧に加わります。</p></header>
+<section class="panel" aria-labelledby="addHeading"><h2 id="addHeading">サイトを追加</h2><div class="add-row"><input id="nameInput" class="field" maxlength="64" placeholder="表示名（例：仕事用）" aria-label="表示名"><input id="idInput" class="field" maxlength="128" placeholder="tab の値" aria-label="tab の値"><button id="addButton" class="button primary" type="button">追加</button></div></section>
+<div id="status" class="status" role="status" aria-live="polite"></div>
+<section id="siteList" class="list" aria-label="登録済みサイト"></section>
+<section class="panel" aria-labelledby="exportHeading"><h2 id="exportHeading">全体を書き出す</h2><p class="note">HTMLは登録したサイトごとに1ファイルを作成し、ZIPにまとめます。CSVは全サイトのプロンプト内容を書き出します。CSVにはインポート機能がありません。</p><div class="export-row" style="margin-top:12px"><button id="exportAllButton" class="button primary" type="button">全体をHTML（ZIP）でエクスポート</button><button id="exportCsvButton" class="button" type="button">全体をCSVでエクスポート</button></div></section>
+</main>
+<script>
+(()=>{"use strict";
+/* index28本体と同じDB・暗号化形式を読み取り専用で参照し、各サイトの現行データを書き出す。 */
+const DB_NAME="TmUSz36d",DB_VERSION=1,STORE="state",ROOT_KEY="index28Root:workspaces:v1",DATA_PREFIX="AKMcwq01:",SITE_URL="https://uni928.github.io/Uni928PublicHTMLs2/index28.html",FORMAT=[{format:"brotli",key:"br"},{format:"deflate-raw",key:"dr"},{format:"gzip",key:"gz"}],SECRET="uni928-prompt-manager|fixed-local-encryption-key|v1",SALT="uni928-prompt-manager-static-salt-v1";
+const $=id=>document.getElementById(id);let sites=[],db=null,keyPromise=null;
+const makeId=()=>{const a="0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";let s="";const b=crypto.getRandomValues(new Uint8Array(16));for(const x of b){if(x<248)s+=a[x%62];if(s.length===8)break}return s};
+function status(text,kind=""){const el=$("status");el.textContent=text;el.className="status"+(kind?" "+kind:"")}
+function openDb(){return new Promise((resolve,reject)=>{const r=indexedDB.open(DB_NAME,DB_VERSION);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(STORE))r.result.createObjectStore(STORE)};r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)})}
+function readValue(key){return new Promise((resolve,reject)=>{const r=db.transaction(STORE,"readonly").objectStore(STORE).get(key);r.onsuccess=()=>resolve(r.result||null);r.onerror=()=>reject(r.error)})}
+function writeValue(key,value){return new Promise((resolve,reject)=>{const tx=db.transaction(STORE,"readwrite");tx.objectStore(STORE).put(value,key);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)})}
+function b64bytes(s){const raw=atob(s.replace(/-/g,"+").replace(/_/g,"/")+"=".repeat((4-s.length%4)%4));return Uint8Array.from(raw,c=>c.charCodeAt(0))}
+function b64url(bytes){let raw="";for(let i=0;i<bytes.length;i+=0x8000)raw+=String.fromCharCode(...bytes.subarray(i,i+0x8000));return btoa(raw).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/g,"")}
+async function storageKey(){if(!keyPromise)keyPromise=(async()=>{const material=await crypto.subtle.importKey("raw",new TextEncoder().encode(SECRET),"PBKDF2",false,["deriveKey"]);return crypto.subtle.deriveKey({name:"PBKDF2",salt:new TextEncoder().encode(SALT),iterations:120000,hash:"SHA-256"},material,{name:"AES-GCM",length:256},false,["decrypt"])})();return keyPromise}
+async function decodeStored(v){if(!v)return null;if(v.__encrypted!==1)return v;const key=await storageKey(),compressed=new Uint8Array(await crypto.subtle.decrypt({name:"AES-GCM",iv:b64bytes(v.iv)},key,b64bytes(v.payload))),plain=new Uint8Array(await new Response(new Blob([compressed]).stream().pipeThrough(new DecompressionStream("gzip"))).arrayBuffer());return JSON.parse(new TextDecoder().decode(plain))}
+function persist(){return writeValue(ROOT_KEY,sites)}
+function safeText(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function render(){const host=$("siteList");if(!sites.length){host.innerHTML='<div class="panel">登録済みサイトはありません。上の欄から追加できます。</div>';return}host.innerHTML=sites.map((s,i)=>`<article class="site" data-index="${i}"><div><div class="site-name">${safeText(s.name)}</div><div class="site-id">tab=${safeText(s.id)}</div></div><div class="site-actions"><button class="button primary" data-action="open" type="button">サイトへ移動</button><button class="button" data-action="rename" type="button">名称変更</button>${i?'<button class="button" data-action="up" type="button" aria-label="上へ移動">↑</button>':''}${i<sites.length-1?'<button class="button" data-action="down" type="button" aria-label="下へ移動">↓</button>':''}<button class="button danger" data-action="remove" type="button">削除</button></div></article>`).join("")}
+function addSite(id,name){id=String(id||"").trim().slice(0,128);name=String(name||"").trim().slice(0,64);if(!id)throw new Error("tab の値を入力してください。");if(!name)name=`サイト ${sites.length+1}`;const found=sites.find(x=>x.id===id);if(found){if(name&&found.name.startsWith("サイト "))found.name=name;return false}sites.push({id,name,created:Date.now()});return true}
+function handleMoved(){const m=location.hash.match(/^#moved=([^&]*)/);if(!m)return;let id;try{id=decodeURIComponent(m[1])}catch{id=m[1]}if(id){addSite(id,`サイト ${id}`);persist().then(()=>{render();status(`tab=${id} を一覧に登録しました。`,"good")})}history.replaceState(null,"",location.pathname+location.search)}
+function launch(id){const u=new URL(SITE_URL);u.searchParams.set("tab",id);window.open(u.href,"_blank","noopener,noreferrer")}
+function crc32(bytes){let c=0xffffffff;for(const b of bytes){c^=b;for(let k=0;k<8;k++)c=(c>>>1)^((c&1)?0xedb88320:0)}return(c^0xffffffff)>>>0}
+function u16(v){return[v&255,(v>>>8)&255]}function u32(v){return[v&255,(v>>>8)&255,(v>>>16)&255,(v>>>24)&255]}
+function zipStore(files){const enc=new TextEncoder(),locals=[],centrals=[];let offset=0;for(const f of files){const name=enc.encode(f.name),data=f.data instanceof Uint8Array?f.data:enc.encode(f.data),crc=crc32(data),local=new Uint8Array([...u32(0x04034b50),...u16(20),...u16(0x0800),...u16(0),...u16(0),...u16(0),...u32(crc),...u32(data.length),...u32(data.length),...u16(name.length),...u16(0),...name,...data]);locals.push(local);const central=new Uint8Array([...u32(0x02014b50),...u16(20),...u16(20),...u16(0x0800),...u16(0),...u16(0),...u16(0),...u32(crc),...u32(data.length),...u32(data.length),...u16(name.length),...u16(0),...u16(0),...u16(0),...u16(0),...u32(0),...u32(offset),...name]);centrals.push(central);offset+=local.length}const centralLength=centrals.reduce((n,x)=>n+x.length,0),end=new Uint8Array([...u32(0x06054b50),...u16(0),...u16(0),...u16(files.length),...u16(files.length),...u32(centralLength),...u32(offset),...u16(0)]);return new Blob([...locals,...centrals,end],{type:"application/zip"})}
+async function payloadFor(data){const inner={schema:"prompt-manager",version:1,prompts:Array.isArray(data?.prompts)?data.prompts:[],tabs:Array.isArray(data?.tabs)?data.tabs:[{id:"tab-basic",name:"基本",created:0}],bannedWords:Array.isArray(data?.bannedWords)?data.bannedWords:["sk-","AIzaSy"],exportFilename:data?.exportFilename||"",activeTabId:data?.activeTabId||"tab-basic",sortNewest:data?.sortNewest!==false};const bytes=new TextEncoder().encode(JSON.stringify({v:1,t:"",s:JSON.stringify(inner),n:"",p:"",m:"editor",z:"small",f:[],i:[]})),candidates=[];for(const f of FORMAT){try{const out=new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(new CompressionStream(f.format))).arrayBuffer());candidates.push({key:f.key,value:b64url(out)})}catch{}}if(!candidates.length)throw new Error("このブラウザではHTML用圧縮が利用できません。");candidates.sort((a,b)=>a.value.length-b.value.length);return candidates[0]}
+async function exportAll(){if(!sites.length){status("書き出すサイトがありません。","error");return}const b=$("exportAllButton");b.disabled=true;try{const files=[];for(let i=0;i<sites.length;i++){const s=sites[i],v=await readValue(DATA_PREFIX+s.id),data=await decodeStored(v)||{prompts:[],tabs:[{id:"tab-basic",name:"基本",created:0}],bannedWords:["sk-","AIzaSy"],activeTabId:"tab-basic"},p=await payloadFor(data),u=new URL(SITE_URL);u.searchParams.set("tab",s.id);const redirect='<!doctype html><html lang="ja"><meta charset="utf-8"><title>'+safeText(s.name)+'</title><script>location.replace('+JSON.stringify(u.href+"#"+p.key+"="+p.value)+')<\/script></html>';files.push({name:String(i+1).padStart(2,"0")+"_"+s.name.replace(/[\\/:*?"<>|]/g,"_").slice(0,50)+".html",data:redirect})}download(zipStore(files),"index28-全体エクスポート.zip");status(`${sites.length}サイト分のHTMLをZIPにまとめました。`,"good")}catch(e){status(e.message||"HTMLの書き出しに失敗しました。","error")}finally{b.disabled=false}}
+function csvQuote(v){return '"'+String(v??"").replace(/"/g,'""')+'"'}
+async function exportCsv(){const b=$("exportCsvButton");b.disabled=true;try{const rows=[["サイト名","tab","タイトル","タブ","本文"]];for(const s of sites){const data=await decodeStored(await readValue(DATA_PREFIX+s.id));for(const p of data?.prompts||[]){const tab=(data.tabs||[]).find(t=>t.id===p.tabId);rows.push([s.name,s.id,p.title||"",tab?.name||"基本",p.text||""])}}const csv="\uFEFF"+rows.map(r=>r.map(csvQuote).join(",")).join("\r\n");download(new Blob([csv],{type:"text/csv;charset=utf-8"}),"index28-全体エクスポート.csv");status("全登録サイトのCSVを書き出しました。この画面にはCSVインポート機能はありません。","good")}catch(e){status(e.message||"CSVの書き出しに失敗しました。","error")}finally{b.disabled=false}}
+function download(blob,name){const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000)}
+$("addButton").addEventListener("click",async()=>{try{const id=$("idInput").value.trim()||makeId(),name=$("nameInput").value.trim()||`サイト ${sites.length+1}`;if(!addSite(id,name)){status("同じ tab のサイトは登録済みです。","error");return}await persist();$("idInput").value="";$("nameInput").value="";render();status("サイトを追加しました。","good")}catch(e){status(e.message,"error")}});
+$("siteList").addEventListener("click",async e=>{const b=e.target.closest("button[data-action]");if(!b)return;const card=b.closest("[data-index]"),i=Number(card.dataset.index),s=sites[i];if(!s)return;switch(b.dataset.action){case"open":launch(s.id);break;case"rename":{const v=prompt("表示名を入力してください",s.name);if(v===null)return;if(!v.trim()){status("名称は1文字以上入力してください。","error");return}s.name=v.trim().slice(0,64);break}case"remove":if(!confirm(`「${s.name}」（tab=${s.id}）を一覧から削除しますか？保存データ自体は削除されません。`))return;sites.splice(i,1);break;case"up":if(i>0)[sites[i-1],sites[i]]=[sites[i],sites[i-1]];break;case"down":if(i<sites.length-1)[sites[i+1],sites[i]]=[sites[i],sites[i+1]];break}await persist();render()});
+$("exportAllButton").addEventListener("click",exportAll);$("exportCsvButton").addEventListener("click",exportCsv);
+(async()=>{try{db=await openDb();const saved=await readValue(ROOT_KEY);sites=Array.isArray(saved)?saved.filter(x=>x&&typeof x.id==="string"&&typeof x.name==="string"):[];handleMoved();if(!location.hash.startsWith("#moved="))render()}catch(e){status("保存領域を開けませんでした。IndexedDB対応ブラウザで開いてください。","error")}})();
+})();
+</script>
+</body>
+</html>
