@@ -373,19 +373,38 @@
   }
 
   function extractMessages(doc) {
-    const roleNodes = [...doc.querySelectorAll('[data-message-author-role="user"], [data-message-author-role="assistant"]')];
     const messages = [];
-
-    for (const roleNode of roleNodes) {
-      const role = roleNode.getAttribute('data-message-author-role');
-      const contentNode = chooseContentNode(roleNode);
+    const appendMessage = (role, contentNode) => {
+      if (!contentNode) return;
       const html = normalizeMessageHtml(cleanNode(contentNode));
       const text = contentNode.textContent.trim();
-      if (!text && !html) continue;
+      if (!text && !html) return;
 
       const previous = messages[messages.length - 1];
-      if (previous && previous.role === role && previous.text === text) continue;
+      if (previous && previous.role === role && previous.text === text) return;
       messages.push({ role, html, text });
+    };
+
+    // 従来形式を優先し、既存の保存HTMLとの互換性を維持する。
+    const roleNodes = [...doc.querySelectorAll('[data-message-author-role="user"], [data-message-author-role="assistant"]')];
+    for (const roleNode of roleNodes) {
+      appendMessage(roleNode.getAttribute('data-message-author-role'), chooseContentNode(roleNode));
+    }
+
+    // 従来形式で本文を拾えない場合のみ、新形式の会話単位キーとMarkdown本文を使う。
+    if (!messages.length) {
+      const units = [...doc.querySelectorAll('[data-content-search-unit-key]')];
+      for (const unit of units) {
+        const key = unit.getAttribute('data-content-search-unit-key') || '';
+        const roleMatch = key.match(/:(user|assistant)$/);
+        if (!roleMatch) continue;
+        const role = roleMatch[1];
+        const contentNode = role === 'assistant'
+          ? unit.querySelector('[data-markdown-text-style="assistant-message"]')
+          : unit.querySelector('[data-user-message-bubble="true"]')
+            || unit.querySelector('[data-markdown-text-style="user-message"]');
+        if (contentNode) appendMessage(role, contentNode);
+      }
     }
     return messages;
   }
