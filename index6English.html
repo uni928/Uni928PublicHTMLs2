@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>AI Conversation Log HTML Formatter</title>
+<title>Conversation Archive Formatter</title>
 <style>
 @layer reset, base, components, uni-html-dropbox, utilities;
 
-/* reset: normalize basic browser defaults */
+/* base: ページ全体の基礎スタイル */
 @layer reset {
   *, *::before, *::after { box-sizing: border-box; }
   html { color-scheme: light; }
@@ -15,7 +15,7 @@
   button, input, textarea { font: inherit; }
 }
 
-/* base: colors, spacing, and typography */
+/* base: 色・余白・タイポグラフィ */
 @layer base {
   :root {
     --bg: #f5f7fb;
@@ -44,7 +44,7 @@
   textarea { color: var(--ink); }
 }
 
-/* components: input page */
+/* components: 入力ページ */
 @layer components {
   .page { width: min(1080px, calc(100% - 32px)); margin: 0 auto; padding: 42px 0 64px; }
   .hero { padding: 8px 4px 28px; }
@@ -96,7 +96,7 @@
 }
 
 
-/* uni-html-dropbox: card-style drop zone for saved HTML files */
+/* uni-html-dropbox: HTMLファイル投入パネルをカード型ドロップゾーンに変更 */
 @layer uni-html-dropbox {
   .uni-html-dropbox {
     margin: 20px 24px 0;
@@ -159,7 +159,7 @@
     display: grid;
     gap: 5px;
     text-align: center;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans JP", sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Arial", sans-serif;
   }
 
   .uni-html-dropbox__title {
@@ -218,7 +218,7 @@
   }
 }
 
-/* utilities: small-screen adjustments */
+/* utilities: 小画面調整 */
 @layer utilities {
   @media (max-width: 680px) {
     .page { width: min(100% - 20px, 1080px); padding-top: 24px; }
@@ -234,15 +234,15 @@
 <main class="page">
   <header class="hero">
     <div class="eyebrow">Conversation archive formatter</div>
-    <h1>Turn saved conversation HTML into one clean, readable page.</h1>
-    <p>Load HTML saved from a conversation page in your browser and extract only the conversation content. Sidebars and controls from the original page are removed, while text, headings, lists, code, and tables are reformatted for readability.</p>
+    <h1>Turn a saved conversation into a clean, readable page.</h1>
+    <p>Load an HTML conversation saved from your browser. This tool extracts the conversation and formats its text, headings, lists, code, and tables into a readable page, leaving out the original sidebar and controls.</p>
   </header>
 
   <section class="panel" aria-labelledby="panelTitle">
     <div class="panel-head">
       <div>
-        <h2 id="panelTitle">Add saved HTML</h2>
-        <p>Choose a file or paste the full HTML source into the field below.</p>
+        <h2 id="panelTitle">Load a saved HTML file</h2>
+        <p>Choose a file or paste the full HTML source below.</p>
       </div>
       <span id="status" class="status">Not analyzed</span>
     </div>
@@ -259,9 +259,9 @@
             </svg>
           </span>
           <span class="uni-html-dropbox__copy">
-            <span class="uni-html-dropbox__title">Upload saved HTML</span>
-            <span class="uni-html-dropbox__guide">Click to choose a file or drag it here</span>
-            <span class="uni-html-dropbox__meta">Supports HTML and HTM files</span>
+            <span class="uni-html-dropbox__title">Upload a saved HTML file</span>
+            <span class="uni-html-dropbox__guide">Click to choose a file, or drag it here</span>
+            <span class="uni-html-dropbox__meta">HTML and HTM files supported</span>
           </span>
         </span>
         <input id="file" class="uni-html-dropbox__input" type="file" accept=".html,.htm,text/html">
@@ -274,18 +274,18 @@
 
     <div class="editor-wrap">
       <div class="editor-label"><span>HTML source</span><span id="meta">0 characters</span></div>
-      <textarea id="source" spellcheck="false" placeholder="Paste the full HTML source of a conversation page saved from your browser here."></textarea>
+      <textarea id="source" spellcheck="false" placeholder="Paste the full HTML source of a conversation saved from your browser."></textarea>
     </div>
 
     <div class="options">
-      <label class="check"><input id="collapseAssistant" type="checkbox" checked> Generate with AI responses collapsed</label>
+      <label class="check"><input id="collapseAssistant" type="checkbox" checked> Collapse assistant messages in the output</label>
       <div class="actions">
-        <button id="preview" class="btn secondary" type="button">Analyze</button>
+        <button id="preview" class="btn secondary" type="button">Analyze conversation</button>
         <button id="download" class="btn primary" type="button" disabled>Download formatted HTML</button>
       </div>
     </div>
   </section>
-  <p class="note">All processing happens locally on this page. The HTML you provide is not sent anywhere.</p>
+  <p class="note">All processing happens in this page. Your HTML is not sent to any external service.</p>
 </main>
 <script>
 (() => {
@@ -373,19 +373,38 @@
   }
 
   function extractMessages(doc) {
-    const roleNodes = [...doc.querySelectorAll('[data-message-author-role="user"], [data-message-author-role="assistant"]')];
     const messages = [];
-
-    for (const roleNode of roleNodes) {
-      const role = roleNode.getAttribute('data-message-author-role');
-      const contentNode = chooseContentNode(roleNode);
+    const appendMessage = (role, contentNode) => {
+      if (!contentNode) return;
       const html = normalizeMessageHtml(cleanNode(contentNode));
       const text = contentNode.textContent.trim();
-      if (!text && !html) continue;
+      if (!text && !html) return;
 
       const previous = messages[messages.length - 1];
-      if (previous && previous.role === role && previous.text === text) continue;
+      if (previous && previous.role === role && previous.text === text) return;
       messages.push({ role, html, text });
+    };
+
+    // 従来形式を優先し、既存の保存HTMLとの互換性を維持する。
+    const roleNodes = [...doc.querySelectorAll('[data-message-author-role="user"], [data-message-author-role="assistant"]')];
+    for (const roleNode of roleNodes) {
+      appendMessage(roleNode.getAttribute('data-message-author-role'), chooseContentNode(roleNode));
+    }
+
+    // 従来形式で本文を拾えない場合のみ、新形式の会話単位キーとMarkdown本文を使う。
+    if (!messages.length) {
+      const units = [...doc.querySelectorAll('[data-content-search-unit-key]')];
+      for (const unit of units) {
+        const key = unit.getAttribute('data-content-search-unit-key') || '';
+        const roleMatch = key.match(/:(user|assistant)$/);
+        if (!roleMatch) continue;
+        const role = roleMatch[1];
+        const contentNode = role === 'assistant'
+          ? unit.querySelector('[data-markdown-text-style="assistant-message"]')
+          : unit.querySelector('[data-user-message-bubble="true"]')
+            || unit.querySelector('[data-markdown-text-style="user-message"]');
+        if (contentNode) appendMessage(role, contentNode);
+      }
     }
     return messages;
   }
@@ -394,7 +413,7 @@
     const raw = source.value.trim();
     if (!raw) {
       status.className = 'status error';
-      status.textContent = 'HTML is empty';
+      status.textContent = 'The HTML is empty.';
       download.disabled = true;
       return;
     }
@@ -402,39 +421,39 @@
     try {
       const doc = new DOMParser().parseFromString(raw, 'text/html');
       const messages = extractMessages(doc);
-      if (!messages.length) throw new Error('Could not detect conversation content.');
+      if (!messages.length) throw new Error('No conversation text could be detected.');
 
       parsed = {
-        title: (doc.querySelector('title')?.textContent || 'Conversation log').trim(),
+        title: (doc.querySelector('title')?.textContent || 'Conversation').trim(),
         messages
       };
       const userCount = messages.filter(m => m.role === 'user').length;
       const assistantCount = messages.filter(m => m.role === 'assistant').length;
       status.className = 'status ok';
-      status.textContent = `${messages.length} messages detected (You ${userCount} / AI ${assistantCount})`;
+      status.textContent = `${messages.length} messages found (you: ${userCount} / assistant: ${assistantCount})`;
       download.disabled = false;
     } catch (error) {
       parsed = null;
       download.disabled = true;
       status.className = 'status error';
-      status.textContent = error.message || 'Analysis error';
+      status.textContent = error.message || 'Could not analyze the HTML.';
     }
   }
 
   function buildOutput(data, collapsed) {
-    const title = data.title.replace(/\s*[|｜-]\s*ChatGPT\s*$/i, '').trim() || 'Conversation log';
+    const title = data.title.replace(/\s*[|｜-]\s*ChatGPT\s*$/i, '').trim() || 'Conversation';
     const cards = data.messages.map((message, index) => {
       const body = message.html || `<p>${escapeHtml(message.text)}</p>`;
       if (message.role === 'assistant') {
         return `
 <details class="turn assistant"${collapsed ? '' : ' open'}>
-  <summary><span class="badge">AI</span><span class="summary-label">Response ${index + 1}</span><span class="chevron" aria-hidden="true">⌄</span></summary>
+  <summary><span class="badge">AI</span><span class="summary-label">Assistant message ${index + 1}</span><span class="chevron" aria-hidden="true">⌄</span></summary>
   <div class="message-body">${body}</div>
 </details>`;
       }
       return `
 <article class="turn user">
-  <div class="turn-head"><span class="badge">YOU</span><span>Question / instruction ${index + 1}</span></div>
+  <div class="turn-head"><span class="badge">YOU</span><span>Your message ${index + 1}</span></div>
   <div class="message-body">${body}</div>
 </article>`;
     }).join('\n');
@@ -448,7 +467,7 @@
 <style>
 @layer reset, base, layout, message, content, table, code, utilities;
 
-/* reset: normalize browser differences */
+/* base: ブラウザ差を整える */
 @layer reset {
   *, *::before, *::after { box-sizing: border-box; }
   body, h1, p { margin: 0; }
@@ -456,7 +475,7 @@
   img { max-width: 100%; height: auto; }
 }
 
-/* base: colors and body text */
+/* base: 配色と本文 */
 @layer base {
   :root {
     --bg: #f6f7fa;
@@ -479,7 +498,7 @@
   a { color: #2d49bd; text-underline-offset: .18em; }
 }
 
-/* layout: readable content width and header */
+/* layout: 読みやすい本文幅とヘッダー */
 @layer layout {
   .shell { width: min(920px, calc(100% - 28px)); margin: 0 auto; padding: 42px 0 80px; }
   .top { margin-bottom: 28px; padding: 0 4px; }
@@ -489,7 +508,7 @@
   .thread { display: grid; gap: 16px; }
 }
 
-/* message: conversation cards and collapsible UI */
+/* message: 発言カードと開閉UI */
 @layer message {
   .turn { overflow: hidden; border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); }
   .turn.user { background: var(--user); border-color: var(--user-line); }
@@ -507,7 +526,7 @@
   .message-body { padding: 19px 20px 22px; overflow-wrap: anywhere; }
 }
 
-/* content: headings and lists inside messages */
+/* content: 会話本文内の見出し・箇条書き */
 @layer content {
   .message-body > :first-child { margin-top: 0; }
   .message-body > :last-child { margin-bottom: 0; }
@@ -522,7 +541,7 @@
   .message-body hr { border: 0; border-top: 1px solid var(--line); margin: 1.5em 0; }
 }
 
-/* table: card-style tables with horizontal scrolling on narrow screens */
+/* table: 表をカード状に整え、狭い画面では横スクロール */
 @layer table {
   .message-body table { display: block; width: 100%; max-width: 100%; margin: 1.2em 0; overflow-x: auto; border: 1px solid #d7dee8; border-radius: 14px; background: #fff; box-shadow: 0 5px 18px rgba(24,32,43,.05); }
   .message-body thead { background: #f1f4f8; }
@@ -535,14 +554,14 @@
   .message-body table p { margin: 0; }
 }
 
-/* code: code blocks and inline code */
+/* code: コードとインラインコード */
 @layer code {
   .message-body pre { margin: 1.1em 0; overflow: auto; border: 1px solid #273341; border-radius: 14px; background: #17202a; padding: 15px 16px; color: #eef3f8; font: .88rem/1.65 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; tab-size: 2; }
   .message-body code { border-radius: 6px; background: #eef1f5; padding: .14em .34em; font: .9em ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
   .message-body pre code { background: transparent; padding: 0; color: inherit; }
 }
 
-/* utilities: print and mobile adjustments */
+/* utilities: 印刷とモバイル */
 @layer utilities {
   @media (max-width: 620px) {
     .shell { width: min(100% - 16px, 920px); padding-top: 24px; }
@@ -566,9 +585,9 @@
   <header class="top">
     <div class="kicker">Conversation archive</div>
     <h1>${escapeHtml(title)}</h1>
-    <p class="meta">${data.messages.length} messages reformatted for easier reading</p>
+    <p class="meta">${data.messages.length} messages formatted for easier reading</p>
   </header>
-  <section class="thread" aria-label="Conversation log">
+  <section class="thread" aria-label="Conversation">
 ${cards}
   </section>
 </main>
