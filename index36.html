@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#f6f4ef">
+<meta name="description" content="鳥取砂丘の景色や楽しみ方を紹介する、非公式の案内ページです。">
+<title>鳥取砂丘を訪ねる</title>
+<style>
+@layer base {
+  /* 読みやすさを優先した、スマートフォン対応の案内ページです。 */
+  :root {
+    color-scheme: light;
+    --ink: #302b24;
+    --muted: #655e53;
+    --paper: #f6f2e9;
+    --card: #fffefa;
+    --accent: #a45b2a;
+    --accent-soft: #f5e8d8;
+    --line: #e4d9c9;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans JP", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    line-height: 1.85;
+    letter-spacing: .025em;
+  }
+  .page { width: min(100% - 32px, 760px); margin-inline: auto; }
+  header { padding: 64px 0 38px; }
+  .eyebrow { margin: 0 0 12px; color: var(--accent); font-size: .82rem; font-weight: 750; letter-spacing: .12em; }
+  h1 { max-width: 680px; margin: 0; font-size: clamp(2rem, 7vw, 3.35rem); line-height: 1.35; letter-spacing: .01em; }
+  .intro { max-width: 650px; margin: 22px 0 0; color: var(--muted); font-size: 1.06rem; }
+  main { padding-bottom: 56px; }
+  section { margin-top: 22px; padding: clamp(22px, 5vw, 34px); border: 1px solid var(--line); border-radius: 20px; background: var(--card); }
+  h2 { margin: 0 0 14px; font-size: 1.28rem; line-height: 1.5; }
+  p { margin: 0 0 14px; }
+  p:last-child { margin-bottom: 0; }
+  .welcome { border: 0; background: var(--accent); color: white; }
+  .welcome .eyebrow { color: #f8dfc5; }
+  .welcome h2 { font-size: clamp(1.35rem, 5vw, 1.8rem); }
+  .welcome p { color: #fff7ef; }
+  .steps { display: grid; gap: 12px; margin: 20px 0 0; padding: 0; list-style: none; counter-reset: step; }
+  .steps li { position: relative; min-height: 52px; padding: 10px 12px 10px 52px; border-radius: 12px; background: #f7f1e7; counter-increment: step; }
+  .steps li::before { position: absolute; top: 10px; left: 12px; display: grid; width: 28px; height: 28px; place-items: center; border-radius: 50%; background: var(--accent-soft); color: var(--accent); content: counter(step); font-weight: 750; }
+  .note { margin-top: 18px; padding: 15px 17px; border-left: 3px solid var(--accent); background: #faf5ec; color: var(--muted); }
+  a { color: #78431f; text-underline-offset: .18em; }
+  a:hover { color: #4e2b15; }
+  footer { padding: 0 0 36px; color: var(--muted); font-size: .88rem; }
+  @media (max-width: 520px) {
+    header { padding-top: 42px; }
+    .page { width: min(100% - 24px, 760px); }
+    section { border-radius: 16px; }
+  }
+}
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <p class="eyebrow">TOTTORI SAND DUNES</p>
+    <h1>鳥取砂丘を訪ねる</h1>
+    <p class="intro">風が描く砂の模様、広がる砂丘、そしてその先に見える日本海。鳥取砂丘の景色や散策の楽しみ方を紹介する、非公式の案内ページです。</p>
+  </header>
+  <main>
+    <section class="welcome" aria-labelledby="welcome-title">
+      <p class="eyebrow">WELCOME</p>
+      <h2 id="welcome-title">砂丘の景色を、ゆっくり楽しもう</h2>
+      <p>砂の上を歩きながら、風や光によって変わる景色を眺めてみませんか。訪れる時間や天候によって、砂丘はさまざまな表情を見せてくれます。</p>
+    </section>
+
+    <section aria-labelledby="about-title">
+      <h2 id="about-title">鳥取砂丘とは</h2>
+      <p>鳥取市の日本海沿岸に広がる、国内最大級の海岸砂丘です。砂丘の中心部は国の天然記念物に指定されており、砂と風がつくる独特の地形を歩いて体感できます。</p>
+      <p>目の前に広がる砂の斜面を越えると、日本海を望む景色に出会えます。遠くから眺めるだけでなく、砂丘の中を散策することで、広さや高低差をより感じられます。</p>
+    </section>
+
+    <section aria-labelledby="enjoy-title">
+      <h2 id="enjoy-title">楽しみ方の例</h2>
+      <p>初めて訪れる場合は、景色を眺めながら無理のない範囲で歩くのがおすすめです。周辺には砂丘の自然や地域について知ることができる施設、体験スポットもあります。</p>
+      <ol class="steps">
+        <li>砂丘入口から景色を眺め、歩くルートを考える</li>
+        <li>砂の起伏や風紋を見ながら、砂丘の中を散策する</li>
+        <li>周辺の施設や体験スポットにも立ち寄る</li>
+      </ol>
+      <p class="note">砂の上は歩きにくく、天候によって体感温度も変わります。歩きやすい服装と靴、飲み物を用意し、体調や天候に合わせて散策してください。</p>
+    </section>
+
+    <section aria-labelledby="visit-title">
+      <h2 id="visit-title">訪れる前に確認したいこと</h2>
+      <p>交通、駐車場、周辺施設の営業時間や開催状況は変更される場合があります。出発前に最新情報を確認してください。</p>
+      <p>鳥取砂丘の観光情報は、<a href="https://www.tottori-guide.jp/sakyu/" target="_blank" rel="noopener noreferrer">鳥取県観光旅行情報サイト</a>や、<a href="https://www.sakyu-vc.com/jp/" target="_blank" rel="noopener noreferrer">鳥取砂丘ビジターセンター</a>で確認できます。</p>
+    </section>
+
+    <section aria-labelledby="notice-title">
+      <h2 id="notice-title">このページについて</h2>
+      <p>このページは鳥取砂丘を紹介する非公式の案内ページです。鳥取県、鳥取市、各施設などの公式ページではありません。</p>
+      <p>掲載内容は訪問の参考としてご利用ください。最新の利用案内や現地のルールは、公式情報をご確認ください。</p>
+    </section>
+  </main>
+  <footer>風景を楽しみながら、砂丘の自然と現地の案内に配慮して散策しましょう。</footer>
+</div>
+</body>
+</html>
