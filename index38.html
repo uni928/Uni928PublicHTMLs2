@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ログ確認</title>
+<style>
+@layer base {
+  :root { color-scheme: light; font-family: system-ui, sans-serif; color: #1d2935; background: #f3f6f8; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 20px; }
+  main { max-width: 900px; margin: auto; }
+  h1 { font-size: 1.5rem; }
+  .card { background: white; border: 1px solid #dce3e8; border-radius: 14px; padding: 16px; margin: 14px 0; }
+  .row { display: flex; gap: 10px; align-items: flex-start; border-top: 1px solid #e8edf0; padding: 12px 0; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; margin: 0; flex: 1; }
+  button, .file-button { border: 0; border-radius: 8px; padding: 10px 14px; background: #176b50; color: white; font: inherit; cursor: pointer; }
+  button.secondary { background: #526273; }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  .muted { color: #607080; font-size: .92rem; }
+  .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  #dropZone { border: 2px dashed #91a3b2; border-radius: 12px; padding: 22px 14px; text-align: center; background: #f8fafb; }
+  #dropZone.dragover { border-color: #176b50; background: #e8f4ef; }
+  @media (max-width: 600px) { body { padding: 12px; } .row { gap: 8px; } button { padding: 9px 11px; } }
+}
+</style>
+</head>
+<body>
+<main>
+<h1>ログ確認</h1>
+<section class="card">
+<p>ログファイルをドロップして内容を確認します。解決状態はログのファイル名をキーにIndexedDBへ保存します。ログ本文のIndexedDB保存は初期状態ではオフです。</p>
+<div id="dropZone" tabindex="0" role="button" aria-label="ログファイルをドロップ、または選択">ログファイルをここにドラッグ＆ドロップ<br><span class="muted">または</span><br><label class="file-button">ログを選択<input id="logFile" type="file" accept=".log,.txt,text/plain" hidden></label></div>
+<p class="controls"><button id="toggleLogSave" class="secondary" aria-pressed="false">ログ本文のIndexedDB保存: オフ</button><button id="saveLogToDb" class="secondary" disabled>読み込み中のログをIndexedDBに保存</button><button id="loadLogFromDb" class="secondary" disabled>IndexedDBから保存ログを読み込む</button></p>
+<p class="muted">ログ本文の保存をオンにして「保存」を押したときだけ、選択中のログを保存します。解決状態のJSONは別環境への移行に使えます。</p>
+<div class="controls"><button id="exportState">状態をJSONでエクスポート</button><label class="file-button">状態JSONをインポート<input id="importState" type="file" accept="application/json,.json" hidden></label><button id="resetState" class="secondary">保存内容をリセット</button></div>
+<p id="status" class="muted" aria-live="polite">ログファイルを選択してください。</p>
+</section>
+<section class="card"><h2>未解決 <span id="openCount">0</span></h2><div id="openList"></div></section>
+<section class="card"><h2>解決済み <span id="doneCount">0</span></h2><div id="doneList"></div></section>
+</main>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  let fileKey = '';
+  let lines = [];
+  let saveLogEnabled = false;
+  const dbPromise = new Promise((resolve, reject) => {
+    const request = indexedDB.open('append-log-review', 1);
+    request.onupgradeneeded = () => request.result.createObjectStore('states');
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+  async function loadState() {
+    const db = await dbPromise;
+    return new Promise((resolve, reject) => {
+      const request = db.transaction('states').objectStore('states').get(fileKey);
+      request.onsuccess = () => resolve(request.result || { resolved: [] });
+      request.onerror = () => reject(request.error);
+    });
+  }
+  async function saveState(state) {
+    const db = await dbPromise;
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction('states', 'readwrite');
+      tx.objectStore('states').put(state, fileKey);
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+  function normalize(line) {
+    return line.replace(/\d{4}[-/.年]\d{1,2}[-/.月]\d{1,2}日?/g, '<DATE>')
+      .replace(/\d{1,2}[:：]\d{2}(?:[:：]\d{2})?/g, '<TIME>')
+      .replace(/\s+/g, ' ').trim();
+  }
+  async function render() {
+    if (!fileKey) return;
+    const state = await loadState();
+    const resolved = new Set(state.resolved || []);
+    const savedCount = resolved.size;
+    const firstByContent = new Map();
+    lines.forEach((line, index) => {
+      const normalized = normalize(line);
+      if (!normalized) return;
+      if (firstByContent.has(normalized)) resolved.add(index);
+      else firstByContent.set(normalized, index);
+    });
+    state.resolved = [...resolved].filter(index => Number.isInteger(index) && index >= 0 && index < lines.length).sort((a,b) => a-b);
+    if (state.resolved.length !== savedCount) await saveState(state);
+    const resolvedSet = new Set(state.resolved);
+    $('openCount').textContent = lines.filter((_, i) => !resolvedSet.has(i)).length;
+    $('doneCount').textContent = resolvedSet.size;
+    for (const [id, done] of [['openList', false], ['doneList', true]]) {
+      const root = $(id); root.replaceChildren();
+      lines.forEach((line, index) => {
+        if (resolvedSet.has(index) !== done) return;
+        const row = document.createElement('div'); row.className = 'row';
+        const pre = document.createElement('pre'); pre.textContent = line;
+        const button = document.createElement('button'); button.textContent = done ? '未解決に戻す' : '解決済み';
+        button.addEventListener('click', async () => {
+          const next = await loadState();
+          const set = new Set(next.resolved || []);
+          done ? set.delete(index) : set.add(index);
+          next.resolved = [...set].sort((a,b) => a-b);
+          await saveState(next); await render();
+        });
+        row.append(pre, button); root.append(row);
+      });
+    }
+    $('status').textContent = `ログ ${lines.length} 行 / 解決済み ${state.resolved.length} 行（${fileKey}）`;
+  }
+  async function loadLog(file) {
+    if (!file) return;
+    fileKey = file.name;
+    lines = (await file.text()).replace(/\r\n?/g, '\n').split('\n');
+    if (lines.at(-1) === '') lines.pop();
+    $('saveLogToDb').disabled = false;
+    $('loadLogFromDb').disabled = false;
+    await render();
+  }
+  const dropZone = $('dropZone');
+  dropZone.addEventListener('dragover', event => { event.preventDefault(); dropZone.classList.add('dragover'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+  dropZone.addEventListener('drop', event => { event.preventDefault(); dropZone.classList.remove('dragover'); loadLog(event.dataTransfer.files?.[0]); });
+  dropZone.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') $('logFile').click(); });
+  $('logFile').addEventListener('change', event => loadLog(event.target.files?.[0]));
+  $('toggleLogSave').addEventListener('click', () => {
+    saveLogEnabled = !saveLogEnabled;
+    $('toggleLogSave').textContent = `ログ本文のIndexedDB保存: ${saveLogEnabled ? 'オン' : 'オフ'}`;
+    $('toggleLogSave').setAttribute('aria-pressed', String(saveLogEnabled));
+  });
+  $('saveLogToDb').addEventListener('click', async () => {
+    if (!saveLogEnabled || !fileKey) return;
+    const state = await loadState(); state.logText = lines.join('\n'); await saveState(state);
+    $('status').textContent = `${fileKey} のログ本文をIndexedDBに保存しました。`;
+  });
+  $('loadLogFromDb').addEventListener('click', async () => {
+    if (!fileKey) return;
+    const state = await loadState();
+    if (typeof state.logText !== 'string') { $('status').textContent = 'このファイル名で保存されたログ本文はありません。'; return; }
+    lines = state.logText.split('\n');
+    $('status').textContent = `${fileKey} の保存ログ本文を読み込みました。`;
+    await render();
+  });
+  $('exportState').addEventListener('click', async () => {
+    if (!fileKey) { $('status').textContent = '先にログファイルを読み込んでください。'; return; }
+    const state = await loadState();
+    const data = { format: 'append-log-review-state-v1', fileKey, resolved: state.resolved || [] };
+    const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = fileKey + '.state.json'; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  });
+  $('importState').addEventListener('change', async event => {
+    const file = event.target.files?.[0]; if (!file) return;
+    try {
+      const data = JSON.parse(await file.text());
+      if (data.format !== 'append-log-review-state-v1' || !Array.isArray(data.resolved)) throw new Error('形式が異なります');
+      if (data.fileKey !== fileKey) throw new Error(`対象ファイル名が異なります（JSON: ${data.fileKey} / 現在: ${fileKey}）`);
+      const next = [...new Set(data.resolved.filter(i => Number.isInteger(i) && i >= 0 && i < lines.length))].sort((a,b) => a-b);
+      const state = await loadState(); state.resolved = next; await saveState(state);
+      $('status').textContent = `状態を取り込みました（${next.length} 行）。`;
+      await render();
+    } catch (error) { $('status').textContent = `インポートできませんでした: ${error.message}`; }
+    event.target.value = '';
+  });
+  $('resetState').addEventListener('click', async () => {
+    if (!fileKey) { $('status').textContent = '先にログファイルを読み込んでください。'; return; }
+    const db = await dbPromise;
+    await new Promise((resolve, reject) => { const tx = db.transaction('states', 'readwrite'); tx.objectStore('states').delete(fileKey); tx.oncomplete = resolve; tx.onerror = () => reject(tx.error); });
+    await render(); $('status').textContent = `${fileKey} の解決状態とIndexedDB内のログ本文をリセットしました。`;
+  });
+})();
+</script>
+</body>
+</html>
