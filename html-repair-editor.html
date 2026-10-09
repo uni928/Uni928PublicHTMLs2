@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HTML修正エディタ</title>
+<style>
+@layer base, layout, components;
+@layer base {
+  :root{color-scheme:light;--ink:#1d2939;--muted:#667085;--line:#d0d5dd;--blue:#175cd3;--soft:#f2f4f7;--white:#fff}
+  *{box-sizing:border-box}body{margin:0;background:#f7f9fc;color:var(--ink);font:15px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}button,input,textarea{font:inherit}button{cursor:pointer}textarea{resize:vertical}
+}
+@layer layout {
+  main{width:min(1100px,100%);margin:auto;padding:20px 16px 64px}.top{display:grid;grid-template-columns:1fr auto;gap:14px;align-items:end}.controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:16px 0}.cols{display:grid;grid-template-columns:1fr 1fr;gap:12px}.results{display:grid;gap:14px;margin-top:16px}.ctx-head{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:6px}.ctx{border:1px solid var(--line);border-radius:10px;background:white;padding:10px}.line-row{display:grid;grid-template-columns:48px 1fr;gap:8px;align-items:start}.line-row+ .line-row{margin-top:4px}
+}
+@layer components {
+  h1{font-size:1.35rem;margin:0 0 4px}.sub,.hint,.meta{color:var(--muted);font-size:.9rem}.filename{width:min(360px,100%)}input[type=text],textarea{width:100%;border:1px solid var(--line);border-radius:7px;background:white;padding:8px;color:var(--ink)}textarea{font:13px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;min-height:2.1em;overflow:hidden;white-space:pre;tab-size:2}.ln{padding:7px 0;color:#98a2b3;text-align:right;font:12px/1.6 ui-monospace,monospace;user-select:none}.bar{background:white;border:1px solid var(--line);border-radius:10px;padding:12px}.bar label{font-weight:650;display:block;margin-bottom:5px}button,.file-button{border:1px solid var(--line);border-radius:7px;background:white;padding:8px 12px;color:var(--ink)}button.primary{background:var(--blue);border-color:var(--blue);color:white}.drop{border:2px dashed #98a2b3;border-radius:10px;padding:20px;text-align:center;color:var(--muted);background:white}.drop.over{border-color:var(--blue);background:#eff8ff}.status{margin-left:auto;color:#027a48}.empty{padding:22px;text-align:center;color:var(--muted);background:white;border-radius:10px;border:1px solid var(--line)}
+  @media(max-width:680px){main{padding:16px 12px 48px}.top{grid-template-columns:1fr}.cols{grid-template-columns:1fr}.controls .status{width:100%;margin:0}.line-row{grid-template-columns:38px 1fr}}
+}
+</style>
+</head>
+<body>
+<main>
+  <div class="top"><div><h1>HTML修正エディタ</h1><div class="sub">ファイルを読み込み、エラー行や検索結果の周辺だけを編集できます。</div></div><label class="filename">保存するファイル名<input id="filename" type="text" value="untitled.html" aria-label="保存するファイル名"></label></div>
+  <div class="controls"><label class="file-button">ファイルを選択<input id="fileInput" type="file" hidden></label><button id="save" class="primary">Ctrl+Sで保存</button><button id="clear">編集中データを削除</button><span id="status" class="status">ファイルを読み込んでください</span></div>
+  <div id="drop" class="drop">HTMLファイルなどをここへドラッグ＆ドロップ</div>
+  <div class="cols" style="margin-top:14px">
+    <section class="bar"><label for="errorInput">エラー文から該当行を探す</label><textarea id="errorInput" rows="3" placeholder="例: app.js:25 または Line 25: ..."></textarea><div class="hint">行番号を含むエラー文を貼り付けてください。複数の行番号も拾います。</div><button id="findError" style="margin-top:8px">エラー行を表示</button></section>
+    <section class="bar"><label for="searchInput">本文を検索</label><input id="searchInput" type="text" placeholder="検索語"><div class="hint">ヒットした行ごとに前後1行を表示します。同じ元行が複数箇所に出た場合も編集内容は同期します。</div><button id="findSearch" style="margin-top:8px">検索結果を表示</button></section>
+  </div>
+  <div id="results" class="results"><div class="empty">ファイルを読み込むと、ここに該当箇所が表示されます。</div></div>
+</main>
+<script>
+(()=>{
+ const $=id=>document.getElementById(id), dbName='html-repair-editor-v1';
+ let lines=[], loaded=false, db=null, sourceType='';
+ const status=t=>{$('status').textContent=t};
+ function openDB(){return new Promise((resolve,reject)=>{if(!('indexedDB'in window)){reject(Error('IndexedDBを利用できません'));return}const req=indexedDB.open(dbName,1);req.onupgradeneeded=()=>req.result.createObjectStore('state');req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)})}
+ async function persist(){if(!db||!loaded)return;try{await new Promise((resolve,reject)=>{const tx=db.transaction('state','readwrite');tx.objectStore('state').put({name:$('filename').value,content:lines.join('\n')},'latest');tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)});status('IndexedDBに保存済み')}catch(e){status('自動保存に失敗: '+e.message)}}
+ let saveTimer;function scheduleSave(){clearTimeout(saveTimer);status('変更を保存中…');saveTimer=setTimeout(persist,180)}
+ function setContent(name,content){$('filename').value=name||'untitled.html';lines=String(content).replace(/\r\n?/g,'\n').split('\n');loaded=true;render([]);scheduleSave()}
+ function makeRanges(nums){return [...new Set(nums.filter(n=>Number.isInteger(n)&&n>=1&&n<=lines.length))].sort((a,b)=>a-b).map(n=>({hit:n,start:Math.max(1,n-1),end:Math.min(lines.length,n+1)}))}
+ function render(ranges){const root=$('results');root.replaceChildren();if(!loaded){root.innerHTML='<div class="empty">ファイルを読み込むと、ここに該当箇所が表示されます。</div>';return}if(!ranges.length){root.innerHTML='<div class="empty">該当箇所はありません。</div>';return}
+ ranges.forEach((r,i)=>{const card=document.createElement('section');card.className='ctx';const head=document.createElement('div');head.className='ctx-head';const title=document.createElement('strong');title.textContent=`${i+1}件目 — 該当行 ${r.hit}行目${r.start!==r.end?`（${r.start}〜${r.end}行）`:''}`;const del=document.createElement('span');del.className='meta';del.textContent='編集は同じ行すべてに反映';head.append(title,del);card.append(head);
+ for(let n=r.start;n<=r.end;n++){const row=document.createElement('div');row.className='line-row';const ln=document.createElement('div');ln.className='ln';ln.textContent=n;const ta=document.createElement('textarea');ta.spellcheck=false;ta.value=lines[n-1];ta.dataset.line=n;ta.setAttribute('aria-label',`${n}行目`);fit(ta);ta.addEventListener('input',()=>{lines[n-1]=ta.value;document.querySelectorAll(`textarea[data-line="${n}"]`).forEach(other=>{if(other!==ta){other.value=ta.value;fit(other)}});fit(ta);scheduleSave()});row.append(ln,ta);card.append(row)}root.append(card)})}
+ function fit(el){el.style.height='auto';el.style.height=Math.max(34,el.scrollHeight)+'px'}
+ function search(){const q=$('searchInput').value;if(!loaded||!q){status(!loaded?'ファイルを読み込んでください':'検索語を入力してください');return}const nums=[];lines.forEach((line,i)=>{if(line.includes(q))nums.push(i+1)});render(makeRanges(nums));status(`${nums.length}件ヒット`)}
+ function errorSearch(){const raw=$('errorInput').value;if(!loaded||!raw){status(!loaded?'ファイルを読み込んでください':'エラー文を入力してください');return}const nums=[];for(const m of raw.matchAll(/(?:^|[^\d])(\d+)(?=\s*(?::|\)|行目|行\b))/g)){const n=Number(m[1]);if(n>=1&&n<=lines.length)nums.push(n)}
+ // Common runtime stack formats: file.html:25:8 and (file.html:25:8).
+ for(const m of raw.matchAll(/:\s*(\d+)(?::\d+)?(?:\)|\s|$)/g)){const n=Number(m[1]);if(n>=1&&n<=lines.length)nums.push(n)}const uniq=[...new Set(nums)];render(makeRanges(uniq));status(uniq.length?`${uniq.length}行を表示`:'行番号を読み取れませんでした。行番号を含むエラー文を貼り付けてください')}
+ async function readFile(file){const text=await file.text();setContent(file.name,text);sourceType=file.type;status('読み込みました。IndexedDBに自動保存します')}
+ async function saveFile(){if(!loaded){status('ファイルを読み込んでください');return}const name=$('filename').value.trim()||'untitled.html',blob=new Blob([lines.join('\n')],{type:'text/html;charset=utf-8'});try{if(window.showSaveFilePicker){const handle=await showSaveFilePicker({suggestedName:name,types:[{description:'HTML / text files',accept:{'text/html':['.html','.htm'],'text/plain':['.txt']}}]});const writable=await handle.createWritable();await writable.write(blob);await writable.close();status('ファイルを保存しました')}else{const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);status('ダウンロードを開始しました')}}catch(e){if(e.name!=='AbortError')status('保存に失敗: '+e.message)}}
+ $('fileInput').addEventListener('change',e=>{const f=e.target.files[0];if(f)readFile(f);e.target.value=''});const drop=$('drop');drop.addEventListener('dragover',e=>{e.preventDefault();drop.classList.add('over')});drop.addEventListener('dragleave',()=>drop.classList.remove('over'));drop.addEventListener('drop',e=>{e.preventDefault();drop.classList.remove('over');const f=e.dataTransfer.files[0];if(f)readFile(f)});
+ $('findSearch').onclick=search;$('findError').onclick=errorSearch;$('save').onclick=saveFile;$('filename').addEventListener('input',scheduleSave);$('searchInput').addEventListener('keydown',e=>{if(e.key==='Enter')search()});$('clear').onclick=async()=>{if(!confirm('IndexedDBに保存された編集中データを削除しますか？'))return;try{await new Promise((resolve,reject)=>{const tx=db.transaction('state','readwrite');tx.objectStore('state').delete('latest');tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)});lines=[];loaded=false;render([]);$('filename').value='untitled.html';status('編集中データを削除しました')}catch(e){status('削除に失敗: '+e.message)}};
+ document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();saveFile()}});
+ (async()=>{try{db=await openDB();const state=await new Promise((resolve,reject)=>{const tx=db.transaction('state','readonly'),req=tx.objectStore('state').get('latest');req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)});if(state){$('filename').value=state.name||'untitled.html';lines=String(state.content??'').split('\n');loaded=true;render([]);status('前回の編集内容を復元しました')}else status('ファイルを読み込んでください')}catch(e){status('IndexedDBを利用できません: '+e.message)}})();
+})();
+</script>
+</body>
+</html>
