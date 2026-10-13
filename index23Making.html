@@ -144,18 +144,23 @@
 const makeIndex = (name, version) => `<script>
 const version=${version};
 const D='${esc(name)}',S='pages',K=D+'-content-v'+version,B='./${esc(name)}Body.html';
-const goBody=()=>{const u=new URL(B,location.href);u.search=location.search;u.hash=location.hash;location.replace(u.href)};
+const goBody=()=>{const u=new URL(B,location.href);u.search=location.search;u.hash='version='+version;location.replace(u.href)};
 if(!('indexedDB'in window))goBody();
 else{const r=indexedDB.open(D,1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(S))r.result.createObjectStore(S)};r.onerror=()=>goBody();r.onsuccess=()=>{const d=r.result,q=d.transaction(S).objectStore(S).get(K);q.onerror=()=>{d.close();goBody()};q.onsuccess=()=>{const h=q.result?.html;d.close();h?(document.open(),document.write(h),document.close()):goBody()}}}
 <\/script>\n`;
 
   const makeBody = (name, version, encoded) => `<script>
 const version=${version};
-const clearOldVersions=()=>new Promise((ok,no)=>{const r=indexedDB.open('${esc(name)}',1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains('pages'))r.result.createObjectStore('pages')};r.onerror=()=>no(r.error);r.onsuccess=()=>{const d=r.result,t=d.transaction('pages','readwrite'),s=t.objectStore('pages');for(let i=1;i<version;i++)s.delete('${esc(name)}-content-v'+i);t.oncomplete=()=>{d.close();ok()};t.onerror=()=>{d.close();no(t.error)}}});
-const D='${esc(name)}',S='pages',K=D+'-content-v'+version,B='./${esc(name)}.html',E='${encoded}';
-const open=()=>new Promise((ok,no)=>{const r=indexedDB.open(D,1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(S))r.result.createObjectStore(S)};r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)});
+const receivedVersion=Number(new URLSearchParams(location.hash.slice(1)).get('version'));
+const E='${encoded}';
 const decode=e=>new TextDecoder().decode(Uint8Array.from(atob(e),c=>c.charCodeAt(0)));
+if(Number.isInteger(receivedVersion)&&receivedVersion>version){document.open();document.write(decode(E));document.close()}
+else{
+const clearOldVersions=()=>new Promise((ok,no)=>{const r=indexedDB.open('${esc(name)}',1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains('pages'))r.result.createObjectStore('pages')};r.onerror=()=>no(r.error);r.onsuccess=()=>{const d=r.result,t=d.transaction('pages','readwrite'),s=t.objectStore('pages');for(let i=1;i<version;i++)s.delete('${esc(name)}-content-v'+i);t.oncomplete=()=>{d.close();ok()};t.onerror=()=>{d.close();no(t.error)}}});
+const D='${esc(name)}',S='pages',K=D+'-content-v'+version,B='./${esc(name)}.html';
+const open=()=>new Promise((ok,no)=>{const r=indexedDB.open(D,1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(S))r.result.createObjectStore(S)};r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)});
 clearOldVersions().catch(e=>console.error(e)).then(()=>open()).then(d=>new Promise((ok,no)=>{const t=d.transaction(S,'readwrite');t.objectStore(S).put({html:decode(E),version:'v'+version,savedAt:new Date().toISOString()},K);t.oncomplete=()=>{d.close();ok()};t.onerror=()=>{d.close();no(t.error)}})).then(()=>{const u=new URL(B,location.href);u.search=location.search;u.hash=location.hash;location.replace(u.href)}).catch(e=>{console.error(e);document.body.textContent='保存に失敗しました。';});
+}
 <\/script>\n`;
   const onlyScript = value => /^<script>[\s\S]*<\/script>\n?$/.test(value);
 
