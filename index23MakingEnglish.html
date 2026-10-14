@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>IndexedDB Lightweight HTML Generator</title>
+<title>IndexedDB Lightweight Page Builder</title>
 <style>
 @layer base, components, utilities;
 
-/* base: Basic page settings */
+/* base: page-wide defaults */
 @layer base {
   :root {
     font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -19,7 +19,7 @@
   button, input { font: inherit; }
 }
 
-/* components: Inputs, drop area, and result display */
+/* components: form, drop area, and status */
 @layer components {
   .page { width: min(100% - 2rem, 48rem); margin: 0 auto; padding: 2rem 0 3rem; }
   h1 { margin: 0 0 .5rem; font-size: clamp(1.45rem, 4vw, 2rem); }
@@ -59,18 +59,18 @@
 </head>
 <body>
 <main class="page">
-  <h1>IndexedDB Lightweight HTML Generator</h1>
-  <p class="intro">Select an HTML file to create two IndexedDB restore files and include the original file as the third file.</p>
+  <h1>IndexedDB Lightweight Page Builder</h1>
+  <p class="intro">Select an HTML file to create a three-file ZIP: two files that restore it from IndexedDB, plus the original file.</p>
   <section class="panel">
     <div class="field">
       <label for="fileName">File name</label>
       <input id="fileName" type="text" value="index.html" autocomplete="off" spellcheck="false">
-      <p class="help">The extension is adjusted automatically. Example: index.html → index.html / indexBody.html</p>
+      <p class="help">The extension is added automatically. Example: index.html → index.html / indexBody.html</p>
     </div>
     <div class="field">
       <label for="version">Version</label>
       <input id="version" type="number" value="1" min="1" step="1" inputmode="numeric">
-      <p class="help">This version number is inserted into <code>const version=1;</code> in both generated files. Older saved versions are deleted when the files are generated.</p>
+      <p class="help">Version number inserted into <code>const version=1;</code> in the two generated files. Saved data for older versions is deleted when the files are generated.</p>
     </div>
     <div class="uni-photo-dropbox">
       <label class="uni-photo-dropbox__zone" id="dropZone">
@@ -82,13 +82,13 @@
           </span>
           <span class="uni-photo-dropbox__copy">
             <span class="uni-photo-dropbox__title">Upload an HTML file</span>
-            <span class="uni-photo-dropbox__guide">Click to select, or drag a file here</span>
+            <span class="uni-photo-dropbox__guide">Click to choose a file, or drag it here</span>
             <span class="uni-photo-dropbox__meta">HTML files only</span>
           </span>
         </span>
         <input id="htmlInput" class="uni-photo-dropbox__input" type="file" accept=".html,text/html">
       </label>
-      <p id="fileNameView" class="file-name">No file selected.</p>
+      <p id="fileNameView" class="file-name">No file selected yet.</p>
     </div>
     <div class="actions">
       <button id="downloadButton" class="primary" type="button" disabled>Download 3 files as a ZIP</button>
@@ -128,7 +128,7 @@
 
   const getVersion = () => {
     const value = Number.parseInt(versionInput.value, 10);
-    if (!Number.isInteger(value) || value < 1) throw new Error('Enter a whole number of 1 or greater for the version');
+    if (!Number.isInteger(value) || value < 1) throw new Error('Enter a whole number of 1 or greater for the version.');
     versionInput.value = String(value);
     return value;
   };
@@ -144,18 +144,29 @@
 const makeIndex = (name, version) => `<script>
 const version=${version};
 const D='${esc(name)}',S='pages',K=D+'-content-v'+version,B='./${esc(name)}Body.html';
-const goBody=()=>{const u=new URL(B,location.href);new URLSearchParams(location.search).forEach((v,k)=>u.searchParams.append(k,v));u.searchParams.append('_ts',Date.now());u.hash=location.hash;location.replace(u.href)};
+const clearVersionFragment=()=>{const p=new URLSearchParams(location.hash.slice(1));p.delete('ver');const h=p.toString();history.replaceState(null,'',location.pathname+location.search+(h?'#'+h:''))};
+const goBody=()=>{const u=new URL(B,location.href);const p=new URLSearchParams(location.hash.slice(1));p.set('ver',version);u.search=location.search;u.hash=p.toString();location.replace(u.href)};
 if(!('indexedDB'in window))goBody();
-else{const r=indexedDB.open(D,1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(S))r.result.createObjectStore(S)};r.onerror=()=>goBody();r.onsuccess=()=>{const d=r.result,q=d.transaction(S).objectStore(S).get(K);q.onerror=()=>{d.close();goBody()};q.onsuccess=()=>{const h=q.result?.html;d.close();h?(document.open(),document.write(h),document.close()):goBody()}}}
+else{const r=indexedDB.open(D,1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(S))r.result.createObjectStore(S)};r.onerror=()=>goBody();r.onsuccess=()=>{const d=r.result,q=d.transaction(S).objectStore(S).get(K);q.onerror=()=>{d.close();goBody()};q.onsuccess=()=>{const h=q.result?.html;d.close();h?(document.open(),document.write(h),document.close(),clearVersionFragment()):goBody()}}}
 <\/script>\n`;
 
   const makeBody = (name, version, encoded) => `<script>
 const version=${version};
-const clearOldVersions=()=>new Promise((ok,no)=>{const r=indexedDB.open('${esc(name)}',1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains('pages'))r.result.createObjectStore('pages')};r.onerror=()=>no(r.error);r.onsuccess=()=>{const d=r.result,t=d.transaction('pages','readwrite'),s=t.objectStore('pages');for(let i=1;i<version;i++)s.delete('${esc(name)}-content-v'+i);t.oncomplete=()=>{d.close();ok()};t.onerror=()=>{d.close();no(t.error)}}});
-const D='${esc(name)}',S='pages',K=D+'-content-v'+version,B='./${esc(name)}.html',E='${encoded}';
-const open=()=>new Promise((ok,no)=>{const r=indexedDB.open(D,1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(S))r.result.createObjectStore(S)};r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)});
+const fragmentParams=new URLSearchParams(location.hash.slice(1));
+const receivedVersion=Number(fragmentParams.get('ver'));
+const indexUrl='./${esc(name)}.html';
+const returnToIndex=()=>{const u=new URL(indexUrl,location.href);const p=new URLSearchParams(location.hash.slice(1));p.delete('ver');u.search=location.search;u.hash=p.toString();location.replace(u.href)};
+const clearVersionFragment=()=>{fragmentParams.delete('ver');const h=fragmentParams.toString();history.replaceState(null,'',location.pathname+location.search+(h?'#'+h:''))};
+const E='${encoded}';
 const decode=e=>new TextDecoder().decode(Uint8Array.from(atob(e),c=>c.charCodeAt(0)));
-clearOldVersions().catch(e=>console.error(e)).then(()=>open()).then(d=>new Promise((ok,no)=>{const t=d.transaction(S,'readwrite');t.objectStore(S).put({html:decode(E),version:'v'+version,savedAt:new Date().toISOString()},K);t.oncomplete=()=>{d.close();ok()};t.onerror=()=>{d.close();no(t.error)}})).then(()=>location.replace(B)).catch(e=>{console.error(e);document.body.textContent='Failed to save the page.';});
+if(!fragmentParams.has('ver'))returnToIndex();
+else if(receivedVersion!==version){document.open();document.write(decode(E));document.close();clearVersionFragment()}
+else{
+const clearOldVersions=()=>new Promise((ok,no)=>{const r=indexedDB.open('${esc(name)}',1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains('pages'))r.result.createObjectStore('pages')};r.onerror=()=>no(r.error);r.onsuccess=()=>{const d=r.result,t=d.transaction('pages','readwrite'),s=t.objectStore('pages');for(let i=1;i<version;i++)s.delete('${esc(name)}-content-v'+i);t.oncomplete=()=>{d.close();ok()};t.onerror=()=>{d.close();no(t.error)}}});
+const D='${esc(name)}',S='pages',K=D+'-content-v'+version,B=indexUrl;
+const open=()=>new Promise((ok,no)=>{const r=indexedDB.open(D,1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(S))r.result.createObjectStore(S)};r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)});
+clearOldVersions().catch(e=>console.error(e)).then(()=>open()).then(d=>new Promise((ok,no)=>{const t=d.transaction(S,'readwrite');t.objectStore(S).put({html:decode(E),version:'v'+version,savedAt:new Date().toISOString()},K);t.oncomplete=()=>{d.close();ok()};t.onerror=()=>{d.close();no(t.error)}})).then(()=>{const u=new URL(B,location.href);u.search=location.search;u.hash=location.hash;location.replace(u.href)}).catch(e=>{console.error(e);document.body.textContent='Saving failed.';});
+}
 <\/script>\n`;
   const onlyScript = value => /^<script>[\s\S]*<\/script>\n?$/.test(value);
 
@@ -197,7 +208,7 @@ clearOldVersions().catch(e=>console.error(e)).then(()=>open()).then(d=>new Promi
     fileName.value = file.name;
     fileNameView.textContent = `Selected: ${file.name} (${file.size.toLocaleString()} bytes)`;
     downloadButton.disabled = false;
-    status.textContent = 'Ready. You can download the ZIP.';
+    status.textContent = 'Ready. You can download the ZIP file.';
   };
 
   input.addEventListener('change', () => showFile(input.files[0]));
@@ -208,14 +219,14 @@ clearOldVersions().catch(e=>console.error(e)).then(()=>open()).then(d=>new Promi
     try {
       const name = baseName(), version = getVersion(), { encoded, bytes } = await readFile(selectedFile);
       const index = makeIndex(name, version), body = makeBody(name, version, encoded);
-      if (!onlyScript(index) || !onlyScript(body)) throw new Error('Generated files must contain only script tags');
+      if (!onlyScript(index) || !onlyScript(body)) throw new Error('Generated output contains content outside the script tag.');
       const zip = makeZip([{name: name + '.html', data: index}, {name: name + 'Body.html', data: body}, {name: sourceEntryName(selectedFile), data: bytes}]);
       const url = URL.createObjectURL(zip), link = document.createElement('a');
       link.href = url; link.download = name + '-indexeddb-ver' + version + '.zip'; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
       status.textContent = `Downloaded ${name}.html, ${name}Body.html, and ${sourceEntryName(selectedFile)}.`;
-    } catch (error) { console.error(error); status.textContent = 'Failed to create the ZIP.'; }
+    } catch (error) { console.error(error); status.textContent = 'Could not create the ZIP file.'; }
   });
-  clearButton.addEventListener('click', () => { selectedFile = null; input.value = ''; fileName.value = 'index.html'; versionInput.value = '1'; fileNameView.textContent = 'No file selected.'; downloadButton.disabled = true; status.textContent = ''; });
+  clearButton.addEventListener('click', () => { selectedFile = null; input.value = ''; fileName.value = 'index.html'; versionInput.value = '1'; fileNameView.textContent = 'No file selected yet.'; downloadButton.disabled = true; status.textContent = ''; });
 })();
 </script>
 </body>
