@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>IndexedDBè»½é‡ãƒšãƒ¼ã‚¸ä½œæˆãƒ„ãƒ¼ãƒ«</title>
+<title>IndexedDB軽量ページ作成ツール</title>
 <style>
 @layer base, components, utilities;
 
-/* base: ãƒšãƒ¼ã‚¸å…¨ä½“ã®åŸºæœ¬è¨­å®š */
+/* base: ページ全体の基本設定 */
 @layer base {
   :root {
     font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -19,7 +19,7 @@
   button, input { font: inherit; }
 }
 
-/* components: å…¥åŠ›ãƒ»ãƒ‰ãƒ­ãƒƒãƒ—é ˜åŸŸãƒ»çµæžœè¡¨ç¤º */
+/* components: 入力・ドロップ領域・結果表示 */
 @layer components {
   .page { width: min(100% - 2rem, 48rem); margin: 0 auto; padding: 2rem 0 3rem; }
   h1 { margin: 0 0 .5rem; font-size: clamp(1.45rem, 4vw, 2rem); }
@@ -59,18 +59,18 @@
 </head>
 <body>
 <main class="page">
-  <h1>IndexedDBè»½é‡ãƒšãƒ¼ã‚¸ä½œæˆãƒ„ãƒ¼ãƒ«</h1>
-  <p class="intro">HTMLã‚’é¸ã¶ã¨ã€IndexedDBã‹ã‚‰å¾©å…ƒã™ã‚‹2ãƒ•ã‚¡ã‚¤ãƒ«ã¨å…ƒãƒ•ã‚¡ã‚¤ãƒ«ã‚’å«ã‚€3ãƒ•ã‚¡ã‚¤ãƒ«ã‚’ä½œæˆã—ã¾ã™ã€‚</p>
+  <h1>IndexedDB軽量ページ作成ツール</h1>
+  <p class="intro">HTMLを選ぶと、IndexedDBから復元する2ファイルと元ファイルを含む3ファイルを作成します。</p>
   <section class="panel">
     <div class="field">
-      <label for="fileName">ãƒ•ã‚¡ã‚¤ãƒ«å</label>
+      <label for="fileName">ファイル名</label>
       <input id="fileName" type="text" value="index.html" autocomplete="off" spellcheck="false">
-      <p class="help">æ‹¡å¼µå­ã¯è‡ªå‹•èª¿æ•´ã•ã‚Œã¾ã™ã€‚ä¾‹ï¼šindex.html â†’ index.html / indexBody.html</p>
+      <p class="help">拡張子は自動調整されます。例：index.html → index.html / indexBody.html</p>
     </div>
     <div class="field">
-      <label for="version">ãƒãƒ¼ã‚¸ãƒ§ãƒ³</label>
+      <label for="version">バージョン</label>
       <input id="version" type="number" value="1" min="1" step="1" inputmode="numeric">
-      <p class="help">ç”Ÿæˆã™ã‚‹2ãƒ•ã‚¡ã‚¤ãƒ«ã®<code>const version=1;</code>ã«å…¥ã‚‹ãƒãƒ¼ã‚¸ãƒ§ãƒ³ç•ªå·ã§ã™ã€‚å¤ã„ç•ªå·ã®ä¿å­˜å†…å®¹ã¯ç”Ÿæˆæ™‚ã«å‰Šé™¤ã—ã¾ã™ã€‚</p>
+      <p class="help">生成する2ファイルの<code>const version=1;</code>に入るバージョン番号です。古い番号の保存内容は生成時に削除します。</p>
     </div>
     <div class="uni-photo-dropbox">
       <label class="uni-photo-dropbox__zone" id="dropZone">
@@ -81,18 +81,18 @@
             </svg>
           </span>
           <span class="uni-photo-dropbox__copy">
-            <span class="uni-photo-dropbox__title">HTMLã‚’ã‚¢ãƒƒãƒ—ãƒ­ãƒ¼ãƒ‰</span>
-            <span class="uni-photo-dropbox__guide">ã‚¯ãƒªãƒƒã‚¯ã—ã¦é¸æŠžã€ã¾ãŸã¯ã“ã“ã¸ãƒ‰ãƒ©ãƒƒã‚°</span>
-            <span class="uni-photo-dropbox__meta">HTMLãƒ•ã‚¡ã‚¤ãƒ«ã«å¯¾å¿œ</span>
+            <span class="uni-photo-dropbox__title">HTMLをアップロード</span>
+            <span class="uni-photo-dropbox__guide">クリックして選択、またはここへドラッグ</span>
+            <span class="uni-photo-dropbox__meta">HTMLファイルに対応</span>
           </span>
         </span>
         <input id="htmlInput" class="uni-photo-dropbox__input" type="file" accept=".html,text/html">
       </label>
-      <p id="fileNameView" class="file-name">ãƒ•ã‚¡ã‚¤ãƒ«ã¯ã¾ã é¸æŠžã•ã‚Œã¦ã„ã¾ã›ã‚“ã€‚</p>
+      <p id="fileNameView" class="file-name">ファイルはまだ選択されていません。</p>
     </div>
     <div class="actions">
-      <button id="downloadButton" class="primary" type="button" disabled>3ãƒ•ã‚¡ã‚¤ãƒ«ã‚’ZIPã§ãƒ€ã‚¦ãƒ³ãƒ­ãƒ¼ãƒ‰</button>
-      <button id="clearButton" class="secondary" type="button">ã‚¯ãƒªã‚¢</button>
+      <button id="downloadButton" class="primary" type="button" disabled>3ファイルをZIPでダウンロード</button>
+      <button id="clearButton" class="secondary" type="button">クリア</button>
     </div>
     <p id="status" role="status" aria-live="polite"></p>
   </section>
@@ -128,7 +128,7 @@
 
   const getVersion = () => {
     const value = Number.parseInt(versionInput.value, 10);
-    if (!Number.isInteger(value) || value < 1) throw new Error('ãƒãƒ¼ã‚¸ãƒ§ãƒ³ã¯1ä»¥ä¸Šã®æ•´æ•°ã§å…¥åŠ›ã—ã¦ãã ã•ã„');
+    if (!Number.isInteger(value) || value < 1) throw new Error('バージョンは1以上の整数で入力してください');
     versionInput.value = String(value);
     return value;
   };
@@ -162,7 +162,7 @@ else{
 const clearOldVersions=()=>new Promise((ok,no)=>{const r=indexedDB.open('${esc(name)}',1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains('pages'))r.result.createObjectStore('pages')};r.onerror=()=>no(r.error);r.onsuccess=()=>{const d=r.result,t=d.transaction('pages','readwrite'),s=t.objectStore('pages');for(let i=1;i<version;i++)s.delete('${esc(name)}-content-v'+i);t.oncomplete=()=>{d.close();ok()};t.onerror=()=>{d.close();no(t.error)}}});
 const D='${esc(name)}',S='pages',K=D+'-content-v'+version,B='./${esc(name)}.html';
 const open=()=>new Promise((ok,no)=>{const r=indexedDB.open(D,1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(S))r.result.createObjectStore(S)};r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)});
-clearOldVersions().catch(e=>console.error(e)).then(()=>open()).then(d=>new Promise((ok,no)=>{const t=d.transaction(S,'readwrite');t.objectStore(S).put({html:decode(E),version:'v'+version,savedAt:new Date().toISOString()},K);t.oncomplete=()=>{d.close();ok()};t.onerror=()=>{d.close();no(t.error)}})).then(()=>{const u=new URL(B,location.href);u.search=location.search;u.hash=location.hash;location.replace(u.href)}).catch(e=>{console.error(e);document.body.textContent='ä¿å­˜ã«å¤±æ•—ã—ã¾ã—ãŸã€‚';});
+clearOldVersions().catch(e=>console.error(e)).then(()=>open()).then(d=>new Promise((ok,no)=>{const t=d.transaction(S,'readwrite');t.objectStore(S).put({html:decode(E),version:'v'+version,savedAt:new Date().toISOString()},K);t.oncomplete=()=>{d.close();ok()};t.onerror=()=>{d.close();no(t.error)}})).then(()=>{const u=new URL(B,location.href);u.search=location.search;u.hash=location.hash;location.replace(u.href)}).catch(e=>{console.error(e);document.body.textContent='保存に失敗しました。';});
 }
 <\/script>\n`;
   const onlyScript = value => /^<script>[\s\S]*<\/script>\n?$/.test(value);
@@ -200,12 +200,12 @@ clearOldVersions().catch(e=>console.error(e)).then(()=>open()).then(d=>new Promi
   };
 
   const showFile = file => {
-    if (!file || !/\.html?$/i.test(file.name)) { status.textContent = 'HTMLãƒ•ã‚¡ã‚¤ãƒ«ã‚’é¸æŠžã—ã¦ãã ã•ã„ã€‚'; return; }
+    if (!file || !/\.html?$/i.test(file.name)) { status.textContent = 'HTMLファイルを選択してください。'; return; }
     selectedFile = file;
     fileName.value = file.name;
-    fileNameView.textContent = `é¸æŠžä¸­: ${file.name}ï¼ˆ${file.size.toLocaleString()} bytesï¼‰`;
+    fileNameView.textContent = `選択中: ${file.name}（${file.size.toLocaleString()} bytes）`;
     downloadButton.disabled = false;
-    status.textContent = 'æº–å‚™å®Œäº†ã§ã™ã€‚ZIPã‚’ãƒ€ã‚¦ãƒ³ãƒ­ãƒ¼ãƒ‰ã§ãã¾ã™ã€‚';
+    status.textContent = '準備完了です。ZIPをダウンロードできます。';
   };
 
   input.addEventListener('change', () => showFile(input.files[0]));
@@ -216,14 +216,14 @@ clearOldVersions().catch(e=>console.error(e)).then(()=>open()).then(d=>new Promi
     try {
       const name = baseName(), version = getVersion(), { encoded, bytes } = await readFile(selectedFile);
       const index = makeIndex(name, version), body = makeBody(name, version, encoded);
-      if (!onlyScript(index) || !onlyScript(body)) throw new Error('ç”Ÿæˆç‰©ãŒscriptã‚¿ã‚°ã ã‘ã§ã¯ã‚ã‚Šã¾ã›ã‚“');
+      if (!onlyScript(index) || !onlyScript(body)) throw new Error('生成物がscriptタグだけではありません');
       const zip = makeZip([{name: name + '.html', data: index}, {name: name + 'Body.html', data: body}, {name: sourceEntryName(selectedFile), data: bytes}]);
       const url = URL.createObjectURL(zip), link = document.createElement('a');
       link.href = url; link.download = name + '-indexeddb-ver' + version + '.zip'; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
-      status.textContent = `${name}.htmlã€${name}Body.htmlã€${sourceEntryName(selectedFile)}ã‚’ãƒ€ã‚¦ãƒ³ãƒ­ãƒ¼ãƒ‰ã—ã¾ã—ãŸã€‚`;
-    } catch (error) { console.error(error); status.textContent = 'ZIPã®ä½œæˆã«å¤±æ•—ã—ã¾ã—ãŸã€‚'; }
+      status.textContent = `${name}.html、${name}Body.html、${sourceEntryName(selectedFile)}をダウンロードしました。`;
+    } catch (error) { console.error(error); status.textContent = 'ZIPの作成に失敗しました。'; }
   });
-  clearButton.addEventListener('click', () => { selectedFile = null; input.value = ''; fileName.value = 'index.html'; versionInput.value = '1'; fileNameView.textContent = 'ãƒ•ã‚¡ã‚¤ãƒ«ã¯ã¾ã é¸æŠžã•ã‚Œã¦ã„ã¾ã›ã‚“ã€‚'; downloadButton.disabled = true; status.textContent = ''; });
+  clearButton.addEventListener('click', () => { selectedFile = null; input.value = ''; fileName.value = 'index.html'; versionInput.value = '1'; fileNameView.textContent = 'ファイルはまだ選択されていません。'; downloadButton.disabled = true; status.textContent = ''; });
 })();
 </script>
 </body>
