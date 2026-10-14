@@ -155,7 +155,7 @@ const version=${version};
 const fragmentParams=new URLSearchParams(location.hash.slice(1));
 const receivedVersion=Number(fragmentParams.get('ver'));
 const indexUrl='./${esc(name)}.html';
-const returnToIndex=()=>{const u=new URL(indexUrl,location.href);u.search=location.search;u.hash='';location.replace(u.href)};
+const returnToIndex=()=>{const u=new URL(indexUrl,location.href);const p=new URLSearchParams(location.hash.slice(1));p.delete('ver');u.search=location.search;u.hash=p.toString();location.replace(u.href)};
 const clearVersionFragment=()=>{fragmentParams.delete('ver');const h=fragmentParams.toString();history.replaceState(null,'',location.pathname+location.search+(h?'#'+h:''))};
 const E='${encoded}';
 const decode=e=>new TextDecoder().decode(Uint8Array.from(atob(e),c=>c.charCodeAt(0)));
