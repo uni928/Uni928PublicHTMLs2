@@ -1,227 +1,165 @@
+貼り付けられたテキスト（1 点）(20261014-035522).txt
+ドキュメント
+Body側は、フラグメントのバージョンがver=XXと異なる場合に、Body無し側に戻らず内容を表示する仕様にして下さい。どちら側も、表示後はバージョンのフラグメントは残らないようにしてください
+
+Body側のバージョンが ver の値と一致しない場合も、Body内のHTMLを表示するよう修正しました。表示後は ver フラグメントを除去し、ほかのフラグメント値があれば維持します。Body無し側で保存内容を表示した場合も同様に ver を除去します。
+
+修正版は添付ファイルに反映しました。
+
 <!doctype html>
-<html lang="ja">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>IndexedDB軽量ページ作成ツール</title>
-<style>
-@layer base, components, utilities;
+
+<html lang="ja"> <head> <meta charset="utf-8"> <meta name="viewport" content="width=device-width,initial-scale=1"> <title>IndexedDB軽量ページ作成ツール</title> <style> @layer base, components, utilities;
 
 /* base: ページ全体の基本設定 */
 @layer base {
-  :root {
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    color: #182033;
-    background: #f5f7fb;
-  }
-  * { box-sizing: border-box; }
-  body { margin: 0; min-height: 100vh; }
-  button, input { font: inherit; }
+{
+font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+color: #182033;
+background: #f5f7fb;
+}
+
+{ box-sizing: border-box; }
+body { margin: 0; min-height: 100vh; }
+button, input { font: inherit; }
 }
 
 /* components: 入力・ドロップ領域・結果表示 */
 @layer components {
-  .page { width: min(100% - 2rem, 48rem); margin: 0 auto; padding: 2rem 0 3rem; }
-  h1 { margin: 0 0 .5rem; font-size: clamp(1.45rem, 4vw, 2rem); }
-  .intro { margin: 0 0 1.5rem; color: #667085; line-height: 1.6; }
-  .panel { padding: 1.25rem; background: #fff; border: 1px solid #e5e7ef; border-radius: 1.25rem; box-shadow: 0 10px 28px rgba(41,50,75,.07); }
-  .field { display: grid; gap: .45rem; margin-bottom: 1rem; }
-  .field label { font-weight: 750; }
-  .field input[type="text"], .field input[type="number"] { width: 100%; padding: .8rem .9rem; border: 1px solid #cfd5e2; border-radius: .7rem; outline: 0; }
-  .field input[type="text"]:focus, .field input[type="number"]:focus { border-color: #7567dc; box-shadow: 0 0 0 3px rgba(117,103,220,.13); }
-  .help { margin: 0; color: #667085; font-size: .86rem; }
-  .uni-photo-dropbox { padding: 20px; background: rgba(255,255,255,.97); border: 1px solid rgba(255,255,255,.9); border-radius: 24px; box-shadow: 0 8px 24px rgba(41,50,75,.07); }
-  .uni-photo-dropbox__zone { position: relative; display: grid; place-items: center; width: 100%; height: 220px; overflow: hidden; border: 1.5px dashed rgba(117,103,220,.28); border-radius: 22px; background: linear-gradient(180deg,rgba(255,255,255,.98),rgba(248,247,253,.98)); cursor: pointer; transition: border-color .18s ease,transform .18s ease,box-shadow .18s ease; }
-  .uni-photo-dropbox__zone:hover, .uni-photo-dropbox__zone.is-dragging { border-color: rgba(117,103,220,.58); box-shadow: 0 12px 28px rgba(117,103,220,.10); transform: translateY(-1px); }
-  .uni-photo-dropbox__inner { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 22px; text-align: center; pointer-events: none; }
-  .uni-photo-dropbox__icon { display: grid; place-items: center; width: 54px; height: 54px; border-radius: 18px; background: linear-gradient(135deg,rgba(117,103,220,.12),rgba(217,137,180,.16)); }
-  .uni-photo-dropbox__icon svg { width: 25px; height: 25px; stroke: #6e65ad; }
-  .uni-photo-dropbox__copy { display: grid; gap: 5px; text-align: center; }
-  .uni-photo-dropbox__title { color: #182033; font-size: 16px; font-weight: 800; line-height: 1.35; }
-  .uni-photo-dropbox__guide { color: #667085; font-size: 13px; font-weight: 600; line-height: 1.55; }
-  .uni-photo-dropbox__meta { color: #98a2b3; font-size: 11px; line-height: 1.4; }
-  .uni-photo-dropbox__input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
-  .file-name { margin: .8rem 0 0; min-height: 1.5rem; color: #475467; font-size: .9rem; }
-  .actions { display: flex; flex-wrap: wrap; gap: .7rem; margin-top: 1rem; }
-  button { padding: .8rem 1rem; border: 0; border-radius: 999px; cursor: pointer; font-weight: 750; }
-  button:disabled { cursor: not-allowed; opacity: .45; }
-  .primary { color: #fff; background: linear-gradient(135deg,#7567dc,#a45ca0); box-shadow: 0 8px 18px rgba(117,103,220,.2); }
-  .secondary { color: #344054; background: #eef0f6; }
-  #status { min-height: 1.5rem; margin: 1rem 0 0; color: #475467; line-height: 1.5; }
+.page { width: min(100% - 2rem, 48rem); margin: 0 auto; padding: 2rem 0 3rem; }
+h1 { margin: 0 0 .5rem; font-size: clamp(1.45rem, 4vw, 2rem); }
+.intro { margin: 0 0 1.5rem; color: #667085; line-height: 1.6; }
+.panel { padding: 1.25rem; background: #fff; border: 1px solid #e5e7ef; border-radius: 1.25rem; box-shadow: 0 10px 28px rgba(41,50,75,.07); }
+.field { display: grid; gap: .45rem; margin-bottom: 1rem; }
+.field label { font-weight: 750; }
+.field input[type="text"], .field input[type="number"] { width: 100%; padding: .8rem .9rem; border: 1px solid #cfd5e2; border-radius: .7rem; outline: 0; }
+.field input[type="text"], .field input[type="number"] { border-color: #7567dc; box-shadow: 0 0 0 3px rgba(117,103,220,.13); }
+.help { margin: 0; color: #667085; font-size: .86rem; }
+.uni-photo-dropbox { padding: 20px; background: rgba(255,255,255,.97); border: 1px solid rgba(255,255,255,.9); border-radius: 24px; box-shadow: 0 8px 24px rgba(41,50,75,.07); }
+.uni-photo-dropbox__zone { position: relative; display: grid; place-items: center; width: 100%; height: 220px; overflow: hidden; border: 1.5px dashed rgba(117,103,220,.28); border-radius: 22px; background: linear-gradient(180deg,rgba(255,255,255,.98),rgba(248,247,253,.98)); cursor: pointer; transition: border-color .18s ease,transform .18s ease,box-shadow .18s ease; }
+.uni-photo-dropbox__zone, .uni-photo-dropbox__zone.is-dragging { border-color: rgba(117,103,220,.58); box-shadow: 0 12px 28px rgba(117,103,220,.10); transform: translateY(-1px); }
+.uni-photo-dropbox__inner { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 22px; text-align: center; pointer-events: none; }
+.uni-photo-dropbox__icon { display: grid; place-items: center; width: 54px; height: 54px; border-radius: 18px; background: linear-gradient(135deg,rgba(117,103,220,.12),rgba(217,137,180,.16)); }
+.uni-photo-dropbox__icon svg { width: 25px; height: 25px; stroke: #6e65ad; }
+.uni-photo-dropbox__copy { display: grid; gap: 5px; text-align: center; }
+.uni-photo-dropbox__title { color: #182033; font-size: 16px; font-weight: 800; line-height: 1.35; }
+.uni-photo-dropbox__guide { color: #667085; font-size: 13px; font-weight: 600; line-height: 1.55; }
+.uni-photo-dropbox__meta { color: #98a2b3; font-size: 11px; line-height: 1.4; }
+.uni-photo-dropbox__input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+.file-name { margin: .8rem 0 0; min-height: 1.5rem; color: #475467; font-size: .9rem; }
+.actions { display: flex; flex-wrap: wrap; gap: .7rem; margin-top: 1rem; }
+button { padding: .8rem 1rem; border: 0; border-radius: 999px; cursor: pointer; font-weight: 750; }
+button { cursor: not-allowed; opacity: .45; }
+.primary { color: #fff; background: linear-gradient(135deg,#7567dc,#a45ca0); box-shadow: 0 8px 18px rgba(117,103,220,.2); }
+.secondary { color: #344054; background: #eef0f6; }
+#status { min-height: 1.5rem; margin: 1rem 0 0; color: #475467; line-height: 1.5; }
 }
 @media (max-width: 540px) {
-  .page { width: min(100% - 1rem, 48rem); padding-top: 1rem; }
-  .panel { padding: .85rem; }
-  .uni-photo-dropbox { padding: 16px; }
-  .uni-photo-dropbox__zone { height: 190px; }
+.page { width: min(100% - 1rem, 48rem); padding-top: 1rem; }
+.panel { padding: .85rem; }
+.uni-photo-dropbox { padding: 16px; }
+.uni-photo-dropbox__zone { height: 190px; }
 }
 </style>
-</head>
-<body>
-<main class="page">
-  <h1>IndexedDB軽量ページ作成ツール</h1>
-  <p class="intro">HTMLを選ぶと、IndexedDBから復元する2ファイルと元ファイルを含む3ファイルを作成します。</p>
-  <section class="panel">
-    <div class="field">
-      <label for="fileName">ファイル名</label>
-      <input id="fileName" type="text" value="index.html" autocomplete="off" spellcheck="false">
-      <p class="help">拡張子は自動調整されます。例：index.html → index.html / indexBody.html</p>
-    </div>
-    <div class="field">
-      <label for="version">バージョン</label>
-      <input id="version" type="number" value="1" min="1" step="1" inputmode="numeric">
-      <p class="help">生成する2ファイルの<code>const version=1;</code>に入るバージョン番号です。古い番号の保存内容は生成時に削除します。</p>
-    </div>
-    <div class="uni-photo-dropbox">
-      <label class="uni-photo-dropbox__zone" id="dropZone">
-        <span class="uni-photo-dropbox__inner">
-          <span class="uni-photo-dropbox__icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M12 16V4m0 0L7 9m5-5 5 5"></path><path d="M5 20h14"></path>
-            </svg>
-          </span>
-          <span class="uni-photo-dropbox__copy">
-            <span class="uni-photo-dropbox__title">HTMLをアップロード</span>
-            <span class="uni-photo-dropbox__guide">クリックして選択、またはここへドラッグ</span>
-            <span class="uni-photo-dropbox__meta">HTMLファイルに対応</span>
-          </span>
-        </span>
-        <input id="htmlInput" class="uni-photo-dropbox__input" type="file" accept=".html,text/html">
-      </label>
-      <p id="fileNameView" class="file-name">ファイルはまだ選択されていません。</p>
-    </div>
-    <div class="actions">
-      <button id="downloadButton" class="primary" type="button" disabled>3ファイルをZIPでダウンロード</button>
-      <button id="clearButton" class="secondary" type="button">クリア</button>
-    </div>
-    <p id="status" role="status" aria-live="polite"></p>
-  </section>
-</main>
-<script>
-(() => {
-  const input = document.querySelector('#htmlInput');
-  const zone = document.querySelector('#dropZone');
-  const fileName = document.querySelector('#fileName');
-  const versionInput = document.querySelector('#version');
-  const fileNameView = document.querySelector('#fileNameView');
-  const downloadButton = document.querySelector('#downloadButton');
-  const clearButton = document.querySelector('#clearButton');
-  const status = document.querySelector('#status');
-  let selectedFile = null;
 
-  const baseName = () => {
-    const value = fileName.value.trim().replace(/\\/g, '/').split('/').pop().replace(/\.html?$/i, '').trim();
-    return value || 'index';
-  };
+</head> <body> <main class="page"> <h1>IndexedDB軽量ページ作成ツール</h1> <p class="intro">HTMLを選ぶと、IndexedDBから復元する2ファイルと元ファイルを含む3ファイルを作成します。</p> <section class="panel"> <div class="field"> <label for="fileName">ファイル名</label> <input id="fileName" type="text" value="index.html" autocomplete="off" spellcheck="false"> <p class="help">拡張子は自動調整されます。例：index.html → index.html / indexBody.html</p> </div> <div class="field"> <label for="version">バージョン</label> <input id="version" type="number" value="1" min="1" step="1" inputmode="numeric"> <p class="help">生成する2ファイルの<code>const version=1;</code>に入るバージョン番号です。古い番号の保存内容は生成時に削除します。</p> </div> <div class="uni-photo-dropbox"> <label class="uni-photo-dropbox__zone" id="dropZone"> <span class="uni-photo-dropbox__inner"> <span class="uni-photo-dropbox__icon" aria-hidden="true"> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"> <path d="M12 16V4m0 0L7 9m5-5 5 5"></path><path d="M5 20h14"></path> </svg> </span> <span class="uni-photo-dropbox__copy"> <span class="uni-photo-dropbox__title">HTMLをアップロード</span> <span class="uni-photo-dropbox__guide">クリックして選択、またはここへドラッグ</span> <span class="uni-photo-dropbox__meta">HTMLファイルに対応</span> </span> </span> <input id="htmlInput" class="uni-photo-dropbox__input" type="file" accept=".html,text/html"> </label> <p id="fileNameView" class="file-name">ファイルはまだ選択されていません。</p> </div> <div class="actions"> <button id="downloadButton" class="primary" type="button" disabled>3ファイルをZIPでダウンロード</button> <button id="clearButton" class="secondary" type="button">クリア</button> </div> <p id="status" role="status" aria-live="polite"></p> </section> </main> <script> (() => { const input = document.querySelector('#htmlInput'); const zone = document.querySelector('#dropZone'); const fileName = document.querySelector('#fileName'); const versionInput = document.querySelector('#version'); const fileNameView = document.querySelector('#fileNameView'); const downloadButton = document.querySelector('#downloadButton'); const clearButton = document.querySelector('#clearButton'); const status = document.querySelector('#status'); let selectedFile = null;
 
-  const bytesToBase64 = bytes => {
-    let binary = '';
-    const size = 0x8000;
-    for (let i = 0; i < bytes.length; i += size) binary += String.fromCharCode(...bytes.subarray(i, i + size));
-    return btoa(binary);
-  };
+const baseName = () => {
+const value = fileName.value.trim().replace(/\/g, '/').split('/').pop().replace(/.html?$/i, '').trim();
+return value || 'index';
+};
 
-  const readFile = async file => {
-    const bytes = new Uint8Array(await file.arrayBuffer());
-    return { encoded: bytesToBase64(bytes), bytes };
-  };
+const bytesToBase64 = bytes => {
+let binary = '';
+const size = 0x8000;
+for (let i = 0; i < bytes.length; i += size) binary += String.fromCharCode(...bytes.subarray(i, i + size));
+return btoa(binary);
+};
 
-  const getVersion = () => {
-    const value = Number.parseInt(versionInput.value, 10);
-    if (!Number.isInteger(value) || value < 1) throw new Error('バージョンは1以上の整数で入力してください');
-    versionInput.value = String(value);
-    return value;
-  };
+const readFile = async file => {
+const bytes = new Uint8Array(await file.arrayBuffer());
+return { encoded: bytesToBase64(bytes), bytes };
+};
 
-  const sourceEntryName = file => {
-    const originalName = (file?.name || 'source.html').replace(/\\/g, '/').split('/').pop() || 'source.html';
-    const safeName = originalName.replace(/[<>:"|?*\x00-\x1f]/g, '_');
-    return `source/${safeName}`;
-  };
+const getVersion = () => {
+const value = Number.parseInt(versionInput.value, 10);
+if (!Number.isInteger(value) || value < 1) throw new Error('バージョンは1以上の整数で入力してください');
+versionInput.value = String(value);
+return value;
+};
 
-  const esc = value => value.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\r/g, '\\r').replace(/\n/g, '\\n');
+const sourceEntryName = file => {
+const originalName = (file?.name || 'source.html').replace(/\/g, '/').split('/').pop() || 'source.html';
+const safeName = originalName.replace(/[<>:"|?*\x00-\x1f]/g, '_');
+return source/${safeName};
+};
 
-const makeIndex = (name, version) => `<script>
-const version=${version};
-const D='${esc(name)}',S='pages',K=D+'-content-v'+version,B='./${esc(name)}Body.html';
-const goBody=()=>{const u=new URL(B,location.href);u.search=location.search;u.hash='version='+version;location.replace(u.href)};
-if(!('indexedDB'in window))goBody();
-else{const r=indexedDB.open(D,1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(S))r.result.createObjectStore(S)};r.onerror=()=>goBody();r.onsuccess=()=>{const d=r.result,q=d.transaction(S).objectStore(S).get(K);q.onerror=()=>{d.close();goBody()};q.onsuccess=()=>{const h=q.result?.html;d.close();h?(document.open(),document.write(h),document.close()):goBody()}}}
-<\/script>\n`;
+const esc = value => value.replace(/\/g, '\\').replace(/'/g, "\'").replace(/\r/g, '\r').replace(/\n/g, '\n');
 
-  const makeBody = (name, version, encoded) => `<script>
-const version=${version};
-const receivedVersion=Number(new URLSearchParams(location.hash.slice(1)).get('version'));
-const E='${encoded}';
-const decode=e=>new TextDecoder().decode(Uint8Array.from(atob(e),c=>c.charCodeAt(0)));
-if(Number.isInteger(receivedVersion)&&receivedVersion>version){document.open();document.write(decode(E));document.close()}
-else{
-const clearOldVersions=()=>new Promise((ok,no)=>{const r=indexedDB.open('${esc(name)}',1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains('pages'))r.result.createObjectStore('pages')};r.onerror=()=>no(r.error);r.onsuccess=()=>{const d=r.result,t=d.transaction('pages','readwrite'),s=t.objectStore('pages');for(let i=1;i<version;i++)s.delete('${esc(name)}-content-v'+i);t.oncomplete=()=>{d.close();ok()};t.onerror=()=>{d.close();no(t.error)}}});
-const D='${esc(name)}',S='pages',K=D+'-content-v'+version,B='./${esc(name)}.html';
-const open=()=>new Promise((ok,no)=>{const r=indexedDB.open(D,1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(S))r.result.createObjectStore(S)};r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)});
-clearOldVersions().catch(e=>console.error(e)).then(()=>open()).then(d=>new Promise((ok,no)=>{const t=d.transaction(S,'readwrite');t.objectStore(S).put({html:decode(E),version:'v'+version,savedAt:new Date().toISOString()},K);t.oncomplete=()=>{d.close();ok()};t.onerror=()=>{d.close();no(t.error)}})).then(()=>{const u=new URL(B,location.href);u.search=location.search;u.hash=location.hash;location.replace(u.href)}).catch(e=>{console.error(e);document.body.textContent='保存に失敗しました。';});
+const makeIndex = (name, version) => <script> const version=${version}; const D='${esc(name)}',S='pages',K=D+'-content-v'+version,B='./${esc(name)}Body.html'; const goBody=()=>{const u=new URL(B,location.href);u.search=location.search;u.hash='version='+version;location.replace(u.href)}; if(!('indexedDB'in window))goBody(); else{const r=indexedDB.open(D,1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(S))r.result.createObjectStore(S)};r.onerror=()=>goBody();r.onsuccess=()=>{const d=r.result,q=d.transaction(S).objectStore(S).get(K);q.onerror=()=>{d.close();goBody()};q.onsuccess=()=>{const h=q.result?.html;d.close();h?(document.open(),document.write(h),document.close()):goBody()}}} <\/script>\n;
+
+const makeBody = (name, version, encoded) => <script> const version=${version}; const receivedVersion=Number(new URLSearchParams(location.hash.slice(1)).get('version')); const E='${encoded}'; const decode=e=>new TextDecoder().decode(Uint8Array.from(atob(e),c=>c.charCodeAt(0))); if(Number.isInteger(receivedVersion)&&receivedVersion>version){document.open();document.write(decode(E));document.close()} else{ const clearOldVersions=()=>new Promise((ok,no)=>{const r=indexedDB.open('${esc(name)}',1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains('pages'))r.result.createObjectStore('pages')};r.onerror=()=>no(r.error);r.onsuccess=()=>{const d=r.result,t=d.transaction('pages','readwrite'),s=t.objectStore('pages');for(let i=1;i<version;i++)s.delete('${esc(name)}-content-v'+i);t.oncomplete=()=>{d.close();ok()};t.onerror=()=>{d.close();no(t.error)}}}); const D='${esc(name)}',S='pages',K=D+'-content-v'+version,B='./${esc(name)}.html'; const open=()=>new Promise((ok,no)=>{const r=indexedDB.open(D,1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(S))r.result.createObjectStore(S)};r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)}); clearOldVersions().catch(e=>console.error(e)).then(()=>open()).then(d=>new Promise((ok,no)=>{const t=d.transaction(S,'readwrite');t.objectStore(S).put({html:decode(E),version:'v'+version,savedAt:new Date().toISOString()},K);t.oncomplete=()=>{d.close();ok()};t.onerror=()=>{d.close();no(t.error)}})).then(()=>{const u=new URL(B,location.href);u.search=location.search;u.hash=location.hash;location.replace(u.href)}).catch(e=>{console.error(e);document.body.textContent='保存に失敗しました。';}); } <\/script>\n;
+const onlyScript = value => /^<script>[\s\S]*</script>\n?$/.test(value);
+
+const crc32 = data => {
+let crc = 0xffffffff;
+for (const byte of data) {
+crc ^= byte;
+for (let i = 0; i < 8; i++) crc = (crc >>> 1) ^ (0xedb88320 & -(crc & 1));
 }
-<\/script>\n`;
-  const onlyScript = value => /^<script>[\s\S]*<\/script>\n?$/.test(value);
+return (crc ^ 0xffffffff) >>> 0;
+};
 
-  const crc32 = data => {
-    let crc = 0xffffffff;
-    for (const byte of data) {
-      crc ^= byte;
-      for (let i = 0; i < 8; i++) crc = (crc >>> 1) ^ (0xedb88320 & -(crc & 1));
-    }
-    return (crc ^ 0xffffffff) >>> 0;
-  };
+const u16 = (view, offset, value) => view.setUint16(offset, value, true);
+const u32 = (view, offset, value) => view.setUint32(offset, value, true);
 
-  const u16 = (view, offset, value) => view.setUint16(offset, value, true);
-  const u32 = (view, offset, value) => view.setUint32(offset, value, true);
+const makeZip = entries => {
+const encoder = new TextEncoder(), toBytes = data => typeof data === 'string' ? encoder.encode(data) : data instanceof Uint8Array ? data : new Uint8Array(data), chunks = [], central = [], offsets = [];
+let offset = 0;
+for (const entry of entries) {
+const name = encoder.encode(entry.name), data = toBytes(entry.data), local = new ArrayBuffer(30 + name.length);
+const view = new DataView(local);
+u32(view, 0, 0x04034b50); u16(view, 4, 20); u16(view, 6, 0x800); u16(view, 8, 0);
+u16(view, 10, 0); u16(view, 12, 0); u32(view, 14, crc32(data)); u32(view, 18, data.length);
+u32(view, 22, data.length); u16(view, 26, name.length); u16(view, 28, 0);
+new Uint8Array(local, 30).set(name); chunks.push(new Uint8Array(local), data); offsets.push(offset); offset += local.byteLength + data.length;
+const cd = new ArrayBuffer(46 + name.length), cv = new DataView(cd);
+u32(cv, 0, 0x02014b50); u16(cv, 4, 20); u16(cv, 6, 20); u16(cv, 8, 0x800); u16(cv, 10, 0); u16(cv, 12, 0); u16(cv, 14, 0);
+u32(cv, 16, crc32(data)); u32(cv, 20, data.length); u32(cv, 24, data.length); u16(cv, 28, name.length); u16(cv, 30, 0); u16(cv, 32, 0);
+u16(cv, 34, 0); u16(cv, 36, 0); u32(cv, 38, 0); u32(cv, 42, offsets[offsets.length - 1]); new Uint8Array(cd, 46).set(name); central.push(new Uint8Array(cd));
+}
+const centralOffset = offset, centralSize = central.reduce((sum, part) => sum + part.length, 0), end = new ArrayBuffer(22), ev = new DataView(end);
+u32(ev, 0, 0x06054b50); u16(ev, 4, 0); u16(ev, 6, 0); u16(ev, 8, entries.length); u16(ev, 10, entries.length); u32(ev, 12, centralSize); u32(ev, 16, centralOffset); u16(ev, 20, 0);
+return new Blob([...chunks, ...central, new Uint8Array(end)], {type: 'application/zip'});
+};
 
-  const makeZip = entries => {
-    const encoder = new TextEncoder(), toBytes = data => typeof data === 'string' ? encoder.encode(data) : data instanceof Uint8Array ? data : new Uint8Array(data), chunks = [], central = [], offsets = [];
-    let offset = 0;
-    for (const entry of entries) {
-      const name = encoder.encode(entry.name), data = toBytes(entry.data), local = new ArrayBuffer(30 + name.length);
-      const view = new DataView(local);
-      u32(view, 0, 0x04034b50); u16(view, 4, 20); u16(view, 6, 0x800); u16(view, 8, 0);
-      u16(view, 10, 0); u16(view, 12, 0); u32(view, 14, crc32(data)); u32(view, 18, data.length);
-      u32(view, 22, data.length); u16(view, 26, name.length); u16(view, 28, 0);
-      new Uint8Array(local, 30).set(name); chunks.push(new Uint8Array(local), data); offsets.push(offset); offset += local.byteLength + data.length;
-      const cd = new ArrayBuffer(46 + name.length), cv = new DataView(cd);
-      u32(cv, 0, 0x02014b50); u16(cv, 4, 20); u16(cv, 6, 20); u16(cv, 8, 0x800); u16(cv, 10, 0); u16(cv, 12, 0); u16(cv, 14, 0);
-      u32(cv, 16, crc32(data)); u32(cv, 20, data.length); u32(cv, 24, data.length); u16(cv, 28, name.length); u16(cv, 30, 0); u16(cv, 32, 0);
-      u16(cv, 34, 0); u16(cv, 36, 0); u32(cv, 38, 0); u32(cv, 42, offsets[offsets.length - 1]); new Uint8Array(cd, 46).set(name); central.push(new Uint8Array(cd));
-    }
-    const centralOffset = offset, centralSize = central.reduce((sum, part) => sum + part.length, 0), end = new ArrayBuffer(22), ev = new DataView(end);
-    u32(ev, 0, 0x06054b50); u16(ev, 4, 0); u16(ev, 6, 0); u16(ev, 8, entries.length); u16(ev, 10, entries.length); u32(ev, 12, centralSize); u32(ev, 16, centralOffset); u16(ev, 20, 0);
-    return new Blob([...chunks, ...central, new Uint8Array(end)], {type: 'application/zip'});
-  };
+const showFile = file => {
+if (!file || !/.html?$/i.test(file.name)) { status.textContent = 'HTMLファイルを選択してください。'; return; }
+selectedFile = file;
+fileName.value = file.name;
+fileNameView.textContent = 選択中: ${file.name}（${file.size.toLocaleString()} bytes）;
+downloadButton.disabled = false;
+status.textContent = '準備完了です。ZIPをダウンロードできます。';
+};
 
-  const showFile = file => {
-    if (!file || !/\.html?$/i.test(file.name)) { status.textContent = 'HTMLファイルを選択してください。'; return; }
-    selectedFile = file;
-    fileName.value = file.name;
-    fileNameView.textContent = `選択中: ${file.name}（${file.size.toLocaleString()} bytes）`;
-    downloadButton.disabled = false;
-    status.textContent = '準備完了です。ZIPをダウンロードできます。';
-  };
-
-  input.addEventListener('change', () => showFile(input.files[0]));
-  ['dragenter', 'dragover'].forEach(type => zone.addEventListener(type, event => { event.preventDefault(); zone.classList.add('is-dragging'); }));
-  ['dragleave', 'drop'].forEach(type => zone.addEventListener(type, event => { event.preventDefault(); zone.classList.remove('is-dragging'); }));
-  zone.addEventListener('drop', event => showFile(event.dataTransfer.files[0]));
-  downloadButton.addEventListener('click', async () => {
-    try {
-      const name = baseName(), version = getVersion(), { encoded, bytes } = await readFile(selectedFile);
-      const index = makeIndex(name, version), body = makeBody(name, version, encoded);
-      if (!onlyScript(index) || !onlyScript(body)) throw new Error('生成物がscriptタグだけではありません');
-      const zip = makeZip([{name: name + '.html', data: index}, {name: name + 'Body.html', data: body}, {name: sourceEntryName(selectedFile), data: bytes}]);
-      const url = URL.createObjectURL(zip), link = document.createElement('a');
-      link.href = url; link.download = name + '-indexeddb-ver' + version + '.zip'; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
-      status.textContent = `${name}.html、${name}Body.html、${sourceEntryName(selectedFile)}をダウンロードしました。`;
-    } catch (error) { console.error(error); status.textContent = 'ZIPの作成に失敗しました。'; }
-  });
-  clearButton.addEventListener('click', () => { selectedFile = null; input.value = ''; fileName.value = 'index.html'; versionInput.value = '1'; fileNameView.textContent = 'ファイルはまだ選択されていません。'; downloadButton.disabled = true; status.textContent = ''; });
+input.addEventListener('change', () => showFile(input.files[0]));
+['dragenter', 'dragover'].forEach(type => zone.addEventListener(type, event => { event.preventDefault(); zone.classList.add('is-dragging'); }));
+['dragleave', 'drop'].forEach(type => zone.addEventListener(type, event => { event.preventDefault(); zone.classList.remove('is-dragging'); }));
+zone.addEventListener('drop', event => showFile(event.dataTransfer.files[0]));
+downloadButton.addEventListener('click', async () => {
+try {
+const name = baseName(), version = getVersion(), { encoded, bytes } = await readFile(selectedFile);
+const index = makeIndex(name, version), body = makeBody(name, version, encoded);
+if (!onlyScript(index) || !onlyScript(body)) throw new Error('生成物がscriptタグだけではありません');
+const zip = makeZip([{name: name + '.html', data: index}, {name: name + 'Body.html', data: body}, {name: sourceEntryName(selectedFile), data: bytes}]);
+const url = URL.createObjectURL(zip), link = document.createElement('a');
+link.href = url; link.download = name + '-indexeddb-ver' + version + '.zip'; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+status.textContent = ${name}.html、${name}Body.html、${sourceEntryName(selectedFile)}をダウンロードしました。;
+} catch (error) { console.error(error); status.textContent = 'ZIPの作成に失敗しました。'; }
+});
+clearButton.addEventListener('click', () => { selectedFile = null; input.value = ''; fileName.value = 'index.html'; versionInput.value = '1'; fileNameView.textContent = 'ファイルはまだ選択されていません。'; downloadButton.disabled = true; status.textContent = ''; });
 })();
 </script>
-</body>
-</html>
+
+</body> </html>
+
+閉じる
