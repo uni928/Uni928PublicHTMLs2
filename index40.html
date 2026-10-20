@@ -14,6 +14,8 @@
 @layer responsive{@media(max-width:1150px){.composefields{grid-template-columns:repeat(2,minmax(0,1fr))}}}
 
 @layer components{.timeHint{margin-top:4px;font-size:9px;line-height:1.8;color:#8d977e}.composefields{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+@layer components{.posthead .opId{color:#bd3434;font-weight:600}}
 </style></head>
 <body><header class="top"><a class="brand" href="./"><span class="mark">≋</span> スレ帖<span class="tag">小説のための掲示板エディタ</span></a><div class="actions"><span id="saveStatus" role="status">読み込み中</span><button id="importBtn">↥ 読み込む</button><button id="exportBtn" class="dark">↧ エクスポート <kbd>⌘ / Ctrl S</kbd></button></div></header>
 <div class="workspace"><aside class="sidebar"><div class="eyebrow">YOUR WORKSPACE</div><div class="sideheading"><h2>スレッド</h2><button id="newThread" class="icon" title="新しいスレッド">＋</button></div><nav id="threadList" aria-label="スレッド一覧"></nav><div class="sidebottom"><span class="tinySquare">□</span><p>ここは、あなたの執筆室。<br>書き込みは外部に公開されません。</p><small>このブラウザに自動保存 · 単一HTML版</small></div></aside>
@@ -22,7 +24,7 @@
 <section class="board"><div class="boardheading"><div class="boardlabel"><span class="liveDot"></span> 創作スレッド <span id="threadNumber"></span></div><label class="sr" for="title">スレッドタイトル</label><input id="title" class="threadTitle" maxlength="200" placeholder="スレッドタイトルを入力"><div class="boardmeta"><span>掲示板形式の原稿</span><span id="postCount"></span></div><label class="sr" for="note">執筆メモ</label><input id="note" class="note" placeholder="執筆メモを追加（原稿には出力されません）" maxlength="10000"></div><div id="posts"></div><div id="empty" hidden>まだ書き込みがありません。最初のひと言から、物語を始めましょう。</div><div class="threadEnd"><span></span><small>ここまでの書き込み</small><span></span></div></section>
 <section id="composer" class="composer"><div class="composeheading"><h2 id="composeTitle">レスを書き込む</h2><span>Ctrl / ⌘ + Enter で書き込み</span></div><div class="composefields"><label>名前<select id="author"></select></label><label>メール欄<input id="mail" placeholder="sage（任意）" maxlength="100"></label><label>日時<input id="postDate" placeholder="2026/10/19(月) 12:00:00" maxlength="100"></label><label>ID<input id="poster" maxlength="100" placeholder="空欄でランダムID"></label><label>レス番号ランダム増加量<input id="stepMax" type="number" min="0" max="1000000" step="any" value="1.4" title="小数可。2.5なら＋1と＋2は各40%、＋3は20%の確率で出ます"></label><label>レス番号<input id="resNumber" type="number" min="1" max="999999999" step="1" value="1"></label><label>日時番号ランダム増加量<input id="timeMax" type="number" min="0" max="31536000" step="1" value="60" title="この値の10%〜100%の範囲から、増加秒数をランダムに決めます"></label><label>日時増加量（秒数）<input id="timeSeconds" type="number" min="6" max="60" step="1" title="抽選された秒数です。この秒数だけ次の日時が進みます"></label></div><label class="sr" for="body">投稿本文</label><textarea id="body" rows="5" maxlength="200000" placeholder="ここに書き込む。会話、独白、伏線も、いつもの掲示板のように。"></textarea><p class="identityHint">名無しのIDは空欄なら投稿ごとにランダム生成。コテハンのIDは共通です（変更は同名の全レスに反映）。</p><p class="numberHint" id="numberHint" aria-live="polite">増加量1.4：＋1は約71.43%、＋2は約28.57%で出ます。レス番号は手入力でも指定できます。</p><p class="timeHint">日時番号ランダム増加量が60なら、6〜60秒を抽選して秒数欄に表示。投稿後は表示中の秒数だけ日時が進み、次の秒数を再抽選します。0なら日時を固定。</p><div class="composefoot"><div><button id="insertReply" class="plain">≫ アンカーを挿入</button><span id="draftCount">0 文字</span></div><div><button id="cancelEdit" hidden>編集をやめる</button><button id="submitPost" class="accent">書き込む <span>↗</span></button></div></div></section>
 <footer>声が集まる。物語になる。<span>スレ帖 / THREAD NOTE</span></footer></main>
-<aside class="settings"><div class="eyebrow">WRITING TOOLS</div><h2>執筆の設定</h2><section><div class="settingtitle"><span>01</span><h3>名無しの名前</h3></div><p>名前を選ばないときの初期値です。</p><label class="sr" for="anonymous">名無しの初期値</label><input id="anonymous" maxlength="100" placeholder="名無しの住人"><small>変更すると名無しのレスに反映されます。</small></section><section><div class="settingtitle"><span>02</span><h3>コテハン帳</h3><span id="nameCount" class="count"></span></div><p>登場人物の名前を、いつでも呼び出す。</p><div id="nameList"></div><form id="nameForm"><label class="sr" for="newName">登録するコテハン</label><div class="nameAdd"><input id="newName" placeholder="コテハンを追加" maxlength="100"><button class="icon" aria-label="コテハンを登録">＋</button></div></form></section><section><div class="settingtitle"><span>03</span><h3>原稿の表示</h3></div><label class="toggleline">投稿日時を表示<input id="showDate" type="checkbox" role="switch"></label><label class="toggleline">投稿者IDを表示<input id="showId" type="checkbox" role="switch"></label><small>表示設定はコピー・テキスト出力にも反映。</small></section><div class="tip"><span>執筆のヒント</span><p>レス番号を押すと、返信先のアンカーを挿入できます。</p><p>書き込みはあとから編集・並べ替えできます。</p></div><button id="deleteThread" class="danger plain">このスレッドを削除</button></aside></div>
+<aside class="settings"><div class="eyebrow">WRITING TOOLS</div><h2>執筆の設定</h2><section><div class="settingtitle"><span>01</span><h3>名無しの名前</h3></div><p>名前を選ばないときの初期値です。</p><label class="sr" for="anonymous">名無しの初期値</label><input id="anonymous" maxlength="100" placeholder="名無しの住人"><small>変更すると名無しのレスに反映されます。</small></section><section><div class="settingtitle"><span>02</span><h3>コテハン帳</h3><span id="nameCount" class="count"></span></div><p>登場人物の名前を、いつでも呼び出す。</p><div id="nameList"></div><form id="nameForm"><label class="sr" for="newName">登録するコテハン</label><div class="nameAdd"><input id="newName" placeholder="コテハンを追加" maxlength="100"><button class="icon" aria-label="コテハンを登録">＋</button></div></form></section><section><div class="settingtitle"><span>03</span><h3>原稿の表示</h3></div><label class="toggleline">投稿日時を表示<input id="showDate" type="checkbox" role="switch"></label><label class="toggleline">投稿者IDを表示<input id="showId" type="checkbox" role="switch"></label><label class="toggleline">イッチのIDを赤に<input id="highlightOpId" type="checkbox" role="switch" checked></label><small>レス番号1と同じIDが対象。《id》コピーでは《red》タグを付けます。レス番号1がない場合は対象なし。</small><small>表示設定はコピー・テキスト出力にも反映。</small></section><div class="tip"><span>執筆のヒント</span><p>レス番号を押すと、返信先のアンカーを挿入できます。</p><p>書き込みはあとから編集・並べ替えできます。</p></div><button id="deleteThread" class="danger plain">このスレッドを削除</button></aside></div>
 <input id="importFile" type="file" accept=".html,text/html" hidden><div id="toast" role="status" hidden></div><dialog id="confirmDialog"><h2>確認</h2><p id="confirmText"></p><div><button id="confirmNo">キャンセル</button><button id="confirmYes" class="dark">実行する</button></div></dialog><script>const formats=[['gz','gzip'],['df','deflate'],['dr','deflate-raw']];
 const MAX=8*1024*1024;
 const NUMBER_LIMIT=999999999,STEP_LIMIT=1000000;
@@ -32,6 +34,7 @@ const str=(s,n=200000)=>typeof s==='string'&&s.length<=n;
 function validate(s){
  if(!s||!str(s.anonymous,100)||!Array.isArray(s.names)||s.names.length>200||!s.names.every(n=>str(n,100)&&n.trim())||!Array.isArray(s.threads)||!s.threads.length||s.threads.length>200||!str(s.active,100)||typeof s.showDate!=='boolean'||typeof s.showId!=='boolean'||typeof s.preview!=='boolean')fail();
  if(s.timeRandomMode!==undefined&&s.timeRandomMode!=='seconds-range-v1')fail();
+ if(s.highlightOpId!==undefined&&typeof s.highlightOpId!=='boolean')fail();
  if(s.nameIds!==undefined&&(!Array.isArray(s.nameIds)||s.nameIds.length>10000||!s.nameIds.every(p=>Array.isArray(p)&&p.length===2&&str(p[0],100)&&p[0].trim()&&str(p[1],100)&&p[1].trim())||new Set(s.nameIds.map(p=>p[0])).size!==s.nameIds.length))fail();
  const ids=new Set();
  for(const t of s.threads){if(!t||!str(t.id,100)||ids.has(t.id)||!str(t.title,200)||!str(t.note,10000)||!Array.isArray(t.posts)||t.posts.length>10000||!t.draft)fail();ids.add(t.id);const pids=new Set();for(const p of [...t.posts,t.draft]){if(!p||!str(p.id,100)||!str(p.name,100)||!str(p.body)||!str(p.date,100)||!str(p.poster,100)||!str(p.mail,100))fail();if(p!==t.draft){if(pids.has(p.id))fail();pids.add(p.id);}}}
@@ -65,6 +68,7 @@ function nextNumber(t,stepMax=1,random=Math.random){
  return Math.min(NUMBER_LIMIT,latestNumber(t)+step);
 }
 function normalizeNumbering(s){
+ if(s.highlightOpId===undefined)s.highlightOpId=true;
  const migrateTime=s.timeRandomMode!=='seconds-range-v1';
  for(const t of s.threads){const used=new Set(t.posts.filter(p=>p.number!==undefined).map(p=>p.number));t.posts.forEach((p,i)=>{if(p.number===undefined){let n=i+1;while(used.has(n))n++;p.number=n;used.add(n);}});if(t.draft.number===undefined)t.draft.number=String(nextNumber(t));if(t.draft.stepMax===undefined)t.draft.stepMax='1.4';if(migrateTime||t.draft.timeMax===undefined)t.draft.timeMax='60';if(migrateTime||t.draft.timeSeconds===undefined)t.draft.timeSeconds=String(randomTimeSeconds(Number(t.draft.timeMax)));}
  s.timeRandomMode='seconds-range-v1';
@@ -92,9 +96,16 @@ function advancePostDate(text,seconds){
  if(!Number.isFinite(date.getTime()))throw new Error('日時の増加量が大きすぎます。秒数またはランダム増加量を小さくしてください。');
  return formatPostDate(date);
 }
+function threadOpId(s,t){
+ if(s.highlightOpId===false)return null;
+ const first=t.posts.find((p,i)=>postNumber(p,i)===1);
+ return first?.poster?.trim()?first.poster:null;
+}
 function formatThreadText(s,t,marked=false){
+ const opId=threadOpId(s,t);
  const posts=t.posts.map((p,i)=>{
-  const n=postNumber(p,i),header=`${n}：${p.name||s.anonymous||'名無し'}${p.mail?' ['+p.mail+']':''}${s.showDate?(marked?' ':'：')+p.date:''}${s.showId?' ID:'+p.poster:''}`;
+  const id='ID:'+p.poster,idText=marked&&opId!==null&&p.poster===opId?'《red》'+id+'《/red》':id;
+  const n=postNumber(p,i),header=`${n}：${p.name||s.anonymous||'名無し'}${p.mail?' ['+p.mail+']':''}${s.showDate?(marked?' ':'：')+p.date:''}${s.showId?' '+idText:''}`;
   const text=header+'\n'+p.body;
   return marked?`《id:r${n}》${text}\n《id:r${n}e》`:text;
  }).join('\n\n');
@@ -137,10 +148,10 @@ function renderNames(){
  $('nameList').replaceChildren(...state.names.map(n=>{const row=el('div','nameRow'),info=el('div','nameInfo');info.append(el('span','',n),el('small','','ID: '+new Map(state.nameIds).get(n)));row.append(info,action('×',n+'をコテハン帳から削除',()=>{state.names=state.names.filter(x=>x!==n);renderNames();persist();}));return row;}));$('nameCount').textContent=state.names.length;
 }
 function renderPosts(){
- const t=active();$('posts').replaceChildren(...t.posts.map((p,i)=>{
+ const t=active(),opId=threadOpId(state,t);$('posts').replaceChildren(...t.posts.map((p,i)=>{
   const n=postNumber(p,i),post=el('article','post');post.id='res-'+n;
   const head=el('div','posthead'),num=action(String(n).padStart(2,'0'),'レス'+n+'に返信',()=>insertAnchor(n));num.className='postnum';
-  head.append(num,el('span','postname',p.name||state.anonymous||'名無し'));if(p.mail)head.append(el('span','postmail','['+p.mail+']'));if(state.showDate)head.append(el('span','',p.date));if(state.showId)head.append(el('span','','ID:'+p.poster));
+  head.append(num,el('span','postname',p.name||state.anonymous||'名無し'));if(p.mail)head.append(el('span','postmail','['+p.mail+']'));if(state.showDate)head.append(el('span','',p.date));if(state.showId)head.append(el('span',opId!==null&&p.poster===opId?'opId':'','ID:'+p.poster));
   const tools=el('div','posttools');tools.append(action('↑','レスを上へ',()=>move(i,-1)),action('↓','レスを下へ',()=>move(i,1)),action('編集','レスを編集',()=>editPost(p.id)),action('×','レスを削除',async()=>{
    if(await confirmAction('レス '+n+' を削除します。')){t.posts.splice(i,1);if(editing===p.id){editing=null;t.draft=newDraft(t);fillDraft();}renderPosts();renderSidebar();persist();}
   }));tools.children[0].disabled=i===0;tools.children[1].disabled=i===t.posts.length-1;
@@ -150,7 +161,7 @@ function renderPosts(){
 }
 async function move(i,delta){const posts=active().posts;if(i+delta<0||i+delta>=posts.length)return;[posts[i],posts[i+delta]]=[posts[i+delta],posts[i]];renderPosts();persist();toast('順序を変更しました。レス番号は保持されます。');}
 function fillDraft(){const p=active().draft;renderNames();$('mail').value=p.mail;$('postDate').value=p.date;$('poster').value=p.poster;$('body').value=p.body;$('stepMax').value=p.stepMax;updateNumberHint();$('resNumber').value=p.number;$('timeMax').value=p.timeMax;$('timeSeconds').value=p.timeSeconds;setTimeBounds();$('draftCount').textContent=p.body.length+' 文字';$('composeTitle').textContent=editing?'レスを編集中':'レスを書き込む';$('submitPost').textContent=editing?'変更を反映 ↗':'書き込む ↗';$('cancelEdit').hidden=!editing;}
-function render(){normalizeNumbering(state);const t=active();$('title').value=t.title;$('note').value=t.note;$('anonymous').value=state.anonymous;$('showDate').checked=state.showDate;$('showId').checked=state.showId;document.body.classList.toggle('reading',state.preview);$('composer').hidden=state.preview&&!talking;$('editMode').classList.toggle('selected',!state.preview);$('previewMode').classList.toggle('selected',state.preview);$('title').readOnly=state.preview;$('threadNumber').textContent='THREAD '+String(state.threads.indexOf(t)+1).padStart(2,'0');renderSidebar();renderPosts();fillDraft();}
+function render(){normalizeNumbering(state);const t=active();$('title').value=t.title;$('note').value=t.note;$('anonymous').value=state.anonymous;$('showDate').checked=state.showDate;$('showId').checked=state.showId;$('highlightOpId').checked=state.highlightOpId;document.body.classList.toggle('reading',state.preview);$('composer').hidden=state.preview&&!talking;$('editMode').classList.toggle('selected',!state.preview);$('previewMode').classList.toggle('selected',state.preview);$('title').readOnly=state.preview;$('threadNumber').textContent='THREAD '+String(state.threads.indexOf(t)+1).padStart(2,'0');renderSidebar();renderPosts();fillDraft();}
 function updateNumberHint(){
  const value=Number($('stepMax').value),hint=$('numberHint');
  if(!Number.isFinite(value)||value<=0||value>STEP_LIMIT){hint.textContent='レス番号ランダム増加量は0より大きい数値を入力してください。小数も使えます。';return;}
@@ -182,7 +193,7 @@ $('title').oninput=e=>{active().title=e.target.value;renderSidebar();persist();}
 for(const id of ['mail','postDate','poster','body','stepMax','resNumber','timeMax','timeSeconds'])$(id).addEventListener('input',captureDraft);
 $('author').onchange=()=>{const name=$('author').value;active().draft.name=name;$('poster').value=name?setNamedId(state,name):'';captureDraft();};
 $('anonymous').oninput=e=>{state.anonymous=e.target.value;renderNames();renderPosts();persist();};
-for(const id of ['showDate','showId'])$(id).onchange=e=>{state[id]=e.target.checked;renderPosts();persist();};
+for(const id of ['showDate','showId','highlightOpId'])$(id).onchange=e=>{state[id]=e.target.checked;renderPosts();persist();};
 $('nameForm').onsubmit=e=>{e.preventDefault();const n=$('newName').value.trim();if(!n)return;if(state.names.includes(n))return toast('そのコテハンは登録済みです。',true);if(state.names.length>=200)return toast('コテハンは200件まで登録できます。',true);state.names.push(n);setNamedId(state,n);$('newName').value='';renderNames();persist();};
 $('newThread').onclick=()=>{if(state.threads.length>=200)return toast('スレッドは200件までです。',true);const t={id:uid(),title:'無題のスレッド',note:'',posts:[],draft:blank()};state.threads.push(t);state.active=t.id;editing=null;talking=false;state.preview=false;render();persist();$('title').focus();$('title').select();};
 $('deleteThread').onclick=async()=>{if(!await confirmAction('「'+active().title+'」と書きかけを削除します。この操作は取り消せません。'))return;state.threads=state.threads.filter(t=>t.id!==state.active);if(!state.threads.length)state.threads.push({id:uid(),title:'無題のスレッド',note:'',posts:[],draft:blank()});state.active=state.threads[0].id;editing=null;render();persist();};
