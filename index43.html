@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>スクリーンショットをHTML化</title>
+<style>
+@layer base, layout, components;
+@layer base {
+  * { box-sizing: border-box; }
+  html { color-scheme: light; }
+  body { margin: 0; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; color: #18202d; background: #f4f6fb; }
+  button, input { font: inherit; }
+}
+@layer layout {
+  main { max-width: 860px; padding: 26px 18px 50px; margin: 0 auto; }
+  h1 { font-size: clamp(22px, 4.5vw, 30px); margin: 0 0 12px; }
+  p { line-height: 1.65; }
+  .panel { background: white; border: 1px solid #e2e6ee; border-radius: 16px; padding: 20px; box-shadow: 0 8px 24px #23334d0c; }
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+  .preview { margin-top: 22px; overflow: hidden; border: 1px solid #d4dce8; border-radius: 12px; background: white; }
+}
+@layer components {
+  .muted { color: #647084; font-size: 14px; }
+  .drop { display: grid; place-content: center; text-align: center; gap: 10px; min-height: 185px; padding: 20px; border: 2px dashed #9daeca; border-radius: 12px; background: #f7faff; cursor: pointer; }
+  .drop:hover, .drop.dragging { background: #eaf2ff; border-color: #3159a2; }
+  .drop strong { font-size: 18px; }
+  .drop input { display: none; }
+  button { border: 0; border-radius: 10px; padding: 12px 17px; background: #2859b6; color: white; font-weight: 650; cursor: pointer; }
+  button:disabled { cursor: not-allowed; opacity: .48; }
+  button.secondary { background: #e9eef8; color: #25334a; }
+  .preview img { display: block; width: 100%; height: auto; }
+  .placeholder { padding: 60px 15px; text-align: center; color: #6b768b; }
+  #status { min-height: 24px; overflow-wrap: anywhere; }
+}
+</style>
+</head>
+<body>
+<main>
+<h1>スクリーンショットをサイトのように表示</h1>
+<p class="muted">スクリーンショットから、画像を内蔵した単独HTMLを作成します。出力したHTMLはオフラインで開けます。</p>
+<section class="panel">
+<label class="drop" id="dropzone" for="fileInput" tabindex="0" role="button" aria-label="画像を選択">
+<strong>画像をここにドロップ、またはクリックして選択</strong>
+<span class="muted">PNG / JPEG / WebP / GIF などの画像に対応</span>
+<input id="fileInput" type="file" accept="image/*">
+</label>
+<div class="actions">
+<button id="exportButton" disabled>HTMLをダウンロード</button>
+<button id="resetButton" class="secondary" disabled>画像をクリア</button>
+</div>
+<p class="muted" id="status" role="status">画像を選択してください。</p>
+</section>
+<section class="preview" aria-label="出力イメージ">
+<div class="placeholder" id="placeholder">ここにプレビューが表示されます。</div>
+<img id="previewImage" alt="読み込んだスクリーンショット" hidden>
+</section>
+</main>
+<script>
+(() => {
+  const input = document.getElementById('fileInput');
+  const dropzone = document.getElementById('dropzone');
+  const image = document.getElementById('previewImage');
+  const placeholder = document.getElementById('placeholder');
+  const exportButton = document.getElementById('exportButton');
+  const resetButton = document.getElementById('resetButton');
+  const status = document.getElementById('status');
+  let imageData = '';
+  let baseName = 'screenshot';
+
+  // 画像をBase64でHTMLに内蔵し、出力後もネット接続・元ファイルを不要にします。
+  function loadFile(file) {
+    if (!file || !file.type.startsWith('image/')) {
+      status.textContent = '画像ファイルを選択してください。';
+      return;
+    }
+    const reader = new FileReader();
+    reader.onerror = () => { status.textContent = '画像の読み込みに失敗しました。'; };
+    reader.onload = () => {
+      imageData = String(reader.result);
+      baseName = (file.name.replace(/\.[^.]+$/, '').replace(/[\\/:*?"<>|]/g, '_').trim() || 'screenshot');
+      image.src = imageData;
+      image.hidden = false;
+      placeholder.hidden = true;
+      exportButton.disabled = false;
+      resetButton.disabled = false;
+      status.textContent = `${file.name}（${Math.round(file.size / 1024).toLocaleString()} KB）を読み込みました。`;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  input.addEventListener('change', () => loadFile(input.files?.[0]));
+  dropzone.addEventListener('keydown', event => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault(); input.click();
+    }
+  });
+  for (const eventName of ['dragenter', 'dragover']) {
+    dropzone.addEventListener(eventName, event => { event.preventDefault(); dropzone.classList.add('dragging'); });
+  }
+  for (const eventName of ['dragleave', 'drop']) {
+    dropzone.addEventListener(eventName, event => { event.preventDefault(); dropzone.classList.remove('dragging'); });
+  }
+  dropzone.addEventListener('drop', event => loadFile(event.dataTransfer?.files?.[0]));
+
+  // 横幅だけ画面に合わせ、高さは画像比率どおりにして縦スクロールさせます。
+  exportButton.addEventListener('click', () => {
+    if (!imageData) return;
+    const safeTitle = baseName.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const exported = `<!doctype html>\n<html lang="ja">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n<title>${safeTitle}</title>\n<style>\n@layer base {html,body{margin:0;padding:0;width:100%;overflow-x:hidden;background:#fff}img{display:block;width:100%;height:auto;max-width:none}}\n</style>\n</head>\n<body>\n<img src="${imageData}" alt="スクリーンショット">\n</body>\n</html>\n`;
+    const blob = new Blob([exported], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${baseName}.html`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
+    status.textContent = 'HTMLをダウンロードしました。ファイルを開くと画像がページ全幅に表示されます。';
+  });
+
+  resetButton.addEventListener('click', () => {
+    imageData = '';
+    input.value = '';
+    image.removeAttribute('src');
+    image.hidden = true;
+    placeholder.hidden = false;
+    exportButton.disabled = true;
+    resetButton.disabled = true;
+    status.textContent = '画像を選択してください。';
+  });
+})();
+</script>
+</body>
+</html>
