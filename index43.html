@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>パスをコピー</title>
+<style>
+@layer base {
+  html, body { margin: 0; min-height: 100%; background: #fff; color: #222; font-family: system-ui, sans-serif; }
+  main { box-sizing: border-box; max-width: 650px; margin: 12vh auto 0; padding: 24px; }
+  label { display: block; margin-bottom: 10px; font-weight: 600; }
+  textarea { box-sizing: border-box; width: 100%; min-height: 110px; padding: 12px; font: inherit; border: 1px solid #bbb; border-radius: 8px; resize: vertical; overflow-wrap: anywhere; }
+  button { margin-top: 12px; padding: 12px 20px; border: 0; border-radius: 8px; background: #245dc1; color: #fff; font: inherit; cursor: pointer; }
+  #status { min-height: 1.5em; font-size: .9rem; }
+  [hidden] { display: none; }
+}
+</style>
+<script>
+(() => {
+  'use strict';
+  const hash = location.hash.slice(1);
+  // #wanted= がある場合は画面を描画せず、指定先へ遷移を試みます。
+  if (hash.startsWith('wanted=')) {
+    let target = hash.slice('wanted='.length);
+    try { target = decodeURIComponent(target); } catch (_) {}
+    if (/^file:\/\//i.test(target)) {
+      try { location.replace(target); } catch (_) {}
+    }
+    return;
+  }
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('form').hidden = false;
+    const input = document.getElementById('path');
+    const status = document.getElementById('status');
+    document.getElementById('copy').addEventListener('click', async () => {
+      const value = input.value.trim();
+      if (!value) { status.textContent = 'パスを入力してください。'; return; }
+      try {
+        await navigator.clipboard.writeText(value);
+        status.textContent = 'パスをコピーしました。';
+      } catch (_) {
+        input.focus(); input.select();
+        status.textContent = '自動コピーできませんでした。選択された文字列を手動でコピーしてください。';
+      }
+    });
+  });
+})();
+</script>
+</head>
+<body>
+<main id="form" hidden>
+  <label for="path">URL・ファイルパス</label>
+  <textarea id="path" placeholder="file://"></textarea>
+  <button id="copy" type="button">パスをコピー</button>
+  <p id="status" role="status" aria-live="polite"></p>
+</main>
+</body>
+</html>
