@@ -6,11 +6,23 @@
   <meta name="description" content="リンクテキストと報告文からDiscord共有リンクを作成します。">
   <title>Discord共有リンクを作成</title>
   <style>
+    @layer base {
     :root{color-scheme:light;--ink:#202938;--muted:#667085;--line:#d8e0eb;--accent:#5865f2;--accent-dark:#4752c4;--surface:#fff;--background:#f3f5fa}
     *{box-sizing:border-box}
     body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;background:radial-gradient(ellipse at 12% 0%,#e5eaff 0,transparent 38%),var(--background);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
     main{width:min(100%,680px);padding:clamp(22px,5vw,42px);border:1px solid #e1e6ef;border-radius:24px;background:var(--surface);box-shadow:0 20px 60px #17203314}
-    h1{margin:0 0 28px;font-size:clamp(1.45rem,4vw,2rem);letter-spacing:-.03em}
+    h1{margin:0;font-size:clamp(1.45rem,4vw,2rem);letter-spacing:-.03em}
+    /* 右上プレビューはコピー対象のMarkdownリンクから生成する */
+    .header-row{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:28px}
+    .preview{min-width:0;max-width:52%;font-size:.9rem;text-align:right;line-height:1.6;overflow-wrap:anywhere}
+    .preview-title{color:var(--muted);font-weight:750}
+    .preview a{color:var(--accent-dark);text-decoration:underline;text-underline-offset:3px}
+    .preview a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+    .preview-links{max-height:140px;overflow:auto}
+    .preview-links a{display:block}
+    .preview-placeholder{color:var(--muted);font-size:.82rem}
+    @media(max-width:520px){.header-row{flex-wrap:wrap;gap:10px}.preview{max-width:100%;width:100%;text-align:left}}
+
     form{display:grid;gap:20px}
     label{display:grid;gap:8px;font-weight:750}
     input,textarea{width:100%;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--ink);font:inherit;outline:none}
@@ -25,11 +37,33 @@
     #status.error{color:#b42318}
     @media(max-width:520px){body{padding:12px}main{border-radius:18px}textarea{min-height:42vh}}
     @media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important}}
+    }
+    @layer preview-adjustments {
+      /* プレビューの見出しと内容を常に横一列に表示する */
+      .header-row{flex-wrap:nowrap}
+      .preview{display:flex;align-items:center;justify-content:flex-end;gap:4px;min-width:0;white-space:nowrap;overflow-wrap:normal}
+      .preview-title{flex:none}
+      .preview-links{display:flex;gap:8px;min-width:0;max-width:100%;overflow-x:auto;overflow-y:hidden;white-space:nowrap}
+      .preview-links a{display:inline-block;flex:none;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+      .preview-placeholder{white-space:nowrap}
+      @media(max-width:520px){
+        .header-row{flex-wrap:nowrap;gap:8px}
+        .header-row h1{font-size:1.1rem;flex:none}
+        .preview{width:auto;max-width:none;flex:1;justify-content:flex-end;text-align:right;font-size:.78rem}
+        .preview-placeholder{font-size:.75rem}
+      }
+    }
   </style>
 </head>
 <body>
   <main>
-    <h1>Discord共有リンク</h1>
+    <div class="header-row">
+      <h1>Discord共有リンク</h1>
+      <aside class="preview" aria-label="コピーするリンクのプレビュー">
+        <span class="preview-title">プレビュー：</span>
+        <div id="previewLinks" class="preview-links"><span class="preview-placeholder">入力すると表示されます</span></div>
+      </aside>
+    </div>
     <form id="shareForm">
       <label for="linkText">リンクテキスト
         <input id="linkText" name="linkText" type="text" autocomplete="off" placeholder="例：ver1.14.4→ver1.15.0アップデート内容">
@@ -58,6 +92,9 @@
     const reportTextInput = document.getElementById("reportText");
     const copyButton = document.getElementById("copyButton");
     const status = document.getElementById("status");
+    const previewLinks = document.getElementById("previewLinks");
+    let previewRevision = 0;
+    let previewTimer;
 
     function formatJapaneseDateTime(date) {
       return new Intl.DateTimeFormat("ja-JP", { year:"numeric", month:"long", day:"numeric", hour:"2-digit", minute:"2-digit" }).format(date);
@@ -229,6 +266,44 @@
       }
       return links;
     }
+    // コピーするMarkdown文字列そのものを解析し、表示とURLのずれを防ぐ。
+    function renderPreview(links) {
+      previewLinks.replaceChildren();
+      for (const markdown of links) {
+        const match = /^\[((?:\\.|[^\]])*)\]\(<(.*)>\)$/.exec(markdown);
+        if (!match) continue;
+        const anchor = document.createElement("a");
+        anchor.textContent = match[1].replace(/\\([\\[\]])/g, "$1");
+        anchor.href = match[2];
+        anchor.target = "_blank";
+        anchor.rel = "noopener noreferrer";
+        previewLinks.appendChild(anchor);
+      }
+      if (!previewLinks.childNodes.length) previewLinks.textContent = "表示できるリンクがありません";
+    }
+
+    async function updatePreview(revision) {
+      if (!linkTextInput.value && !reportTextInput.value) {
+        previewLinks.innerHTML = '<span class="preview-placeholder">入力すると表示されます</span>';
+        return;
+      }
+      previewLinks.textContent = "作成中…";
+      try {
+        const links = await createDiscordLinks();
+        if (revision === previewRevision) renderPreview(links);
+      } catch (error) {
+        if (revision === previewRevision) previewLinks.textContent = "プレビューを作成できません";
+      }
+    }
+
+    for (const input of [linkTextInput, reportTextInput]) {
+      input.addEventListener("input", () => {
+        const revision = ++previewRevision;
+        clearTimeout(previewTimer);
+        previewTimer = setTimeout(() => updatePreview(revision), 350);
+      });
+    }
+
     async function copyText(value) {
       try { await navigator.clipboard.writeText(value); }
       catch (error) {
@@ -250,7 +325,10 @@
       status.classList.remove("error");
       status.textContent = "";
       try {
+        const revision = ++previewRevision;
+        clearTimeout(previewTimer);
         const links = await createDiscordLinks();
+        renderPreview(links);
         await copyText(links.join("\n\n"));
         copyButton.textContent = "コピーしました";
         status.textContent = links.length > 1 ? links.length + "件に分割したリンクをコピーしました。Discordへは1行ずつ送信してください。" : "Discord共有リンクをコピーしました。";
