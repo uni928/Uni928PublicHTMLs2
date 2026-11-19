@@ -1,0 +1,489 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>画面サンプル共有</title>
+<style>
+  :root { color-scheme: light; font-family: system-ui, "Yu Gothic UI", sans-serif; color: #17292c; background: #eef4f3; --line: #d6e2df; --muted: #49625f; --accent: #075e53; }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { margin: 0; }
+  main { width: min(1120px, 100%); margin: auto; padding: clamp(28px, 6vw, 72px) clamp(16px, 4vw, 40px); }
+  h1 { font-size: clamp(2rem, 5vw, 3.4rem); letter-spacing: -.045em; margin: 0 0 14px; line-height: 1.16; }
+  h2 { font-size: 1.125rem; margin: 0; }
+  p { margin: 0; line-height: 1.65; }
+  .intro { color: var(--muted); margin-bottom: 28px; }
+  .workbench { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+  .card { background: white; border-radius: 20px; border: 1px solid var(--line); overflow: hidden; }
+  .controls { display: grid; gap: 17px; padding: clamp(18px, 3vw, 26px); }
+  button, input { font: inherit; }
+  button { cursor: pointer; border: 1px solid transparent; border-radius: 9px; min-height: 44px; padding: 10px 15px; font-weight: 650; }
+  button:disabled { cursor: default; opacity: .5; }
+  :focus-visible { outline: 3px solid #0f8071; outline-offset: 3px; }
+  .drop { width: 100%; min-height: 142px; background: #eff8f5; border: 1.5px dashed #76a79e; color: var(--accent); display: grid; place-content: center; gap: 7px; }
+  .drop span { color: var(--muted); font-weight: 400; font-size: .875rem; }
+  .drop:hover, .drop.dragging { background: #dbf0e9; border-color: var(--accent); }
+  label { display: block; font-weight: 650; margin-bottom: 6px; }
+  input[type=number] { width: min(100%, 12rem); padding: 11px; color: inherit; border-radius: 9px; border: 1px solid #a8bbb7; }
+  .help, #status, #previewDetails { color: var(--muted); font-size: .875rem; overflow-wrap: anywhere; }
+  .help { margin-top: 6px; }
+  #status { min-height: 1.5em; }
+  #status[data-error=true] { color: #a02922; }
+  .actions { display: flex; flex-wrap: wrap; gap: 9px; }
+  .primary { background: var(--accent); color: white; }
+  .primary:hover:not(:disabled) { background: #05473e; }
+  .secondary { background: white; color: #24403c; border-color: var(--line); }
+  .secondary:hover:not(:disabled) { background: #eef4f3; }
+  .previewHead { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 7px; padding: 17px 22px; border-bottom: 1px solid var(--line); }
+  .previewWindow { min-height: 310px; max-height: 65vh; overflow: auto; background: #f8fbfa; }
+  .previewWindow:focus-visible { outline-offset: -4px; }
+  .previewWindow img { display: block; width: 100%; height: auto; }
+  #emptyPreview { display: grid; place-items: center; padding: 20px; min-height: 310px; text-align: center; color: var(--muted); }
+  .guide { margin-top: 20px; padding: 17px 20px; background: #e1edeb; border-radius: 12px; }
+  .guide p { margin-top: 6px; }
+  @media (max-width: 740px) { .workbench { grid-template-columns: 1fr; } .previewWindow, #emptyPreview { min-height: 230px; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>画面サンプル共有</h1>
+  <p class="intro">フルスクリーンショットを、リンクで開ける暗号化HTMLに変換します。画像はブラウザー内で処理されます。</p>
+  <div class="workbench">
+    <section class="card controls" aria-labelledby="inputHeading">
+      <h2 id="inputHeading">スクリーンショット</h2>
+      <input id="file" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/avif,image/bmp,image/x-ms-bmp" hidden>
+      <button type="button" class="drop" id="drop">
+        画像を選択、またはここにドロップ
+        <span>PNG / JPEG / WebP / GIF / AVIF / BMP</span>
+      </button>
+      <div>
+        <label for="displayWidth">横幅（px）</label>
+        <input type="number" id="displayWidth" step="any" required disabled aria-describedby="widthHelp">
+        <p class="help" id="widthHelp">0以下で画面幅に合わせます。画像が画面より広い場合は横にスクロールできます。</p>
+      </div>
+      <div class="actions">
+        <button type="button" class="primary" id="download" disabled>暗号化してZIPをダウンロード</button>
+        <button type="button" class="secondary" id="clear" disabled>画像をクリア</button>
+      </div>
+      <p id="status" role="status">画像を選択してください。</p>
+    </section>
+    <section class="card" aria-labelledby="previewHeading">
+      <div class="previewHead">
+        <h2 id="previewHeading">プレビュー</h2>
+        <p id="previewDetails" hidden></p>
+      </div>
+      <div class="previewWindow" id="previewWindow" tabindex="0" aria-label="スクリーンショットのプレビュー">
+        <p id="emptyPreview">選択した画像がここに表示されます。</p>
+        <img id="previewImage" alt="選択したスクリーンショット" hidden>
+      </div>
+    </section>
+  </div>
+  <section class="guide" aria-labelledby="guideHeading">
+    <h2 id="guideHeading">GitHub Pagesで共有</h2>
+    <p>ZIPを解凍し、HTMLだけをGitHub Pagesに置きます。公開したHTMLのURLの末尾に、TXTに記載の「URLの後ろに付けるべき文字」を追加して共有してください。鍵付きURLを知っている人は誰でも閲覧できます。</p>
+  </section>
+</main>
+<script>
+"use strict";
+
+const fileInput = document.querySelector("#file");
+const drop = document.querySelector("#drop");
+const previewWindow = document.querySelector("#previewWindow");
+const previewImage = document.querySelector("#previewImage");
+const previewDetails = document.querySelector("#previewDetails");
+const emptyPreview = document.querySelector("#emptyPreview");
+const displayWidth = document.querySelector("#displayWidth");
+const download = document.querySelector("#download");
+const clear = document.querySelector("#clear");
+const status = document.querySelector("#status");
+const encoder = new TextEncoder();
+const imageUrlPattern = /^data:image\/(?:png|jpeg|webp|gif|avif|(?:x-ms-)?bmp);base64,[A-Za-z0-9+/=]+$/;
+let selection;
+let loadId = 0;
+let busy = false;
+
+function showStatus(message, error = false) {
+  status.textContent = message;
+  status.dataset.error = error;
+}
+
+function imageWidthStyle(width) {
+  return width > 0 ? `${width}px` : "";
+}
+
+function updatePreviewWidth() {
+  previewImage.style.width = imageWidthStyle(displayWidth.valueAsNumber);
+}
+
+function setSelection(value) {
+  selection = value;
+  displayWidth.value = value ? value.width : "";
+  displayWidth.disabled = !value || busy;
+  updatePreviewWidth();
+  previewImage.hidden = !value;
+  emptyPreview.hidden = Boolean(value);
+  previewDetails.hidden = !value;
+  if (value) {
+    previewImage.src = value.dataUrl;
+    previewDetails.textContent = `${value.width.toLocaleString()} × ${value.height.toLocaleString()} px`;
+    previewWindow.scrollTop = 0;
+    previewWindow.scrollLeft = 0;
+  } else {
+    previewImage.removeAttribute("src");
+  }
+  download.disabled = !value || busy;
+}
+
+function makeBaseName(name) {
+  let base = name.normalize("NFC").replace(/\.[^.]+$/, "")
+    .replace(/[\\/:*?"<>|%#\u0000-\u001f\u007f]/g, "_")
+    .trim().replace(/^[._]+|[. ]+$/g, "");
+  if (/^(con|prn|aux|nul|com[0-9¹²³]|lpt[0-9¹²³])(?:\.|$)/i.test(base)) base = "sample-" + base;
+  while (encoder.encode(base).length > 175) base = Array.from(base).slice(0, -1).join("");
+  return base.replace(/[. ]+$/g, "") || "screenshot";
+}
+
+async function loadImage(file) {
+  if (!file || busy) return;
+  const id = ++loadId;
+  setSelection(null);
+  clear.disabled = false;
+  showStatus("画像を読み込んでいます…");
+  try {
+    const dataUrl = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(file);
+    });
+    if (!imageUrlPattern.test(dataUrl)) throw new Error("対応する形式の画像を選択してください。");
+    const image = new Image();
+    image.src = dataUrl;
+    try {
+      await image.decode();
+    } catch {
+      throw new Error("画像を表示できませんでした。ファイルを確認してください。");
+    }
+    if (id !== loadId) return;
+    setSelection({ dataUrl, baseName: makeBaseName(file.name), width: image.naturalWidth, height: image.naturalHeight });
+    showStatus(`${file.name} を読み込みました。`);
+  } catch (error) {
+    if (id === loadId) showStatus(error.message || "画像を読み込めませんでした。", true);
+  }
+}
+
+function createPassword() {
+  const alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+  let password = "";
+  while (password.length < 60) {
+    for (const byte of crypto.getRandomValues(new Uint8Array(64))) {
+      if (byte < 248) password += alphabet[byte % alphabet.length];
+      if (password.length === 60) return password;
+    }
+  }
+}
+
+async function deriveKey(password, salt, usage) {
+  const material = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveKey"]);
+  return crypto.subtle.deriveKey(
+    { name: "PBKDF2", salt, iterations: 600000, hash: "SHA-256" },
+    material, { name: "AES-GCM", length: 256 }, false, [usage]
+  );
+}
+
+function createImageHtml(dataUrl, baseName, width) {
+  const title = baseName.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const widthStyle = imageWidthStyle(width);
+  const size = widthStyle ? ` style="width:${widthStyle}"` : "";
+  return `<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${title}</title>
+<style>html,body{margin:0;padding:0;background:#fff}img{display:block;width:100%;height:auto}</style>
+</head>
+<body><img src="${dataUrl}" alt="スクリーンショット"${size}></body>
+</html>`;
+}
+
+function toBase64(bytes) {
+  if (bytes.toBase64) return bytes.toBase64();
+  const chunks = [];
+  for (let offset = 0; offset < bytes.length; offset += 24576) {
+    chunks.push(btoa(String.fromCharCode(...bytes.subarray(offset, offset + 24576))));
+  }
+  return chunks.join("");
+}
+
+async function encryptHtml(html, password) {
+  const compressed = await new Response(new Blob([html]).stream()
+    .pipeThrough(new CompressionStream("gzip"))).arrayBuffer();
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const key = await deriveKey(password, salt, "encrypt");
+  const ciphertext = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, compressed));
+  return {
+    salt: toBase64(salt),
+    iv: toBase64(iv),
+    ciphertext: toBase64(ciphertext)
+  };
+}
+
+// This function is serialized into each standalone viewer along with deriveKey.
+function runViewer(payload) {
+  const form = document.querySelector("form");
+  const passwordInput = document.querySelector("#password");
+  const infoInput = document.querySelector("#info");
+  const unlockButton = document.querySelector("#unlock");
+  const feedback = document.querySelector("#feedback");
+  let unlocking = false;
+
+  function readBase64(value) {
+    if (Uint8Array.fromBase64) return Uint8Array.fromBase64(value);
+    return Uint8Array.from(atob(value), character => character.charCodeAt(0));
+  }
+
+  async function unlock(password) {
+    if (unlocking) return;
+    if (!/^[A-Za-z0-9]{60}$/.test(password)) {
+      feedback.textContent = "60文字のパスワードを入力してください。";
+      return;
+    }
+    if (!crypto.subtle) {
+      feedback.textContent = "HTTPSのURLから開いてください。";
+      return;
+    }
+    const startingUrl = location.href;
+    unlocking = true;
+    unlockButton.disabled = true;
+    passwordInput.disabled = true;
+    infoInput.disabled = true;
+    feedback.textContent = "復号しています…";
+    try {
+      const key = await deriveKey(password, readBase64(payload.salt), "decrypt");
+      const compressed = await crypto.subtle.decrypt(
+        { name: "AES-GCM", iv: readBase64(payload.iv) }, key, readBase64(payload.ciphertext)
+      );
+      const html = await new Response(new Blob([compressed]).stream()
+        .pipeThrough(new DecompressionStream("gzip"))).text();
+      const template = document.createElement("template");
+      template.innerHTML = html;
+      const image = template.content.querySelector("img");
+      const title = template.content.querySelector("title");
+      document.title = title.textContent;
+      document.body.classList.add("unlocked");
+      document.body.replaceChildren(image);
+    } catch {
+      feedback.textContent = "解除できませんでした。共有リンクまたはパスワードを確認してください。";
+      unlocking = false;
+      unlockButton.disabled = false;
+      passwordInput.disabled = false;
+      infoInput.disabled = false;
+      if (location.href !== startingUrl) tryUrlUnlock();
+    }
+  }
+
+  form.addEventListener("submit", event => {
+    event.preventDefault();
+    unlock(passwordInput.value.trim());
+  });
+  infoInput.addEventListener("change", async () => {
+    const file = infoInput.files[0];
+    infoInput.value = "";
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const match = text.match(/^【パスワード】[ \t]*\r?\n([A-Za-z0-9]{60})[ \t]*\r?$/m);
+      if (!match) throw new Error();
+      await unlock(match[1]);
+    } catch {
+      feedback.textContent = "パスワード情報のTXTを確認してください。";
+    }
+  });
+  function tryUrlUnlock() {
+    if (unlocking) return;
+    const url = new URL(location.href);
+    const hashParams = new URLSearchParams(url.hash.slice(1));
+    const password = hashParams.get("key") || url.searchParams.get("key");
+    if (!hashParams.has("key") && !url.searchParams.has("key")) return;
+    hashParams.delete("key");
+    url.hash = hashParams.toString();
+    url.searchParams.delete("key");
+    try { history.replaceState(null, "", url); } catch {}
+    if (password) unlock(password);
+  }
+  window.addEventListener("hashchange", tryUrlUnlock);
+  tryUrlUnlock();
+}
+
+function createViewer(payload) {
+  return `<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex, nofollow">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'">
+<title>画面サンプル</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:grid;place-items:center;padding:16px;background:#eef4f3;color:#17292c;font-family:system-ui,"Yu Gothic UI",sans-serif}
+main{width:min(100%,430px);padding:24px;border:1px solid #d6e2df;border-radius:18px;background:#fff}
+h1{margin:0 0 10px;font-size:1.6rem}
+p{line-height:1.6;margin:0 0 14px}
+label{display:block;font-weight:600;margin-bottom:6px}
+input,button{font:inherit;max-width:100%}
+input[type=password]{width:100%;padding:10px;border:1px solid #a8bbb7;border-radius:8px}
+button{background:#075e53;color:#fff;border:0;border-radius:8px;padding:10px 16px;margin:10px 0 16px;cursor:pointer}
+button:disabled{opacity:.55}
+#feedback{min-height:1.55em;margin:12px 0 0;color:#49625f}
+body.unlocked{display:block;place-items:normal;padding:0;background:white}
+body.unlocked img{display:block;width:100%;height:auto}
+</style>
+</head>
+<body>
+<main>
+<h1>画面サンプル</h1>
+<p>共有リンクで開くか、パスワードを入力してください。</p>
+<form>
+<label for="password">パスワード</label>
+<input id="password" type="password" autocomplete="off" spellcheck="false" required>
+<button id="unlock" type="submit">解除する</button>
+</form>
+<label for="info">パスワード情報のTXTを選択</label>
+<input id="info" type="file" accept=".txt,text/plain">
+<p id="feedback" role="status"></p>
+<noscript>閲覧するにはJavaScriptを有効にしてください。</noscript>
+</main>
+<script>
+"use strict";
+${deriveKey.toString()}
+(${runViewer.toString()})(${JSON.stringify(payload)});
+<\/script>
+</body>
+</html>`;
+}
+
+const crcTable = Uint32Array.from({ length: 256 }, (_, value) => {
+  for (let bit = 0; bit < 8; bit++) value = (value >>> 1) ^ (value & 1 ? 0xedb88320 : 0);
+  return value;
+});
+
+function crc32(bytes) {
+  let crc = 0xffffffff;
+  for (const byte of bytes) crc = (crc >>> 8) ^ crcTable[(crc ^ byte) & 0xff];
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+// The encrypted bytes are already compressed before encryption. ZIP stores both entries directly.
+function createZip(entries) {
+  const files = [];
+  const directory = [];
+  const utf8Flag = 0x0800;
+  const now = new Date();
+  const date = ((Math.min(2107, Math.max(1980, now.getFullYear())) - 1980) << 9)
+    | ((now.getMonth() + 1) << 5) | now.getDate();
+  const time = (now.getHours() << 11) | (now.getMinutes() << 5) | (now.getSeconds() >> 1);
+  let offset = 0;
+  let directorySize = 0;
+  for (const [name, content] of entries) {
+    const nameBytes = encoder.encode(name);
+    const bytes = encoder.encode(content);
+    const crc = crc32(bytes);
+    const local = new Uint8Array(30 + nameBytes.length);
+    const header = new DataView(local.buffer);
+    header.setUint32(0, 0x04034b50, true);
+    header.setUint16(4, 20, true);
+    header.setUint16(6, utf8Flag, true);
+    header.setUint16(10, time, true);
+    header.setUint16(12, date, true);
+    header.setUint32(14, crc, true);
+    header.setUint32(18, bytes.length, true);
+    header.setUint32(22, bytes.length, true);
+    header.setUint16(26, nameBytes.length, true);
+    local.set(nameBytes, 30);
+    files.push(local, bytes);
+
+    const central = new Uint8Array(46 + nameBytes.length);
+    const record = new DataView(central.buffer);
+    record.setUint32(0, 0x02014b50, true);
+    record.setUint16(4, 20, true);
+    central.set(local.subarray(4, 28), 6);
+    record.setUint32(42, offset, true);
+    central.set(nameBytes, 46);
+    directory.push(central);
+    offset += local.length + bytes.length;
+    directorySize += central.length;
+  }
+  const end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, 0x06054b50, true);
+  end.setUint16(8, entries.length, true);
+  end.setUint16(10, entries.length, true);
+  end.setUint32(12, directorySize, true);
+  end.setUint32(16, offset, true);
+  return new Blob([...files, ...directory, end.buffer], { type: "application/zip" });
+}
+
+drop.addEventListener("click", () => fileInput.click());
+displayWidth.addEventListener("input", updatePreviewWidth);
+fileInput.addEventListener("change", () => {
+  loadImage(fileInput.files[0]);
+  fileInput.value = "";
+});
+for (const eventName of ["dragenter", "dragover", "dragleave", "drop"]) {
+  drop.addEventListener(eventName, event => {
+    event.preventDefault();
+    drop.classList.toggle("dragging", !busy && (eventName === "dragenter" || eventName === "dragover"));
+    if (eventName === "drop") loadImage(event.dataTransfer.files[0]);
+  });
+}
+clear.addEventListener("click", () => {
+  loadId++;
+  setSelection(null);
+  clear.disabled = true;
+  showStatus("画像を選択してください。");
+});
+
+download.addEventListener("click", async () => {
+  if (!selection || busy || !displayWidth.reportValidity()) return;
+  const width = displayWidth.valueAsNumber;
+  const { dataUrl, baseName } = selection;
+  busy = true;
+  download.disabled = clear.disabled = drop.disabled = displayWidth.disabled = true;
+  showStatus("画像を暗号化し、ZIPを作成しています…");
+  try {
+    if (!crypto.subtle) throw new Error("HTTPSのURLから開いてください。");
+    const password = createPassword();
+    const htmlName = `${baseName}.html`;
+    const infoName = `${htmlName}パスワード情報.txt`;
+    const suffix = `#key=${password}`;
+    const viewer = createViewer(await encryptHtml(createImageHtml(dataUrl, baseName, width), password));
+    const info = [
+      "【ファイル名】", htmlName, "",
+      "【タイトルタグの中身】", baseName, "",
+      "【パスワード】", password, "",
+      "【URLの後ろに付けるべき文字】", suffix, "",
+      "【共有URLの末尾】", encodeURIComponent(htmlName) + suffix, "",
+      "GitHub PagesにはHTMLだけをアップロードしてください。共有URLは閲覧を許可する相手に送ってください。", ""
+    ].join("\r\n");
+    const archive = createZip([[htmlName, viewer], [infoName, "\ufeff" + info]]);
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(archive);
+    link.download = `${baseName}.zip`;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(link.href), 30000);
+    showStatus("暗号化HTMLとパスワード情報TXTを収めたZIPを作成しました。");
+  } catch (error) {
+    showStatus(error.message || "ZIPを作成できませんでした。", true);
+  } finally {
+    busy = false;
+    download.disabled = clear.disabled = drop.disabled = displayWidth.disabled = false;
+  }
+});
+</script>
+</body>
+</html>
