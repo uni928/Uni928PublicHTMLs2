@@ -265,6 +265,12 @@ summary { cursor:pointer; }
 .viewer-size-switch button { padding:5px 8px; min-width:32px; min-height:32px; background:transparent; border:0; border-radius:5px; font:600 .875rem var(--ui); }
 .viewer-size-switch button[aria-pressed="true"] { background:var(--accent); color:white; }
 .viewer-size-switch button:hover:not([aria-pressed="true"]) { background:#e6e2f2; }
+.viewer-more-menu { position:relative; }
+.viewer-more-menu > summary { list-style:none; cursor:pointer; }
+.viewer-more-menu > summary::-webkit-details-marker { display:none; }
+.viewer-more-options { display:grid; gap:7px; position:absolute; z-index:5; top:calc(100% + 7px); right:0; min-width:210px; padding:10px; border:1px solid var(--line); border-radius:9px; background:white; box-shadow:0 8px 24px #24203520; }
+.viewer-more-options > button { width:100%; }
+.viewer-more-options .viewer-size-switch { justify-content:center; }
 .document-outline,.viewer-qr-panel { margin:0 0 1.3em; padding:12px 16px; border:1px solid var(--line); border-radius:9px; background:#f8f7fb; }
 .document-outline summary,.viewer-qr-title { font-weight:650; }
 .document-outline ol { margin:.6em 0 0; padding:0; list-style:none; }
@@ -347,10 +353,14 @@ summary { cursor:pointer; }
 }
 @media(prefers-reduced-motion:reduce) { *,*::before,*::after { transition:none !important; scroll-behavior:auto !important; } }
 @media print {
-  body, :root { background:white; }
-  #viewerMode { width:100%; padding:0; }
-  #viewerMode > .document { box-shadow:none; border:0; padding:0; }
-  .reader-head,.viewer-actions,.viewer-qr-panel,.document-outline,.code-copy-button { display:none; }
+  #viewerMode[data-print-mode="trim"] > .document { border:1px solid #d3d3de; box-shadow:0 2px 7px #24203518, inset 0 1px 0 #ffffff; }
+  #viewerMode[data-print-mode="trim"] .reader-head,
+  #viewerMode[data-print-mode="trim"] .viewer-actions,
+  #viewerMode[data-print-mode="trim"] .viewer-qr-panel,
+  #viewerMode[data-print-mode="trim"] .document-outline,
+  #viewerMode[data-print-mode="trim"] .code-copy-button { display:none !important; }
+  #viewerMode[data-print-mode="trim"] #viewContent { break-after:avoid-page; page-break-after:avoid; }
+  #viewerMode[data-print-mode="trim"] #viewMeta { break-inside:avoid-page; page-break-inside:avoid; margin-top:1em; padding-top:.5em; }
   #printTimestamp { display:block; }
   .document h1,.document h2,.document h3 { break-after:avoid; }
   .document img,.document tr { break-inside:avoid; }
@@ -569,6 +579,7 @@ summary { cursor:pointer; }
 <main id="viewerMode" class="app hidden">
     <div class="reader-head"><span class="brand" lang="en"><svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><path fill="#5445b9" d="m2 8 12.5 3.9V29L2 24.2z"/><path fill="#9584ed" d="M16 11.9 28.5 4.7V22L16 29z"/><path fill="#c1b6fb" d="m4.5 5.2 10.2-2.1 11.5 2.1-11 5z"/></svg><b>Folio</b></span><span class="mast-label">閲覧ページ</span></div><article class="panel document">
       <div class="viewer-actions">
+        <details class="viewer-more-menu"><summary class="secondary-button">その他機能</summary><div class="viewer-more-options">
         <button id="viewerQrButton" class="secondary-button viewer-qr-button" type="button" aria-expanded="false">共有QRコードを表示</button>
         <div class="viewer-size-switch" role="group" aria-label="文字サイズ">
           <button type="button" data-viewer-size="xlarge" aria-pressed="false">特大</button>
@@ -576,6 +587,9 @@ summary { cursor:pointer; }
           <button type="button" data-viewer-size="medium" aria-pressed="false">中</button>
           <button type="button" data-viewer-size="small" aria-pressed="false">小</button>
         </div>
+        <button id="printFullButton" class="secondary-button" type="button">そのまま印刷</button>
+        <button id="printTrimButton" class="secondary-button" type="button">削って印刷</button>
+        </div></details>
         <div hidden><button id="copyNoteButton" class="secondary-button" type="button">note形式でのコピーに試みる</button></div>
         <div hidden><button id="copyMarkdownButton" class="secondary-button" type="button">Markdownをコピー</button></div>
         <button id="editButton" class="secondary-button" type="button"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m14 5 5 5M4 20l4.8-1.1L20 7.7a2.2 2.2 0 0 0 0-3.1l-.6-.6a2.2 2.2 0 0 0-3.1 0L5.1 15.2z"/></svg>編集に戻る</button>
@@ -2220,7 +2234,18 @@ if (!confirm("短縮URLは、URLを適当に入力した人にも表示される
       });
     }
 
+    document.getElementById("printFullButton").addEventListener("click", function () {
+      document.querySelector(".viewer-more-menu").open = false;
+      viewerMode.dataset.printMode = "full";
+      window.print();
+    });
+    document.getElementById("printTrimButton").addEventListener("click", function () {
+      document.querySelector(".viewer-more-menu").open = false;
+      viewerMode.dataset.printMode = "trim";
+      window.print();
+    });
     window.addEventListener("beforeprint", function () {
+      if (!viewerMode.dataset.printMode) viewerMode.dataset.printMode = "full";
       const printLine = document.getElementById("printTimestamp");
       if (printLine) printLine.textContent = "印刷日時：" + formatJapaneseDateTime(new Date());
     });
